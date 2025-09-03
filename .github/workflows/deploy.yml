@@ -25,46 +25,13 @@ jobs:
       env:
         CI: false
         
-    - name: 🏗️ Test Multiple Directory Paths
-      run: |
-        echo "Testing multiple directory paths systematically"
-        mkdir -p test-dirs/root test-dirs/public_html test-dirs/www test-dirs/htdocs
-        cp test-deployment.html test-dirs/root/index.html
-        cp test-deployment.html test-dirs/public_html/index.html
-        cp test-deployment.html test-dirs/www/index.html
-        cp test-deployment.html test-dirs/htdocs/index.html
-        
-    - name: 📂 Test Path 1: Root directory
+    - name: 📂 Test root directory path
       uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: test-dirs/root/
+        local-dir: ./
         server-dir: /
-        
-    - name: 📂 Test Path 2: public_html
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: test-dirs/public_html/
-        server-dir: /public_html/
-        
-    - name: 📂 Test Path 3: www directory  
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: test-dirs/www/
-        server-dir: /www/
-        exclude: |
-          **/.git*
-          **/.git*/**
-          **/node_modules/**
-          **/*.log
-          **/server/**
-          **/shared/**
-          .env*
+        include: |
+          test-deployment.html
