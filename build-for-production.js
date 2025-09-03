@@ -14,11 +14,11 @@ console.log('🏗️  Building OfficeXpress for production deployment...');
 try {
   // Build the client application
   console.log('📦 Building React client application...');
-  execSync('vite build', { stdio: 'inherit' });
+  execSync('npm run build', { stdio: 'inherit' });
   
   // Update index.html to use absolute paths for production
   console.log('🔧 Configuring paths for production...');
-  const indexPath = path.join(process.cwd(), 'dist', 'index.html');
+  const indexPath = path.join(process.cwd(), 'dist', 'public', 'index.html');
   let indexContent = readFileSync(indexPath, 'utf8');
   
   // Ensure all asset paths are relative to root
