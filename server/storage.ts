@@ -113,7 +113,7 @@ export class DatabaseStorage implements IStorage {
       .insert(vendorRegistrations)
       .values({
         ...vendor,
-        vehicleTypes: vendor.vehicleTypes || []
+        vehicleTypes: vendor.vehicleTypes as string[] || []
       })
       .returning();
     return newVendor;
@@ -140,7 +140,7 @@ export class DatabaseStorage implements IStorage {
       .insert(blogPosts)
       .values({
         ...post,
-        tags: post.tags || []
+        tags: post.tags as string[] || []
       })
       .returning();
     return newPost;
@@ -166,7 +166,7 @@ export class DatabaseStorage implements IStorage {
       .insert(portfolioClients)
       .values({
         ...client,
-        images: client.images || []
+        images: client.images as string[] || []
       })
       .returning();
     return newClient;
@@ -181,7 +181,7 @@ export class DatabaseStorage implements IStorage {
       .update(portfolioClients)
       .set({
         ...client,
-        images: client.images || []
+        images: client.images as string[] || []
       })
       .where(eq(portfolioClients.id, client.id))
       .returning();
@@ -201,7 +201,7 @@ export class DatabaseStorage implements IStorage {
       .update(blogPosts)
       .set({
         ...post,
-        tags: post.tags || [],
+        tags: post.tags as string[] || [],
         updatedAt: new Date()
       })
       .where(eq(blogPosts.id, post.id))
