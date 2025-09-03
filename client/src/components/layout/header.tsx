@@ -36,7 +36,11 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
             <div className="flex items-center space-x-2">
-              <Car className="h-8 w-8 text-brand-primary" />
+              <img 
+                src="/logo.jpg" 
+                alt="OfficeXpress Logo" 
+                className="h-10 w-auto"
+              />
               <span className="text-xl font-bold text-brand-primary">
                 OfficeXpress
               </span>

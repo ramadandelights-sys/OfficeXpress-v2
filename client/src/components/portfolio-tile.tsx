@@ -34,7 +34,7 @@ export default function PortfolioTile({ client }: PortfolioTileProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-brand-slate/80 hover:bg-brand-slate text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-[#4c9096]/80 hover:bg-[#4c9096] text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={navigateToPrev}
               data-testid={`prev-image-${client.id}`}
             >
@@ -43,7 +43,7 @@ export default function PortfolioTile({ client }: PortfolioTileProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-brand-slate/80 hover:bg-brand-slate text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-[#4c9096]/80 hover:bg-[#4c9096] text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={navigateToNext}
               data-testid={`next-image-${client.id}`}
             >

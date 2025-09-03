@@ -127,7 +127,7 @@ export default function Portfolio() {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
-                className="bg-brand-slate text-white hover:bg-brand-slate/90"
+                className="bg-[#4c9096] text-white hover:bg-[#4c9096]/90"
                 asChild
                 data-testid="cta-corporate"
               >
@@ -135,7 +135,7 @@ export default function Portfolio() {
               </Button>
               <Button 
                 variant="outline"
-                className="border-2 border-brand-slate text-brand-slate hover:bg-brand-slate hover:text-white"
+                className="border-2 border-[#4c9096] text-[#4c9096] hover:bg-[#4c9096] hover:text-white"
                 asChild
                 data-testid="cta-rental"
               >
