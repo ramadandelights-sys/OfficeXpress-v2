@@ -25,20 +25,19 @@ jobs:
       env:
         CI: false
         
-    - name: 🏗️ Build application
-      run: node build-for-production.js
-      env:
-        CI: false
-        NODE_ENV: production
+    - name: 🏗️ Test Directory Path
+      run: echo "Testing /public_html/ directory path"
         
-    - name: 📂 Deploy to hosting via FTP
+    - name: 📂 Deploy test file to hosting via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: dist/public/
-        server-dir: /domains/officexpress.org/public_html/
+        local-dir: ./
+        server-dir: /public_html/
+        include: |
+          test-deployment.html
         exclude: |
           **/.git*
           **/.git*/**
