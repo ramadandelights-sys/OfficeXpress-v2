@@ -3,7 +3,6 @@ import { Link, useLocation } from "wouter";
 import { Car, Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@/assets/logo.jpg";
 
 export default function Header() {
   const [location] = useLocation();
@@ -33,11 +32,12 @@ export default function Header() {
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
-            <img 
-              src={logoImage} 
-              alt="OfficeXpress Logo" 
-              className="h-10 w-auto"
-            />
+            <div className="flex items-center space-x-2">
+              <Car className="h-8 w-8 text-brand-primary" />
+              <span className="text-xl font-bold text-brand-primary">
+                OfficeXpress
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Navigation */}
