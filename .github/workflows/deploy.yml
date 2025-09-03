@@ -30,7 +30,7 @@ jobs:
         echo "Testing multiple directory paths systematically"
         mkdir -p test-dirs/root test-dirs/public_html test-dirs/www test-dirs/htdocs
         cp test-deployment.html test-dirs/root/index.html
-        cp test-deployment.html test-dirs/public_html/index.html  
+        cp test-deployment.html test-dirs/public_html/index.html
         cp test-deployment.html test-dirs/www/index.html
         cp test-deployment.html test-dirs/htdocs/index.html
         
