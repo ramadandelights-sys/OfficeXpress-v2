@@ -9,14 +9,54 @@
       }
     },
     {
-      "src": "api/index.ts",
+      "src": "api/corporate-bookings.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/rental-bookings.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/vendor-registrations.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/contact-messages.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/blog-posts.ts",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "api/portfolio-clients.ts",
       "use": "@vercel/node"
     }
   ],
   "routes": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/index.ts"
+      "src": "/api/corporate-bookings",
+      "dest": "/api/corporate-bookings.ts"
+    },
+    {
+      "src": "/api/rental-bookings",
+      "dest": "/api/rental-bookings.ts"
+    },
+    {
+      "src": "/api/vendor-registrations",
+      "dest": "/api/vendor-registrations.ts"
+    },
+    {
+      "src": "/api/contact-messages",
+      "dest": "/api/contact-messages.ts"
+    },
+    {
+      "src": "/api/blog-posts",
+      "dest": "/api/blog-posts.ts"
+    },
+    {
+      "src": "/api/portfolio-clients",
+      "dest": "/api/portfolio-clients.ts"
     },
     {
       "src": "/static/(.*)",
