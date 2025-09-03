@@ -318,14 +318,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.put("/api/admin/blog-posts/:id", async (req, res) => {
     try {
+      console.log("Updating blog post:", req.params.id, JSON.stringify(req.body, null, 2));
       const postData = updateBlogPostSchema.parse({ ...req.body, id: req.params.id });
       const post = await storage.updateBlogPost(postData);
+      console.log("Blog post updated successfully:", post.id);
       res.json(post);
     } catch (error) {
+      console.error("Blog post update error:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to update blog post" });
+        res.status(500).json({ message: "Failed to update blog post", error: error.message });
       }
     }
   });

@@ -201,7 +201,8 @@ export class DatabaseStorage implements IStorage {
       .update(blogPosts)
       .set({
         ...post,
-        tags: post.tags || []
+        tags: post.tags || [],
+        updatedAt: new Date()
       })
       .where(eq(blogPosts.id, post.id))
       .returning();
