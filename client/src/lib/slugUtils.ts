@@ -26,25 +26,3 @@ export function generateSlug(title: string): string {
     // Fallback for edge cases (empty result)
     || 'untitled-post';
 }
-
-/**
- * Test the slug generation with various inputs
- */
-export function testSlugGeneration() {
-  const testCases = [
-    "🚀 Say Hello to OfficeXpress: Your Daily Commute, Reimagined",
-    "Transportation & Logistics Solutions!",
-    "🎯 100% Success Rate 💯",
-    "Simple Title",
-    "   Multiple   Spaces   ",
-    "Special@#$%Characters***",
-    "😀😃😄😁",
-    "",
-    "   ",
-  ];
-
-  console.log("Slug Generation Test Results:");
-  testCases.forEach(title => {
-    console.log(`"${title}" → "${generateSlug(title)}"`);
-  });
-}
