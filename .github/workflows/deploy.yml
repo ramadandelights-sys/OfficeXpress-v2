@@ -1,41 +1,20 @@
-name: 🚀 Deploy OfficeXpress to Production
+# Disabled - Using Vercel for automatic deployment
+# This workflow was causing deployment conflicts
+# Vercel automatically deploys when you push to main branch
+
+name: 🚀 OfficeXpress Build Check (Disabled)
 
 on:
-  push:
-    branches: [ main, master ]
-  workflow_dispatch: # Allows manual trigger from GitHub
-
+  workflow_dispatch: # Manual trigger only
+  
 jobs:
-  deploy:
-    name: 🎉 Deploy to Production
+  build-check:
+    name: 🔍 Build Verification (Disabled)
     runs-on: ubuntu-latest
     
     steps:
-    - name: 🚚 Get latest code
-      uses: actions/checkout@v4
-      
-    - name: 📦 Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: 🔨 Install dependencies
-      run: npm ci
-      env:
-        CI: false
-        
-    - name: 🏗️ Build application
-      run: node build-for-production.js
-      env:
-        CI: false
-        NODE_ENV: production
-        
-    - name: 📂 Deploy to hosting via FTP 
-      uses: SamKirkland/FTP-Deploy-Action@v4.3.6
-      with:
-        server: ${{ secrets.FTP_SERVER }}
-        username: ${{ secrets.FTP_USERNAME }}
-        password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: dist/public/
-        server-dir: /public_html/
+    - name: ℹ️ Information
+      run: |
+        echo "This workflow has been disabled"
+        echo "Vercel handles automatic deployment from GitHub"
+        echo "No manual deployment needed"
