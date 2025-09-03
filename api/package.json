@@ -1,0 +1,11 @@
+{
+  "name": "api-functions",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4",
+    "drizzle-orm": "^0.39.1",
+    "ws": "^8.18.0",
+    "zod": "^3.24.2"
+  }
+}
