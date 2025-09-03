@@ -111,7 +111,10 @@ export class DatabaseStorage implements IStorage {
   async createVendorRegistration(vendor: InsertVendorRegistration): Promise<VendorRegistration> {
     const [newVendor] = await db
       .insert(vendorRegistrations)
-      .values(vendor)
+      .values({
+        ...vendor,
+        vehicleTypes: vendor.vehicleTypes || []
+      })
       .returning();
     return newVendor;
   }
@@ -135,7 +138,10 @@ export class DatabaseStorage implements IStorage {
   async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
     const [newPost] = await db
       .insert(blogPosts)
-      .values(post)
+      .values({
+        ...post,
+        tags: post.tags || []
+      })
       .returning();
     return newPost;
   }
@@ -158,7 +164,10 @@ export class DatabaseStorage implements IStorage {
   async createPortfolioClient(client: InsertPortfolioClient): Promise<PortfolioClient> {
     const [newClient] = await db
       .insert(portfolioClients)
-      .values(client)
+      .values({
+        ...client,
+        images: client.images || []
+      })
       .returning();
     return newClient;
   }
@@ -170,7 +179,10 @@ export class DatabaseStorage implements IStorage {
   async updatePortfolioClient(client: UpdatePortfolioClient): Promise<PortfolioClient> {
     const [updatedClient] = await db
       .update(portfolioClients)
-      .set(client)
+      .set({
+        ...client,
+        images: client.images || []
+      })
       .where(eq(portfolioClients.id, client.id))
       .returning();
     return updatedClient;
@@ -187,7 +199,10 @@ export class DatabaseStorage implements IStorage {
   async updateBlogPost(post: UpdateBlogPost): Promise<BlogPost> {
     const [updatedPost] = await db
       .update(blogPosts)
-      .set(post)
+      .set({
+        ...post,
+        tags: post.tags || []
+      })
       .where(eq(blogPosts.id, post.id))
       .returning();
     return updatedPost;

@@ -193,6 +193,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/blog-posts", async (req, res) => {
+    try {
+      const postData = insertBlogPostSchema.parse(req.body);
+      
+      // Generate slug if not provided
+      if (!postData.slug && postData.title) {
+        postData.slug = postData.title
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, "")
+          .replace(/\s+/g, "-")
+          .replace(/-+/g, "-")
+          .trim();
+      }
+
+      const post = await storage.createBlogPost(postData);
+      res.json(post);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
+      } else {
+        console.error("Blog post creation error:", error);
+        res.status(500).json({ message: "Failed to create blog post" });
+      }
+    }
+  });
+
   app.get("/api/admin/corporate-bookings", async (req, res) => {
     try {
       const bookings = await storage.getCorporateBookings();

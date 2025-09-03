@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
+import BlogPostCreator from "@/components/blog-post-creator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -43,6 +44,7 @@ function AdminDashboard() {
   const { toast } = useToast();
   const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
+  const [showBlogCreator, setShowBlogCreator] = useState(false);
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminAuthenticated");
@@ -71,6 +73,21 @@ function AdminDashboard() {
 
   const { data: contactMessages = [], isLoading: loadingMessages } = useQuery<ContactMessage[]>({
     queryKey: ["/api/admin/contact-messages"],
+  });
+
+  const createBlogPostMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/admin/blog-posts", "POST", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Blog post created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/blog-posts"] });
+      setShowBlogCreator(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create blog post", variant: "destructive" });
+    },
   });
 
   const updateBlogPostMutation = useMutation({
@@ -150,14 +167,34 @@ function AdminDashboard() {
         {/* Blog Posts Management */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-blog-management">
-              <Edit className="h-5 w-5" />
-              Blog Posts Management
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-blog-management">
+                <Edit className="h-5 w-5" />
+                Blog Posts Management
+              </CardTitle>
+              <Button 
+                onClick={() => setShowBlogCreator(true)}
+                className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90"
+                data-testid="button-create-blog"
+              >
+                <Plus className="h-4 w-4" />
+                Create New Post
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingPosts ? (
+            {showBlogCreator ? (
+              <BlogPostCreator
+                onSave={(data) => createBlogPostMutation.mutate(data)}
+                isLoading={createBlogPostMutation.isPending}
+                onCancel={() => setShowBlogCreator(false)}
+              />
+            ) : loadingPosts ? (
               <div className="text-center py-8" data-testid="loading-blog-posts">Loading blog posts...</div>
+            ) : blogPosts.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No blog posts yet. Create your first post!
+              </div>
             ) : (
               <div className="space-y-4">
                 {blogPosts.map((post) => (
