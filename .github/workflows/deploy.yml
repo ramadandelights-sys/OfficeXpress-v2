@@ -25,13 +25,17 @@ jobs:
       env:
         CI: false
         
-    - name: 📂 Test root directory path
+    - name: 🏗️ Build application
+      run: node build-for-production.js
+      env:
+        CI: false
+        NODE_ENV: production
+        
+    - name: 📂 Deploy to hosting via FTP 
       uses: SamKirkland/FTP-Deploy-Action@v4.3.6
       with:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        local-dir: ./
+        local-dir: dist/public/
         server-dir: /
-        include: |
-          test-deployment.html
