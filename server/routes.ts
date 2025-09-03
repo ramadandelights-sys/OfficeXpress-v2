@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Validation errors:", error.errors);
         res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to create blog post", error: error.message });
+        res.status(500).json({ message: "Failed to create blog post", error: error instanceof Error ? error.message : String(error) });
       }
     }
   });
@@ -329,7 +329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Validation errors:", error.errors);
         res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
       } else {
-        res.status(500).json({ message: "Failed to update blog post", error: error.message });
+        res.status(500).json({ message: "Failed to update blog post", error: error instanceof Error ? error.message : String(error) });
       }
     }
   });
