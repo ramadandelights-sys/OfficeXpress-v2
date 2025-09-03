@@ -33,7 +33,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
             <img 
-              src="/attached_assets/OfficeXpress_logo_1756863810405.png" 
+              src="/attached_assets/OfficeXpress_logo_1756864809144.jpg" 
               alt="OfficeXpress Logo" 
               className="h-10 w-auto"
             />
