@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut } from "lucide-react";
+import AdminLogin from "@/components/admin-login";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,8 +26,27 @@ import { updateBlogPostSchema, updatePortfolioClientSchema } from "@shared/schem
 
 export default function Admin() {
   const { toast } = useToast();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
+
+  useEffect(() => {
+    const authStatus = sessionStorage.getItem("adminAuthenticated");
+    setIsAuthenticated(authStatus === "true");
+  }, []);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminAuthenticated");
+    setIsAuthenticated(false);
+    toast({
+      title: "Logged out successfully",
+      description: "You have been logged out of the admin panel",
+    });
+  };
+
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
+  }
 
   const { data: blogPosts = [], isLoading: loadingPosts } = useQuery<BlogPost[]>({
     queryKey: ["/api/admin/blog-posts"],
@@ -111,9 +131,20 @@ export default function Admin() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8" data-testid="heading-admin">
-          Admin Panel
-        </h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="heading-admin">
+            Admin Panel
+          </h1>
+          <Button 
+            variant="outline" 
+            onClick={handleLogout}
+            className="flex items-center gap-2"
+            data-testid="logout-btn"
+          >
+            <LogOut className="h-4 w-4" />
+            Logout
+          </Button>
+        </div>
 
         {/* Blog Posts Management */}
         <Card className="mb-8">

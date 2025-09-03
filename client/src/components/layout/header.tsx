@@ -20,9 +20,7 @@ export default function Header() {
     { name: "Blog", href: "/blog" },
   ];
 
-  const secondaryNavigation = [
-    { name: "Admin", href: "/admin" },
-  ];
+  const secondaryNavigation: never[] = [];
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -39,11 +37,8 @@ export default function Header() {
               <img 
                 src="/logo.jpg" 
                 alt="OfficeXpress Logo" 
-                className="h-10 w-auto"
+                className="h-16 w-auto"
               />
-              <span className="text-xl font-bold text-brand-primary">
-                OfficeXpress
-              </span>
             </div>
           </Link>
 
@@ -59,20 +54,6 @@ export default function Header() {
                     : "text-foreground hover:text-primary hover:bg-brand-primary/10"
                 }`}
                 data-testid={`nav-${item.name.toLowerCase().replace(" ", "-")}`}
-              >
-                {item.name}
-              </Link>
-            ))}
-            {secondaryNavigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm border border-brand-primary ${
-                  isActive(item.href)
-                    ? "bg-brand-primary text-primary-foreground"
-                    : "text-brand-primary hover:bg-brand-primary hover:text-primary-foreground"
-                }`}
-                data-testid={`nav-${item.name.toLowerCase()}`}
               >
                 {item.name}
               </Link>
@@ -119,21 +100,6 @@ export default function Header() {
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                   data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
-                >
-                  {item.name}
-                </Link>
-              ))}
-              {secondaryNavigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`font-medium transition-colors px-3 py-2 rounded-lg border border-brand-primary ${
-                    isActive(item.href)
-                      ? "bg-brand-primary text-primary-foreground"
-                      : "text-brand-primary hover:bg-brand-primary hover:text-primary-foreground"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  data-testid={`mobile-nav-${item.name.toLowerCase()}`}
                 >
                   {item.name}
                 </Link>
