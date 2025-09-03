@@ -1,0 +1,194 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(120, 40%, 95%);
+  --foreground: hsl(180, 8%, 25%);
+  --card: hsl(120, 50%, 98%);
+  --card-foreground: hsl(180, 8%, 25%);
+  --popover: hsl(120, 50%, 98%);
+  --popover-foreground: hsl(180, 8%, 25%);
+  --primary: hsl(140, 35%, 75%);
+  --primary-foreground: hsl(180, 8%, 15%);
+  --secondary: hsl(177, 25%, 75%);
+  --secondary-foreground: hsl(180, 8%, 25%);
+  --muted: hsl(60, 20%, 90%);
+  --muted-foreground: hsl(180, 8%, 40%);
+  --accent: hsl(187, 85%, 92%);
+  --accent-foreground: hsl(180, 8%, 25%);
+  --destructive: hsl(0, 84%, 60%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(180, 8%, 80%);
+  --input: hsl(180, 8%, 85%);
+  --ring: hsl(140, 35%, 75%);
+  --chart-1: hsl(140, 35%, 75%);
+  --chart-2: hsl(177, 25%, 75%);
+  --chart-3: hsl(187, 85%, 92%);
+  --chart-4: hsl(60, 20%, 90%);
+  --chart-5: hsl(0, 84%, 60%);
+  --sidebar: hsl(120, 50%, 98%);
+  --sidebar-foreground: hsl(180, 8%, 25%);
+  --sidebar-primary: hsl(140, 35%, 75%);
+  --sidebar-primary-foreground: hsl(180, 8%, 15%);
+  --sidebar-accent: hsl(187, 85%, 92%);
+  --sidebar-accent-foreground: hsl(180, 8%, 25%);
+  --sidebar-border: hsl(180, 8%, 80%);
+  --sidebar-ring: hsl(140, 35%, 75%);
+  --font-sans: "Roboto", sans-serif;
+  --font-serif: Georgia, serif;
+  --font-mono: Menlo, monospace;
+  --radius: 8px;
+  --shadow-2xs: 0px 2px 0px 0px hsl(140, 35%, 75%);
+  --shadow-xs: 0px 2px 0px 0px hsl(140, 35%, 75%);
+  --shadow-sm: 0px 2px 0px 0px hsl(140, 35%, 75%), 0px 1px 2px -1px hsl(140, 35%, 75%);
+  --shadow: 0px 2px 0px 0px hsl(140, 35%, 75%), 0px 1px 2px -1px hsl(140, 35%, 75%);
+  --shadow-md: 0px 2px 0px 0px hsl(140, 35%, 75%), 0px 2px 4px -1px hsl(140, 35%, 75%);
+  --shadow-lg: 0px 2px 0px 0px hsl(140, 35%, 75%), 0px 4px 6px -1px hsl(140, 35%, 75%);
+  --shadow-xl: 0px 2px 0px 0px hsl(140, 35%, 75%), 0px 8px 10px -1px hsl(140, 35%, 75%);
+  --shadow-2xl: 0px 2px 0px 0px hsl(140, 35%, 75%);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  
+  /* OfficeXpress Brand Colors */
+  --brand-primary: hsl(141, 42%, 78%);  /* #A8E6CF - Mint Green */
+  --brand-secondary: hsl(177, 28%, 77%); /* #B2DFDB - Pastel Teal */
+  --brand-accent: hsl(187, 85%, 92%);    /* #E0F7FA - Pale Lime */
+  --brand-neutral: hsl(61, 51%, 89%);    /* #F0F4C3 - Whisper White */
+  --brand-slate: hsl(200, 11%, 83%);     /* #CFD8DC - Soft Slate */
+  --brand-highlight: hsl(340, 59%, 87%); /* #F8BBD0 - Blush Pink */
+}
+
+.dark {
+  --background: hsl(0, 0%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --card: hsl(0, 0%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --popover: hsl(0, 0%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --primary: hsl(0, 0%, 98%);
+  --primary-foreground: hsl(0, 0%, 9%);
+  --secondary: hsl(0, 0%, 14.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --muted: hsl(0, 0%, 14.9%);
+  --muted-foreground: hsl(0, 0%, 63.9%);
+  --accent: hsl(0, 0%, 14.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --border: hsl(0, 0%, 14.9%);
+  --input: hsl(0, 0%, 14.9%);
+  --ring: hsl(0, 0%, 83.1%);
+  --chart-1: hsl(220, 70%, 50%);
+  --chart-2: hsl(160, 60%, 45%);
+  --chart-3: hsl(30, 80%, 55%);
+  --chart-4: hsl(280, 65%, 60%);
+  --chart-5: hsl(340, 75%, 55%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+@layer components {
+  .brand-primary {
+    background-color: var(--brand-primary);
+  }
+  
+  .brand-secondary {
+    background-color: var(--brand-secondary);
+  }
+  
+  .brand-accent {
+    background-color: var(--brand-accent);
+  }
+  
+  .brand-neutral {
+    background-color: var(--brand-neutral);
+  }
+  
+  .brand-slate {
+    background-color: var(--brand-slate);
+  }
+  
+  .brand-highlight {
+    background-color: var(--brand-highlight);
+  }
+  
+  .text-brand-primary {
+    color: var(--brand-primary);
+  }
+  
+  .text-brand-secondary {
+    color: var(--brand-secondary);
+  }
+  
+  .text-brand-accent {
+    color: var(--brand-accent);
+  }
+  
+  .text-brand-neutral {
+    color: var(--brand-neutral);
+  }
+  
+  .text-brand-slate {
+    color: var(--brand-slate);
+  }
+  
+  .text-brand-highlight {
+    color: var(--brand-highlight);
+  }
+
+  .service-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+
+  .service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  }
+
+  .portfolio-tile {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1;
+  }
+
+  .portfolio-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: 10;
+  }
+
+  .portfolio-tile:hover .portfolio-nav {
+    opacity: 1;
+  }
+
+  .portfolio-nav.prev {
+    left: 10px;
+  }
+
+  .portfolio-nav.next {
+    right: 10px;
+  }
+}
