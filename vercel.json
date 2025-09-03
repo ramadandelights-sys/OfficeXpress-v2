@@ -19,12 +19,24 @@
       "dest": "/api/index.ts"
     },
     {
-      "src": "/(about|blog|corporate|rental|vendor|contact|admin|portfolio).*",
-      "dest": "/dist/public/index.html"
+      "src": "/static/(.*)",
+      "dest": "/dist/public/static/$1"
+    },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/public/assets/$1"
+    },
+    {
+      "src": "/logo.jpg",
+      "dest": "/dist/public/logo.jpg"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|txt))",
+      "dest": "/dist/public/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/$1"
+      "dest": "/dist/public/index.html"
     }
   ]
 }
