@@ -579,7 +579,7 @@ You can also click 'Insert Image' to add images to your content."
                   variant="outline"
                   disabled={isLoading}
                   onClick={() => form.setValue("published", false)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
                   data-testid="button-save-draft"
                 >
                   <Save className="h-4 w-4" />
@@ -589,7 +589,7 @@ You can also click 'Insert Image' to add images to your content."
                   type="submit"
                   disabled={isLoading}
                   onClick={() => form.setValue("published", true)}
-                  className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90"
+                  className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
                   data-testid="button-publish"
                 >
                   <Send className="h-4 w-4" />

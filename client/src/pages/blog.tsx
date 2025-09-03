@@ -62,7 +62,7 @@ export default function Blog() {
                   )}
                   <div className="p-6">
                     <div className="flex items-center space-x-2 mb-3">
-                      <span className="bg-brand-primary/20 text-brand-primary px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
+                      <span className="bg-[#4c9096] text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1">
                         <Tag className="w-3 h-3" />
                         {post.category}
                       </span>
@@ -79,7 +79,7 @@ export default function Blog() {
                     </p>
                     <Link 
                       href={`/blog/${post.id}`} 
-                      className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
+                      className="inline-flex items-center text-[#4c9096] font-semibold hover:text-[#4c9096]/80 transition-colors"
                       data-testid={`blog-read-more-${post.id}`}
                     >
                       Read More <ArrowRight className="ml-2 w-4 h-4" />

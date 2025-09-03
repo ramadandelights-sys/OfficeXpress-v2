@@ -174,7 +174,7 @@ function AdminDashboard() {
               </CardTitle>
               <Button 
                 onClick={() => setShowBlogCreator(true)}
-                className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90"
+                className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
                 data-testid="button-create-blog"
               >
                 <Plus className="h-4 w-4" />

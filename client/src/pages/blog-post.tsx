@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
-import { ArrowLeft, Calendar, Tag, User, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, Tag, User, Clock, Share } from "lucide-react";
+import { FaFacebook, FaLinkedin, FaTwitter } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -145,13 +146,13 @@ export default function BlogPostPage() {
                   <span className="text-sm text-muted-foreground">Share this post:</span>
                   <div className="flex space-x-2">
                     <Button size="sm" variant="outline" data-testid="share-facebook">
-                      <Facebook className="w-4 h-4" />
+                      <FaFacebook className="w-4 h-4" />
                     </Button>
                     <Button size="sm" variant="outline" data-testid="share-linkedin">
-                      <Linkedin className="w-4 h-4" />
+                      <FaLinkedin className="w-4 h-4" />
                     </Button>
                     <Button size="sm" variant="outline" data-testid="share-twitter">
-                      <span className="w-4 h-4 text-center">𝕏</span>
+                      <FaTwitter className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>

@@ -195,11 +195,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/blog-posts", async (req, res) => {
     try {
-      console.log("Received blog post data:", JSON.stringify(req.body, null, 2));
+      console.log("Received blog post data, processing images...");
+      
+      // Import image processor
+      const { ImageProcessor } = await import("./imageProcessor");
+      
+      // Process featured image if provided
+      let processedFeaturedImage = req.body.featuredImage;
+      if (processedFeaturedImage && processedFeaturedImage.startsWith('data:image/')) {
+        console.log("Processing featured image...");
+        try {
+          processedFeaturedImage = await ImageProcessor.processBase64Image(processedFeaturedImage);
+          console.log("Featured image processed successfully");
+        } catch (imageError) {
+          console.error("Failed to process featured image:", imageError);
+          return res.status(400).json({ message: "Failed to process featured image" });
+        }
+      }
+
+      // Process images in content
+      let processedContent = req.body.content || '';
+      if (processedContent) {
+        console.log("Processing content images...");
+        // Find all base64 images in content
+        const base64ImageRegex = /data:image\/[^;]+;base64,[^"'\s]+/g;
+        const images = processedContent.match(base64ImageRegex);
+        
+        if (images && images.length > 0) {
+          console.log(`Found ${images.length} images in content to process`);
+          for (const image of images) {
+            try {
+              const processedImage = await ImageProcessor.processBase64Image(image);
+              processedContent = processedContent.replace(image, processedImage);
+            } catch (imageError) {
+              console.error("Failed to process content image:", imageError);
+              // Continue with other images, don't fail the entire post
+            }
+          }
+          console.log("Content images processed successfully");
+        }
+      }
       
       // Transform the data before validation
       const transformedData = {
         ...req.body,
+        featuredImage: processedFeaturedImage,
+        content: processedContent,
         // Convert scheduledFor string to timestamp if provided
         scheduledFor: req.body.scheduledFor ? new Date(req.body.scheduledFor) : null,
         // Ensure tags is an array
@@ -225,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         postData.excerpt = postData.content.slice(0, 150) + "...";
       }
 
-      console.log("Validated blog post data:", JSON.stringify(postData, null, 2));
+      console.log("Creating blog post with processed images...");
       const post = await storage.createBlogPost(postData);
       res.json(post);
     } catch (error) {
