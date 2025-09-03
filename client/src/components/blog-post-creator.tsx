@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit } from "lucide-react";
+import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -38,6 +39,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [newTag, setNewTag] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
+  const [showContentImageUploader, setShowContentImageUploader] = useState(false);
 
   const form = useForm<AdvancedBlogPost>({
     resolver: zodResolver(advancedBlogPostSchema),
@@ -86,6 +88,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     setWordCount(words);
     const readTime = Math.max(1, Math.ceil(words / 200)); // ~200 words per minute
     form.setValue("readTime", readTime);
+  };
+
+  // Handle image insertion into content
+  const insertImageIntoContent = (imageUrl: string) => {
+    const currentContent = form.getValues("content");
+    const imageMarkdown = `\n\n![Image](${imageUrl})\n\n`;
+    const newContent = currentContent + imageMarkdown;
+    form.setValue("content", newContent);
+    handleContentChange(newContent);
+    setShowContentImageUploader(false);
+    toast({
+      title: "Image inserted",
+      description: "The image has been added to your blog content"
+    });
   };
 
   // Add tag functionality
@@ -214,10 +230,40 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                       <FormItem>
                         <FormLabel className="flex items-center justify-between">
                           Content *
-                          <span className="text-sm text-muted-foreground">
-                            {wordCount} words • {form.watch("readTime")} min read
-                          </span>
+                          <div className="flex items-center gap-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowContentImageUploader(!showContentImageUploader)}
+                              className="flex items-center gap-1"
+                            >
+                              <Image className="h-3 w-3" />
+                              Insert Image
+                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                              {wordCount} words • {form.watch("readTime")} min read
+                            </span>
+                          </div>
                         </FormLabel>
+                        {showContentImageUploader && (
+                          <div className="border rounded-lg p-4 bg-gray-50 mb-2">
+                            <ImageUploader
+                              onImageUpload={insertImageIntoContent}
+                              buttonText="Upload Image for Content"
+                              className="w-full"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowContentImageUploader(false)}
+                              className="mt-2"
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        )}
                         <FormControl>
                           <Textarea 
                             {...field}
@@ -226,7 +272,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                               handleContentChange(e.target.value);
                             }}
                             className="min-h-[400px] font-mono"
-                            placeholder="Write your blog post content here... Use Markdown for formatting."
+                            placeholder="Write your blog post content here... Use Markdown for formatting.
+
+You can also click 'Insert Image' to add images to your content."
                             data-testid="input-blog-content"
                           />
                         </FormControl>
@@ -309,17 +357,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                               <Image className="h-4 w-4" />
-                              Featured Image URL
+                              Featured Image
                             </FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field}
-                                value={field.value || ""}
-                                placeholder="https://example.com/image.jpg"
-                                data-testid="input-featured-image"
+                              <ImageUploader
+                                onImageUpload={field.onChange}
+                                currentImage={field.value || ""}
+                                buttonText="Upload Featured Image"
+                                className="w-full"
                               />
                             </FormControl>
                             <FormMessage />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Upload an image for your blog post preview (max 5MB)
+                            </p>
                           </FormItem>
                         )}
                       />

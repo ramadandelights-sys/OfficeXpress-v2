@@ -77,7 +77,7 @@ function AdminDashboard() {
 
   const createBlogPostMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest("/api/admin/blog-posts", "POST", data);
+      return await apiRequest("POST", "/api/admin/blog-posts", data);
     },
     onSuccess: () => {
       toast({ title: "Blog post created successfully" });
@@ -92,7 +92,7 @@ function AdminDashboard() {
 
   const updateBlogPostMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateBlogPost }) => {
-      return await apiRequest(`/api/admin/blog-posts/${id}`, "PUT", data);
+      return await apiRequest("PUT", `/api/admin/blog-posts/${id}`, data);
     },
     onSuccess: () => {
       toast({ title: "Blog post updated successfully" });
@@ -107,7 +107,7 @@ function AdminDashboard() {
 
   const deleteBlogPostMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/admin/blog-posts/${id}`, "DELETE");
+      return await apiRequest("DELETE", `/api/admin/blog-posts/${id}`);
     },
     onSuccess: () => {
       toast({ title: "Blog post deleted successfully" });
@@ -121,7 +121,7 @@ function AdminDashboard() {
 
   const updatePortfolioClientMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdatePortfolioClient }) => {
-      return await apiRequest(`/api/admin/portfolio-clients/${id}`, "PUT", data);
+      return await apiRequest("PUT", `/api/admin/portfolio-clients/${id}`, data);
     },
     onSuccess: () => {
       toast({ title: "Portfolio client updated successfully" });
@@ -135,7 +135,7 @@ function AdminDashboard() {
 
   const deletePortfolioClientMutation = useMutation({
     mutationFn: async (id: string) => {
-      return await apiRequest(`/api/admin/portfolio-clients/${id}`, "DELETE");
+      return await apiRequest("DELETE", `/api/admin/portfolio-clients/${id}`);
     },
     onSuccess: () => {
       toast({ title: "Portfolio client deleted successfully" });
