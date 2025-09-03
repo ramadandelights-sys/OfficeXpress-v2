@@ -6,7 +6,7 @@
       "use": "@vercel/node"
     },
     {
-      "src": "client/dist/**",
+      "src": "dist/public/**",
       "use": "@vercel/static"
     }
   ],
@@ -17,23 +17,23 @@
     },
     {
       "src": "/static/(.*)",
-      "dest": "/client/dist/static/$1"
+      "dest": "/dist/public/static/$1"
     },
     {
       "src": "/assets/(.*)",
-      "dest": "/client/dist/assets/$1"
+      "dest": "/dist/public/assets/$1"
     },
     {
       "src": "/logo.jpg",
-      "dest": "/client/dist/logo.jpg"
+      "dest": "/dist/public/logo.jpg"
     },
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|txt))",
-      "dest": "/client/dist/$1"
+      "dest": "/dist/public/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/client/dist/index.html"
+      "dest": "/dist/public/index.html"
     }
   ]
 }
