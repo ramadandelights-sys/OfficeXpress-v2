@@ -25,28 +25,29 @@ import type {
 import { updateBlogPostSchema, updatePortfolioClientSchema } from "@shared/schema";
 
 export default function Admin() {
-  const { toast } = useToast();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
-  const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
 
   useEffect(() => {
     const authStatus = sessionStorage.getItem("adminAuthenticated");
     setIsAuthenticated(authStatus === "true");
   }, []);
 
-  const handleLogout = () => {
-    sessionStorage.removeItem("adminAuthenticated");
-    setIsAuthenticated(false);
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of the admin panel",
-    });
-  };
-
   if (!isAuthenticated) {
     return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
   }
+
+  return <AdminDashboard />;
+}
+
+function AdminDashboard() {
+  const { toast } = useToast();
+  const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
+  const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminAuthenticated");
+    window.location.reload(); // Reload to reset the component state
+  };
 
   const { data: blogPosts = [], isLoading: loadingPosts } = useQuery<BlogPost[]>({
     queryKey: ["/api/admin/blog-posts"],
