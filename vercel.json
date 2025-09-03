@@ -19,6 +19,10 @@
       "dest": "/api/index.ts"
     },
     {
+      "src": "/(about|blog|corporate|rental|vendor|contact|admin|portfolio).*",
+      "dest": "/dist/public/index.html"
+    },
+    {
       "src": "/(.*)",
       "dest": "/dist/public/$1"
     }

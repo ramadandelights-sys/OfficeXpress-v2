@@ -1,19 +1,54 @@
 // Vercel serverless function entry point
-import express from "express";
-import { registerRoutes } from "../server/routes.js";
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const app = express();
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+// Simple test endpoint first
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-// Initialize routes
-await registerRoutes(app);
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
 
-// Error handling middleware
-app.use((err, _req, res, _next) => {
-  const status = err.status || err.statusCode || 500;
-  const message = err.message || "Internal Server Error";
-  res.status(status).json({ message });
-});
+  try {
+    // Simple API response for testing
+    const path = req.url || '';
+    
+    if (path.includes('blog-posts')) {
+      res.status(200).json([
+        {
+          id: "test-1",
+          title: "Welcome to OfficeXpress",
+          content: "Your transportation service is now live!",
+          slug: "welcome-to-officexpress",
+          createdAt: new Date().toISOString()
+        }
+      ]);
+      return;
+    }
 
-export default app;
+    if (path.includes('portfolio-clients')) {
+      res.status(200).json([]);
+      return;
+    }
+
+    // Default response
+    res.status(200).json({ 
+      message: "OfficeXpress API is running",
+      path,
+      method: req.method,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('API Error:', error);
+    res.status(500).json({ 
+      error: 'Internal Server Error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
