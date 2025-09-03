@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -11,7 +11,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { BlogPost, PortfolioClient, UpdateBlogPost, UpdatePortfolioClient } from "@shared/schema";
+import type { 
+  BlogPost, 
+  PortfolioClient, 
+  UpdateBlogPost, 
+  UpdatePortfolioClient,
+  CorporateBooking,
+  RentalBooking,
+  VendorRegistration,
+  ContactMessage
+} from "@shared/schema";
 import { updateBlogPostSchema, updatePortfolioClientSchema } from "@shared/schema";
 
 export default function Admin() {
@@ -25,6 +34,22 @@ export default function Admin() {
 
   const { data: portfolioClients = [], isLoading: loadingClients } = useQuery<PortfolioClient[]>({
     queryKey: ["/api/portfolio-clients"],
+  });
+
+  const { data: corporateBookings = [], isLoading: loadingCorporate } = useQuery<CorporateBooking[]>({
+    queryKey: ["/api/admin/corporate-bookings"],
+  });
+
+  const { data: rentalBookings = [], isLoading: loadingRental } = useQuery<RentalBooking[]>({
+    queryKey: ["/api/admin/rental-bookings"],
+  });
+
+  const { data: vendorRegistrations = [], isLoading: loadingVendors } = useQuery<VendorRegistration[]>({
+    queryKey: ["/api/admin/vendor-registrations"],
+  });
+
+  const { data: contactMessages = [], isLoading: loadingMessages } = useQuery<ContactMessage[]>({
+    queryKey: ["/api/admin/contact-messages"],
   });
 
   const updateBlogPostMutation = useMutation({
@@ -157,7 +182,7 @@ export default function Admin() {
         </Card>
 
         {/* Portfolio Clients Management */}
-        <Card>
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" data-testid="heading-portfolio-management">
               <Edit className="h-5 w-5" />
@@ -215,6 +240,211 @@ export default function Admin() {
                         </div>
                       </div>
                     )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Corporate Bookings */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-corporate-bookings">
+              <Building className="h-5 w-5" />
+              Corporate Booking Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingCorporate ? (
+              <div className="text-center py-8" data-testid="loading-corporate-bookings">Loading corporate bookings...</div>
+            ) : corporateBookings.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No corporate bookings yet</div>
+            ) : (
+              <div className="space-y-4">
+                {corporateBookings.map((booking) => (
+                  <div key={booking.id} className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg" data-testid={`corporate-company-${booking.id}`}>
+                          {booking.companyName}
+                        </h3>
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Contact:</span> {booking.customerName}
+                          </div>
+                          <div>
+                            <span className="font-medium">Phone:</span> {booking.phone}
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span> {booking.email}
+                          </div>
+                          <div>
+                            <span className="font-medium">Service:</span> {booking.serviceType || "Not specified"}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Submitted: {new Date(booking.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Rental Bookings */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-rental-bookings">
+              <Car className="h-5 w-5" />
+              Rental Booking Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingRental ? (
+              <div className="text-center py-8" data-testid="loading-rental-bookings">Loading rental bookings...</div>
+            ) : rentalBookings.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No rental bookings yet</div>
+            ) : (
+              <div className="space-y-4">
+                {rentalBookings.map((booking) => (
+                  <div key={booking.id} className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg" data-testid={`rental-customer-${booking.id}`}>
+                          {booking.customerName}
+                        </h3>
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Phone:</span> {booking.phone}
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span> {booking.email}
+                          </div>
+                          <div>
+                            <span className="font-medium">Service:</span> {booking.serviceType || "Not specified"}
+                          </div>
+                          <div>
+                            <span className="font-medium">Duration:</span> {booking.duration || "Not specified"}
+                          </div>
+                          <div>
+                            <span className="font-medium">Pickup Date:</span> {booking.pickupDate || "Not specified"}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Submitted: {new Date(booking.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Vendor Registrations */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-vendor-registrations">
+              <Users className="h-5 w-5" />
+              Vendor Registration Applications
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingVendors ? (
+              <div className="text-center py-8" data-testid="loading-vendor-registrations">Loading vendor registrations...</div>
+            ) : vendorRegistrations.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No vendor applications yet</div>
+            ) : (
+              <div className="space-y-4">
+                {vendorRegistrations.map((vendor) => (
+                  <div key={vendor.id} className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg" data-testid={`vendor-company-${vendor.id}`}>
+                          {vendor.fullName}
+                        </h3>
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Phone:</span> {vendor.phone}
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span> {vendor.email}
+                          </div>
+                          <div>
+                            <span className="font-medium">Location:</span> {vendor.location}
+                          </div>
+                          <div>
+                            <span className="font-medium">Service:</span> {vendor.serviceModality}
+                          </div>
+                          <div>
+                            <span className="font-medium">Experience:</span> {vendor.experience || "Not specified"}
+                          </div>
+                          <div>
+                            <span className="font-medium">Vehicle Types:</span> {vendor.vehicleTypes?.join(", ") || "Not specified"}
+                          </div>
+                        </div>
+                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="font-medium">Additional Info:</span> {vendor.additionalInfo || "None"}
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Applied: {new Date(vendor.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Contact Messages */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-contact-messages">
+              <MessageSquare className="h-5 w-5" />
+              Contact Form Messages
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingMessages ? (
+              <div className="text-center py-8" data-testid="loading-contact-messages">Loading contact messages...</div>
+            ) : contactMessages.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">No contact messages yet</div>
+            ) : (
+              <div className="space-y-4">
+                {contactMessages.map((message) => (
+                  <div key={message.id} className="border rounded-lg p-4 bg-orange-50 dark:bg-orange-900/20">
+                    <div className="flex justify-between items-start">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg" data-testid={`message-name-${message.id}`}>
+                          {message.name}
+                        </h3>
+                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Phone:</span> {message.phone}
+                          </div>
+                          <div>
+                            <span className="font-medium">Email:</span> {message.email}
+                          </div>
+                          <div className="col-span-2">
+                            <span className="font-medium">Subject:</span> {message.subject}
+                          </div>
+                        </div>
+                        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                          <span className="font-medium">Message:</span>
+                          <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
+                        </div>
+                        <div className="mt-2 text-xs text-gray-500">
+                          Received: {new Date(message.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

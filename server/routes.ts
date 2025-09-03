@@ -193,6 +193,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/admin/corporate-bookings", async (req, res) => {
+    try {
+      const bookings = await storage.getCorporateBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch corporate bookings" });
+    }
+  });
+
+  app.get("/api/admin/rental-bookings", async (req, res) => {
+    try {
+      const bookings = await storage.getRentalBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch rental bookings" });
+    }
+  });
+
+  app.get("/api/admin/vendor-registrations", async (req, res) => {
+    try {
+      const vendors = await storage.getVendorRegistrations();
+      res.json(vendors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch vendor registrations" });
+    }
+  });
+
+  app.get("/api/admin/contact-messages", async (req, res) => {
+    try {
+      const messages = await storage.getContactMessages();
+      res.json(messages);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch contact messages" });
+    }
+  });
+
   app.put("/api/admin/blog-posts/:id", async (req, res) => {
     try {
       const postData = updateBlogPostSchema.parse({ ...req.body, id: req.params.id });
