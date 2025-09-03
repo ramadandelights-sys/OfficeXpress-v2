@@ -2,33 +2,38 @@
   "version": 2,
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/public"
-      }
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "client/dist/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
       "src": "/static/(.*)",
-      "dest": "/dist/public/static/$1"
+      "dest": "/client/dist/static/$1"
     },
     {
       "src": "/assets/(.*)",
-      "dest": "/dist/public/assets/$1"
+      "dest": "/client/dist/assets/$1"
     },
     {
       "src": "/logo.jpg",
-      "dest": "/dist/public/logo.jpg"
+      "dest": "/client/dist/logo.jpg"
     },
     {
       "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|json|txt))",
-      "dest": "/dist/public/$1"
+      "dest": "/client/dist/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/public/index.html"
+      "dest": "/client/dist/index.html"
     }
   ]
 }
