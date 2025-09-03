@@ -32,12 +32,19 @@ export default function Header() {
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
-            <div className="flex items-center space-x-2">
-              <Car className="h-8 w-8 text-brand-primary" />
-              <span className="text-xl font-bold text-brand-primary">
-                OfficeXpress
-              </span>
-            </div>
+            <img 
+              src="/logo.jpg" 
+              alt="OfficeXpress Logo" 
+              className="h-10 w-auto"
+              onError={(e) => {
+                // If image fails to load, show text fallback
+                e.currentTarget.style.display = 'none';
+                const textLogo = document.createElement('div');
+                textLogo.className = 'flex items-center space-x-2';
+                textLogo.innerHTML = '<svg class="h-8 w-8 text-brand-primary" fill="currentColor" viewBox="0 0 24 24"><path d="M9.78 2.78A.75.75 0 0 1 10.5 2h3a.75.75 0 0 1 .72.53l.5 1.5h5.03a.75.75 0 0 1 0 1.5H18v10.25A2.75 2.75 0 0 1 15.25 18H8.75A2.75 2.75 0 0 1 6 15.25V5.5H4.25a.75.75 0 0 1 0-1.5h5.03l.5-1.5zM7.5 5.5v9.75c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V5.5h-9z"/></svg><span class="text-xl font-bold text-brand-primary">OfficeXpress</span>';
+                e.currentTarget.parentNode?.appendChild(textLogo);
+              }}
+            />
           </Link>
 
           {/* Desktop Navigation */}

@@ -1,6 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import path from "path";
+import fs from "fs";
 import { 
   insertCorporateBookingSchema,
   insertRentalBookingSchema,
@@ -14,6 +16,16 @@ import {
 import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Logo serving route
+  app.get("/logo.jpg", (req, res) => {
+    const logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "OfficeXpress_logo_1756864809144.jpg");
+    if (fs.existsSync(logoPath)) {
+      res.sendFile(logoPath);
+    } else {
+      res.status(404).send("Logo not found");
+    }
+  });
+
   // Corporate booking routes
   app.post("/api/corporate-bookings", async (req, res) => {
     try {
