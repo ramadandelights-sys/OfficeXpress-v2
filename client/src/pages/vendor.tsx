@@ -295,8 +295,11 @@ export default function Vendor() {
 
                     <Button 
                       type="submit" 
-                      className="w-full text-white hover:opacity-90" 
-                      style={{ backgroundColor: "#75e3ec" }}
+                      className="w-full text-white transition-all duration-200 hover:opacity-90 active:scale-95" 
+                      style={{ 
+                        backgroundColor: mutation.isPending ? "#7db8bd" : "#4c9096",
+                        transform: mutation.isPending ? "scale(0.98)" : "scale(1)"
+                      }}
                       disabled={mutation.isPending}
                       data-testid="button-submit-vendor"
                     >
