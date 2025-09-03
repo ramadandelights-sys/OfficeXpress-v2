@@ -223,7 +223,7 @@ export default function Rental() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-brand-secondary text-secondary-foreground hover:bg-brand-secondary/90" 
+                      className="w-full bg-brand-slate text-white hover:bg-brand-slate/90" 
                       disabled={mutation.isPending}
                       data-testid="button-submit-rental"
                     >

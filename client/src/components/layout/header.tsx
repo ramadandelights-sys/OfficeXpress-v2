@@ -18,6 +18,7 @@ export default function Header() {
     { name: "Vendors", href: "/vendor" },
     { name: "Contact", href: "/contact" },
     { name: "Blog", href: "/blog" },
+    { name: "Admin", href: "/admin" },
   ];
 
   const isActive = (href: string) => {
@@ -31,10 +32,11 @@ export default function Header() {
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
-            <div className="w-10 h-10 bg-brand-primary rounded-lg flex items-center justify-center">
-              <Car className="text-primary-foreground w-6 h-6" />
-            </div>
-            <span className="text-2xl font-bold text-primary-foreground">OfficeXpress</span>
+            <img 
+              src="/attached_assets/OfficeXpress_logo_1756863810405.png" 
+              alt="OfficeXpress Logo" 
+              className="h-10 w-auto"
+            />
           </Link>
 
           {/* Desktop Navigation */}
@@ -43,10 +45,10 @@ export default function Header() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`font-medium transition-colors ${
+                className={`font-medium transition-colors px-3 py-2 rounded-lg ${
                   isActive(item.href)
-                    ? "text-primary"
-                    : "text-foreground hover:text-primary"
+                    ? "bg-brand-primary text-primary-foreground"
+                    : "text-foreground hover:text-primary hover:bg-brand-primary/10"
                 }`}
                 data-testid={`nav-${item.name.toLowerCase().replace(" ", "-")}`}
               >
@@ -88,10 +90,10 @@ export default function Header() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`font-medium transition-colors ${
+                  className={`font-medium transition-colors px-3 py-2 rounded-lg ${
                     isActive(item.href)
-                      ? "text-primary"
-                      : "text-foreground hover:text-primary"
+                      ? "bg-brand-primary text-primary-foreground"
+                      : "text-foreground hover:text-primary hover:bg-brand-primary/10"
                   }`}
                   onClick={() => setIsMobileMenuOpen(false)}
                   data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}

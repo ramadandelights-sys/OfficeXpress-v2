@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { Star } from "lucide-react";
 import PortfolioTile from "@/components/portfolio-tile";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { PortfolioClient } from "@shared/schema";
 
 export default function Portfolio() {
@@ -124,20 +126,21 @@ export default function Portfolio() {
               Experience the same level of professional transportation service that our clients trust every day.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <a 
-                href="/corporate" 
-                className="bg-brand-primary text-primary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-brand-primary/90 transition-colors inline-block"
+              <Button 
+                className="bg-brand-slate text-white hover:bg-brand-slate/90"
+                asChild
                 data-testid="cta-corporate"
               >
-                Corporate Services
-              </a>
-              <a 
-                href="/rental" 
-                className="bg-brand-secondary text-secondary-foreground px-8 py-3 rounded-lg font-semibold hover:bg-brand-secondary/90 transition-colors inline-block"
+                <Link href="/corporate">Corporate Services</Link>
+              </Button>
+              <Button 
+                variant="outline"
+                className="border-2 border-brand-slate text-brand-slate hover:bg-brand-slate hover:text-white"
+                asChild
                 data-testid="cta-rental"
               >
-                Rental Services
-              </a>
+                <Link href="/rental">Rental Services</Link>
+              </Button>
             </div>
           </div>
         </div>

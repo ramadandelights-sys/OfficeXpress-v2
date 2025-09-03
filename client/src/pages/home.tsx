@@ -32,7 +32,7 @@ export default function Home() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
-                  className="bg-brand-accent text-accent-foreground px-8 py-4 rounded-lg font-semibold hover:bg-brand-accent/90 transition-colors"
+                  className="bg-brand-slate text-white px-8 py-4 rounded-lg font-semibold hover:bg-brand-slate/90 transition-colors"
                   asChild
                   data-testid="book-service-btn"
                 >
@@ -43,7 +43,7 @@ export default function Home() {
                 </Button>
                 <Button 
                   variant="outline"
-                  className="border-2 border-white text-white px-8 py-4 rounded-lg font-semibold hover:bg-white hover:text-primary-foreground transition-colors"
+                  className="border-2 border-brand-slate text-brand-slate bg-white px-8 py-4 rounded-lg font-semibold hover:bg-brand-slate hover:text-white transition-colors"
                   asChild
                   data-testid="learn-more-btn"
                 >
@@ -153,7 +153,11 @@ export default function Home() {
             </div>
 
             <div className="text-center">
-              <Button asChild data-testid="view-portfolio-btn">
+              <Button 
+                className="bg-brand-slate text-white hover:bg-brand-slate/90"
+                asChild 
+                data-testid="view-portfolio-btn"
+              >
                 <Link href="/portfolio">View Full Portfolio</Link>
               </Button>
             </div>
@@ -207,7 +211,12 @@ export default function Home() {
             </div>
 
             <div className="text-center">
-              <Button variant="outline" asChild data-testid="view-blog-btn">
+              <Button 
+                variant="outline"
+                className="border-2 border-brand-slate text-brand-slate hover:bg-brand-slate hover:text-white"
+                asChild 
+                data-testid="view-blog-btn"
+              >
                 <Link href="/blog">View All Posts</Link>
               </Button>
             </div>

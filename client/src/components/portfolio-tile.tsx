@@ -20,8 +20,8 @@ export default function PortfolioTile({ client }: PortfolioTileProps) {
   };
 
   return (
-    <div className="portfolio-tile bg-white rounded-lg shadow-md border border-border overflow-hidden group">
-      <div className="h-full flex items-center justify-center p-8 relative">
+    <div className="portfolio-tile bg-white rounded-lg shadow-md border border-border overflow-hidden group aspect-square">
+      <div className="w-full h-full flex items-center justify-center p-6 relative">
         <img
           src={allImages[currentImageIndex]}
           alt={`${client.name} - Image ${currentImageIndex + 1}`}
@@ -34,7 +34,7 @@ export default function PortfolioTile({ client }: PortfolioTileProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="portfolio-nav prev absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-brand-slate/80 hover:bg-brand-slate text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={navigateToPrev}
               data-testid={`prev-image-${client.id}`}
             >
@@ -43,7 +43,7 @@ export default function PortfolioTile({ client }: PortfolioTileProps) {
             <Button
               variant="ghost"
               size="icon"
-              className="portfolio-nav next absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-brand-slate/80 hover:bg-brand-slate text-white rounded-full w-8 h-8 opacity-0 group-hover:opacity-100 transition-opacity"
               onClick={navigateToNext}
               data-testid={`next-image-${client.id}`}
             >

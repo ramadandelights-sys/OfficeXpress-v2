@@ -219,7 +219,7 @@ export default function Corporate() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-brand-primary text-primary-foreground hover:bg-brand-primary/90" 
+                      className="w-full bg-brand-slate text-white hover:bg-brand-slate/90" 
                       disabled={mutation.isPending}
                       data-testid="button-submit-corporate"
                     >

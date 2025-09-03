@@ -9,10 +9,11 @@ export default function Footer() {
           {/* Company Info */}
           <div>
             <div className="flex items-center space-x-3 mb-6">
-              <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
-                <Car className="text-primary-foreground w-5 h-5" />
-              </div>
-              <span className="text-xl font-bold">OfficeXpress</span>
+              <img 
+                src="/attached_assets/OfficeXpress_logo_1756863810405.png" 
+                alt="OfficeXpress Logo" 
+                className="h-8 w-auto"
+              />
             </div>
             <p className="text-gray-300 mb-4">
               Professional transportation solutions for businesses and individuals across Bangladesh.

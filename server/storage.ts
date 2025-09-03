@@ -18,8 +18,10 @@ import {
   type InsertContactMessage,
   type BlogPost,
   type InsertBlogPost,
+  type UpdateBlogPost,
   type PortfolioClient,
-  type InsertPortfolioClient
+  type InsertPortfolioClient,
+  type UpdatePortfolioClient
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -54,6 +56,13 @@ export interface IStorage {
   // Portfolio clients
   createPortfolioClient(client: InsertPortfolioClient): Promise<PortfolioClient>;
   getPortfolioClients(): Promise<PortfolioClient[]>;
+  updatePortfolioClient(client: UpdatePortfolioClient): Promise<PortfolioClient>;
+  deletePortfolioClient(id: string): Promise<void>;
+  
+  // Admin blog operations
+  getAllBlogPosts(): Promise<BlogPost[]>;
+  updateBlogPost(post: UpdateBlogPost): Promise<BlogPost>;
+  deleteBlogPost(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -156,6 +165,36 @@ export class DatabaseStorage implements IStorage {
 
   async getPortfolioClients(): Promise<PortfolioClient[]> {
     return await db.select().from(portfolioClients).orderBy(desc(portfolioClients.createdAt));
+  }
+
+  async updatePortfolioClient(client: UpdatePortfolioClient): Promise<PortfolioClient> {
+    const [updatedClient] = await db
+      .update(portfolioClients)
+      .set(client)
+      .where(eq(portfolioClients.id, client.id))
+      .returning();
+    return updatedClient;
+  }
+
+  async deletePortfolioClient(id: string): Promise<void> {
+    await db.delete(portfolioClients).where(eq(portfolioClients.id, id));
+  }
+
+  async getAllBlogPosts(): Promise<BlogPost[]> {
+    return await db.select().from(blogPosts).orderBy(desc(blogPosts.createdAt));
+  }
+
+  async updateBlogPost(post: UpdateBlogPost): Promise<BlogPost> {
+    const [updatedPost] = await db
+      .update(blogPosts)
+      .set(post)
+      .where(eq(blogPosts.id, post.id))
+      .returning();
+    return updatedPost;
+  }
+
+  async deleteBlogPost(id: string): Promise<void> {
+    await db.delete(blogPosts).where(eq(blogPosts.id, id));
   }
 }
 

@@ -8,6 +8,7 @@ export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  isAdmin: boolean("is_admin").default(false),
 });
 
 export const corporateBookings = pgTable("corporate_bookings", {
@@ -115,6 +116,20 @@ export const insertUserSchema = createInsertSchema(users).pick({
   password: true,
 });
 
+export const updateBlogPostSchema = createInsertSchema(blogPosts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  id: z.string(),
+});
+
+export const updatePortfolioClientSchema = createInsertSchema(portfolioClients).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  id: z.string(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -130,3 +145,5 @@ export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = z.infer<typeof insertBlogPostSchema>;
 export type PortfolioClient = typeof portfolioClients.$inferSelect;
 export type InsertPortfolioClient = z.infer<typeof insertPortfolioClientSchema>;
+export type UpdateBlogPost = z.infer<typeof updateBlogPostSchema>;
+export type UpdatePortfolioClient = z.infer<typeof updatePortfolioClientSchema>;

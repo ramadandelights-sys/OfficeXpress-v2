@@ -7,7 +7,9 @@ import {
   insertVendorRegistrationSchema,
   insertContactMessageSchema,
   insertBlogPostSchema,
-  insertPortfolioClientSchema
+  insertPortfolioClientSchema,
+  updateBlogPostSchema,
+  updatePortfolioClientSchema
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -166,6 +168,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(clients);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch portfolio clients" });
+    }
+  });
+
+  // Admin routes
+  app.get("/api/admin/blog-posts", async (req, res) => {
+    try {
+      const posts = await storage.getAllBlogPosts();
+      res.json(posts);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch all blog posts" });
+    }
+  });
+
+  app.put("/api/admin/blog-posts/:id", async (req, res) => {
+    try {
+      const postData = updateBlogPostSchema.parse({ ...req.body, id: req.params.id });
+      const post = await storage.updateBlogPost(postData);
+      res.json(post);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update blog post" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/blog-posts/:id", async (req, res) => {
+    try {
+      await storage.deleteBlogPost(req.params.id);
+      res.json({ message: "Blog post deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete blog post" });
+    }
+  });
+
+  app.put("/api/admin/portfolio-clients/:id", async (req, res) => {
+    try {
+      const clientData = updatePortfolioClientSchema.parse({ ...req.body, id: req.params.id });
+      const client = await storage.updatePortfolioClient(clientData);
+      res.json(client);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid client data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to update portfolio client" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/portfolio-clients/:id", async (req, res) => {
+    try {
+      await storage.deletePortfolioClient(req.params.id);
+      res.json({ message: "Portfolio client deleted successfully" });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete portfolio client" });
     }
   });
 

@@ -295,7 +295,7 @@ export default function Vendor() {
 
                     <Button 
                       type="submit" 
-                      className="w-full bg-brand-accent text-accent-foreground hover:bg-brand-accent/90" 
+                      className="w-full bg-brand-slate text-white hover:bg-brand-slate/90" 
                       disabled={mutation.isPending}
                       data-testid="button-submit-vendor"
                     >
