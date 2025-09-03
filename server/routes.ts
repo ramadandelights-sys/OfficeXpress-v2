@@ -195,7 +195,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/blog-posts", async (req, res) => {
     try {
-      const postData = insertBlogPostSchema.parse(req.body);
+      console.log("Received blog post data:", JSON.stringify(req.body, null, 2));
+      
+      // Transform the data before validation
+      const transformedData = {
+        ...req.body,
+        // Convert scheduledFor string to timestamp if provided
+        scheduledFor: req.body.scheduledFor ? new Date(req.body.scheduledFor) : null,
+        // Ensure tags is an array
+        tags: Array.isArray(req.body.tags) ? req.body.tags : [],
+        // Set publishedAt if published is true
+        publishedAt: req.body.published ? new Date() : null,
+      };
+      
+      const postData = insertBlogPostSchema.parse(transformedData);
       
       // Generate slug if not provided
       if (!postData.slug && postData.title) {
@@ -207,14 +220,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .trim();
       }
 
+      // Auto-generate excerpt if empty
+      if (!postData.excerpt && postData.content) {
+        postData.excerpt = postData.content.slice(0, 150) + "...";
+      }
+
+      console.log("Validated blog post data:", JSON.stringify(postData, null, 2));
       const post = await storage.createBlogPost(postData);
       res.json(post);
     } catch (error) {
+      console.error("Blog post creation error:", error);
       if (error instanceof z.ZodError) {
+        console.error("Validation errors:", error.errors);
         res.status(400).json({ message: "Invalid blog post data", errors: error.errors });
       } else {
-        console.error("Blog post creation error:", error);
-        res.status(500).json({ message: "Failed to create blog post" });
+        res.status(500).json({ message: "Failed to create blog post", error: error.message });
       }
     }
   });
