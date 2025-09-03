@@ -92,15 +92,18 @@ function AdminDashboard() {
 
   const updateBlogPostMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: UpdateBlogPost }) => {
+      console.log("🔄 Updating blog post:", id, data);
       return await apiRequest("PUT", `/api/admin/blog-posts/${id}`, data);
     },
     onSuccess: () => {
+      console.log("✅ Blog post updated successfully");
       toast({ title: "Blog post updated successfully" });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/blog-posts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/blog-posts"] });
       setEditingBlogPost(null);
     },
-    onError: () => {
+    onError: (error) => {
+      console.error("❌ Failed to update blog post:", error);
       toast({ title: "Failed to update blog post", variant: "destructive" });
     },
   });
@@ -546,9 +549,15 @@ function BlogPostEditForm({ post, onSave, onCancel, isLoading }: BlogPostEditFor
     },
   });
 
+  const handleFormSubmit = (data: UpdateBlogPost) => {
+    console.log("📝 Form submitted with data:", data);
+    console.log("📝 Form errors:", form.formState.errors);
+    onSave(data);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
         <FormField
           control={form.control}
           name="title"
