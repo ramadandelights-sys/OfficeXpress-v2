@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { generateSlug } from "@/lib/slugUtils";
 import type { 
   BlogPost, 
   PortfolioClient, 
@@ -541,6 +542,7 @@ function BlogPostEditForm({ post, onSave, onCancel, isLoading }: BlogPostEditFor
     defaultValues: {
       id: post.id,
       title: post.title,
+      slug: post.slug,
       excerpt: post.excerpt,
       content: post.content,
       category: post.category,
@@ -548,6 +550,15 @@ function BlogPostEditForm({ post, onSave, onCancel, isLoading }: BlogPostEditFor
       published: post.published || false,
     },
   });
+
+  // Auto-generate slug when title changes
+  const watchedTitle = form.watch("title");
+  useEffect(() => {
+    if (watchedTitle) {
+      const newSlug = generateSlug(watchedTitle);
+      form.setValue("slug", newSlug);
+    }
+  }, [watchedTitle, form]);
 
   const handleFormSubmit = (data: UpdateBlogPost) => {
     console.log("📝 Form submitted with data:", data);
@@ -569,6 +580,25 @@ function BlogPostEditForm({ post, onSave, onCancel, isLoading }: BlogPostEditFor
               </FormControl>
               <FormMessage />
             </FormItem>
+          )}
+        />
+
+        {/* Auto-generated slug display */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            URL Slug (Auto-generated)
+          </label>
+          <div className="px-3 py-2 bg-gray-50 dark:bg-gray-800 border rounded-md text-sm text-gray-600 dark:text-gray-400">
+            {form.watch("slug") || "slug-will-appear-here"}
+          </div>
+        </div>
+
+        {/* Hidden slug field for form submission */}
+        <FormField
+          control={form.control}
+          name="slug"
+          render={({ field }) => (
+            <input type="hidden" {...field} />
           )}
         />
 
