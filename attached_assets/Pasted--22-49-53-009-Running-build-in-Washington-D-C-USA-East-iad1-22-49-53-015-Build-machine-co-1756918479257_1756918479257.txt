@@ -1,0 +1,70 @@
+[22:49:53.009] Running build in Washington, D.C., USA (East) – iad1
+[22:49:53.015] Build machine configuration: 2 cores, 8 GB
+[22:49:53.081] Cloning github.com/ramadandelights-sys/OfficeXpress (Branch: main, Commit: c5e81ec)
+[22:49:53.547] Previous build caches not available
+[22:49:54.920] Cloning completed: 1.839s
+[22:49:55.013] Found .vercelignore
+[22:49:55.078] Removed 68 ignored files defined in .vercelignore
+[22:49:55.085]   /.git/config
+[22:49:55.086]   /.git/description
+[22:49:55.086]   /.git/FETCH_HEAD
+[22:49:55.086]   /.git/HEAD
+[22:49:55.086]   /.git/hooks/applypatch-msg.sample
+[22:49:55.086]   /.git/hooks/commit-msg.sample
+[22:49:55.086]   /.git/hooks/fsmonitor-watchman.sample
+[22:49:55.086]   /.git/hooks/post-update.sample
+[22:49:55.086]   /.git/hooks/pre-applypatch.sample
+[22:49:55.086]   /.git/hooks/pre-commit.sample
+[22:49:55.619] Running "vercel build"
+[22:49:56.037] Vercel CLI 46.1.1
+[22:49:56.218] WARN! Due to `builds` existing in your configuration file, the Build and Development Settings defined in your Project Settings will not apply. Learn More: https://vercel.link/unused-build-settings
+[22:49:57.033] Installing dependencies...
+[22:50:03.112] npm warn deprecated @esbuild-kit/core-utils@3.3.2: Merged into tsx: https://tsx.is
+[22:50:03.113] npm warn deprecated @esbuild-kit/esm-loader@2.6.5: Merged into tsx: https://tsx.is
+[22:50:08.514] 
+[22:50:08.514] added 553 packages in 11s
+[22:50:08.514] 
+[22:50:08.514] 79 packages are looking for funding
+[22:50:08.514]   run `npm fund` for details
+[22:50:08.582] Running "npm run build"
+[22:50:08.694] 
+[22:50:08.694] > rest-express@1.0.0 build
+[22:50:08.694] > vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+[22:50:08.694] 
+[22:50:08.986] [36mvite v5.4.19 [32mbuilding for production...[36m[39m
+[22:50:09.037] transforming...
+[22:50:09.407] Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+[22:50:09.407]   npx update-browserslist-db@latest
+[22:50:09.407]   Why you should do it regularly: https://github.com/browserslist/update-db#readme
+[22:50:14.353] [32m✓[39m 1851 modules transformed.
+[22:50:14.767] rendering chunks...
+[22:50:14.779] computing gzip size...
+[22:50:14.798] [2m../dist/public/[22m[32mindex.html                 [39m[1m[2m  2.20 kB[22m[1m[22m[2m │ gzip:   0.86 kB[22m
+[22:50:14.799] [2m../dist/public/[22m[2massets/[22m[35mindex-DarEvn4i.css  [39m[1m[2m 86.14 kB[22m[1m[22m[2m │ gzip:  14.04 kB[22m
+[22:50:14.799] [2m../dist/public/[22m[2massets/[22m[36mindex-jpIpG5-8.js   [39m[1m[33m576.16 kB[39m[22m[2m │ gzip: 166.34 kB[22m
+[22:50:14.800] [33m
+[22:50:14.800] (!) Some chunks are larger than 500 kB after minification. Consider:
+[22:50:14.800] - Using dynamic import() to code-split the application
+[22:50:14.800] - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+[22:50:14.801] - Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+[22:50:14.801] [32m✓ built in 5.79s[39m
+[22:50:14.841] 
+[22:50:14.841]   dist/index.js  29.5kb
+[22:50:14.841] 
+[22:50:14.842] ⚡ Done in 7ms
+[22:50:15.080] Using TypeScript 5.6.3 (local user-provided)
+[22:51:15.257] api/index.ts(13,10): error TS7006: Parameter 'err' implicitly has an 'any' type.
+[22:51:15.258] api/index.ts(13,15): error TS7006: Parameter '_req' implicitly has an 'any' type.
+[22:51:15.258] api/index.ts(13,21): error TS7006: Parameter 'res' implicitly has an 'any' type.
+[22:51:15.258] api/index.ts(13,26): error TS7006: Parameter '_next' implicitly has an 'any' type.
+[22:51:15.259] 
+[22:51:16.727] server/routes.ts(278,78): error TS18046: 'error' is of type 'unknown'.
+[22:51:16.728] server/routes.ts(332,78): error TS18046: 'error' is of type 'unknown'.
+[22:51:16.728] 
+[22:51:19.605] Build Completed in /vercel/output [1m]
+[22:51:19.819] Deploying outputs...
+[22:51:28.433] Deployment completed
+[22:51:29.261] Creating build cache...
+[22:51:48.191] Created build cache: 18.926s
+[22:51:48.192] Uploading build cache [101.52 MB]
+[22:51:49.530] Build cache uploaded: 1.342s

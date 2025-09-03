@@ -1,4 +1,4 @@
-// Simple test endpoint to verify Vercel functions are working
+// Simple test endpoint to verify API is working
 module.exports = (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   
