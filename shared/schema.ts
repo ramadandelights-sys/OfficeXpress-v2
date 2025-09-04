@@ -97,6 +97,17 @@ export const portfolioClients = pgTable("portfolio_clients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const bangladeshLocations = pgTable("bangladesh_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  division: text("division").notNull(),
+  district: text("district").notNull(),
+  subordinate: text("subordinate"),
+  branch: text("branch"),
+  postCode: text("post_code"),
+  fullName: text("full_name").notNull(), // Combined display name
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -125,6 +136,11 @@ export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
 });
 
 export const insertPortfolioClientSchema = createInsertSchema(portfolioClients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBangladeshLocationSchema = createInsertSchema(bangladeshLocations).omit({
   id: true,
   createdAt: true,
 });
@@ -166,3 +182,5 @@ export type PortfolioClient = typeof portfolioClients.$inferSelect;
 export type InsertPortfolioClient = z.infer<typeof insertPortfolioClientSchema>;
 export type UpdateBlogPost = z.infer<typeof updateBlogPostSchema>;
 export type UpdatePortfolioClient = z.infer<typeof updatePortfolioClientSchema>;
+export type BangladeshLocation = typeof bangladeshLocations.$inferSelect;
+export type InsertBangladeshLocation = z.infer<typeof insertBangladeshLocationSchema>;

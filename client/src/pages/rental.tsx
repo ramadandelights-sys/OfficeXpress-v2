@@ -14,7 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertRentalBookingSchema, type InsertRentalBooking } from "@shared/schema";
-import { sortedBangladeshLocations } from "@/data/bangladeshLocations";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 
 // Extended schema for the new rental form
@@ -31,6 +31,12 @@ export default function Rental() {
   const queryClient = useQueryClient();
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  
+  // Fetch Bangladesh locations from database
+  const { data: locations = [] } = useQuery({
+    queryKey: ['/api/bangladesh-locations'],
+    select: (data: any[]) => data.map(location => location.fullName).sort()
+  });
   
   // Calculate number of months to show - 2 months if current date > 28th, otherwise 1
   const getNumberOfMonths = () => {
@@ -505,7 +511,7 @@ export default function Rental() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="max-h-60">
-                                {sortedBangladeshLocations.map((location) => (
+                                {locations.map((location) => (
                                   <SelectItem key={location} value={location}>
                                     {location}
                                   </SelectItem>
@@ -533,7 +539,7 @@ export default function Rental() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent className="max-h-60">
-                                {sortedBangladeshLocations.map((location) => (
+                                {locations.map((location) => (
                                   <SelectItem key={location} value={location}>
                                     {location}
                                   </SelectItem>

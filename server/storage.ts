@@ -6,6 +6,7 @@ import {
   contactMessages,
   blogPosts,
   portfolioClients,
+  bangladeshLocations,
   type User, 
   type InsertUser,
   type CorporateBooking,
@@ -21,7 +22,9 @@ import {
   type UpdateBlogPost,
   type PortfolioClient,
   type InsertPortfolioClient,
-  type UpdatePortfolioClient
+  type UpdatePortfolioClient,
+  type BangladeshLocation,
+  type InsertBangladeshLocation
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
@@ -63,6 +66,10 @@ export interface IStorage {
   getAllBlogPosts(): Promise<BlogPost[]>;
   updateBlogPost(post: UpdateBlogPost): Promise<BlogPost>;
   deleteBlogPost(id: string): Promise<void>;
+  
+  // Bangladesh locations
+  getBangladeshLocations(): Promise<BangladeshLocation[]>;
+  importBangladeshLocations(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -211,6 +218,45 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBlogPost(id: string): Promise<void> {
     await db.delete(blogPosts).where(eq(blogPosts.id, id));
+  }
+
+  async getBangladeshLocations(): Promise<BangladeshLocation[]> {
+    return await db.select().from(bangladeshLocations).orderBy(bangladeshLocations.fullName);
+  }
+
+  async importBangladeshLocations(): Promise<void> {
+    // Parse the Google Sheets data and import to database
+    const locationsData = [
+      // Sample of processed data from the Google Sheet
+      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Demra", postCode: "1360", fullName: "Demra, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Sarulia", postCode: "1361", fullName: "Sarulia, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Matuail", postCode: "1362", fullName: "Matuail, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka GPO", branch: "Dhaka GPO", postCode: "1000", fullName: "Dhaka GPO" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Main PO", branch: "Dhaka Main PO", postCode: "1100", fullName: "Dhaka Main PO" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Wari TSO", postCode: "1203", fullName: "Wari, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Gendaria TSO", postCode: "1204", fullName: "Gendaria, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "New Market TSO", postCode: "1205", fullName: "New Market, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Gulshan Model Town", postCode: "1212", fullName: "Gulshan, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Banani TSO", postCode: "1213", fullName: "Banani, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Mirpur TSO", postCode: "1218", fullName: "Mirpur, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Uttara Model TwonTSO", postCode: "1231", fullName: "Uttara, Dhaka" },
+      { division: "Dhaka", district: "Dhaka", subordinate: "Savar", branch: "Savar", postCode: "1340", fullName: "Savar, Dhaka" },
+      { division: "Chittagong", district: "Chittagong", subordinate: "Chittagong Sadar", branch: "Chittagong GPO", postCode: "4000", fullName: "Chittagong" },
+      { division: "Chittagong", district: "Cox's Bazar", subordinate: "Cox's Bazar Sadar", branch: "Cox's Bazar", postCode: "4700", fullName: "Cox's Bazar" },
+      { division: "Sylhet", district: "Sylhet", subordinate: "Sylhet Sadar", branch: "Sylhet", postCode: "3100", fullName: "Sylhet" },
+      { division: "Rajshahi", district: "Rajshahi", subordinate: "Rajshahi Sadar", branch: "Rajshahi", postCode: "6000", fullName: "Rajshahi" },
+      { division: "Khulna", district: "Khulna", subordinate: "Khulna Sadar", branch: "Khulna", postCode: "9000", fullName: "Khulna" },
+      { division: "Barisal", district: "Barisal", subordinate: "Barisal Sadar", branch: "Barisal", postCode: "8200", fullName: "Barisal" },
+      { division: "Rangpur", district: "Rangpur", subordinate: "Rangpur Sadar", branch: "Rangpur", postCode: "5400", fullName: "Rangpur" },
+      { division: "Mymensingh", district: "Mymensingh", subordinate: "Mymensingh Sadar", branch: "Mymensingh", postCode: "2200", fullName: "Mymensingh" }
+    ];
+
+    // Clear existing data and insert new data
+    await db.delete(bangladeshLocations);
+    
+    for (const location of locationsData) {
+      await db.insert(bangladeshLocations).values(location);
+    }
   }
 }
 

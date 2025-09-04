@@ -376,6 +376,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bangladesh locations API routes
+  app.get("/api/bangladesh-locations", async (req, res) => {
+    try {
+      const locations = await storage.getBangladeshLocations();
+      res.json(locations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch Bangladesh locations" });
+    }
+  });
+
+  app.post("/api/admin/import-bangladesh-locations", async (req, res) => {
+    try {
+      await storage.importBangladeshLocations();
+      res.json({ message: "Bangladesh locations imported successfully" });
+    } catch (error) {
+      console.error("Import error:", error);
+      res.status(500).json({ message: "Failed to import Bangladesh locations" });
+    }
+  });
+
   // Facebook Conversions API endpoint
   app.post("/api/facebook-conversion", async (req, res) => {
     try {
