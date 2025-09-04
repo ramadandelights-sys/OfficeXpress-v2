@@ -33,12 +33,12 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
+          <Link href="/" className="flex items-center space-x-3 md:justify-start justify-center flex-1 md:flex-initial" data-testid="logo-link">
             <div className="flex items-center space-x-2">
               <img 
                 src={logoImage} 
                 alt="OfficeXpress Logo" 
-                className="h-24 w-auto"
+                className="h-32 w-auto object-contain"
               />
             </div>
           </Link>
@@ -62,7 +62,7 @@ export default function Header() {
           </nav>
 
           {/* Search & Mobile Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-4 md:flex md:order-last order-first">
             <div className="relative hidden sm:block">
               <Input
                 type="text"
@@ -81,7 +81,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               data-testid="mobile-menu-toggle"
             >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
             </Button>
           </div>
         </div>

@@ -31,6 +31,13 @@ export default function Rental() {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
+  // Calculate number of months to show - 2 months if current date > 28th, otherwise 1
+  const getNumberOfMonths = () => {
+    const today = new Date();
+    const dayOfMonth = today.getDate();
+    return dayOfMonth > 28 ? 2 : 1;
+  };
+  
   const form = useForm<ExtendedRentalBooking>({
     resolver: zodResolver(extendedRentalBookingSchema),
     defaultValues: {
@@ -127,10 +134,6 @@ export default function Rental() {
       {/* Hero Section */}
       <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-20">
         <div className="container mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-medium mb-6">
-            <Car className="w-4 h-4" />
-            Premium Vehicle Rental
-          </div>
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             Reliable Transportation<br />Solutions
           </h1>
@@ -255,7 +258,7 @@ export default function Rental() {
                               selected={selectedRange}
                               onSelect={setSelectedRange}
                               disabled={{ before: new Date() }}
-                              numberOfMonths={2}
+                              numberOfMonths={getNumberOfMonths()}
                               className="w-full"
                               classNames={{
                                 months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",

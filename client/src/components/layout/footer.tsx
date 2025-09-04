@@ -13,7 +13,7 @@ export default function Footer() {
               <img 
                 src={logoImage} 
                 alt="OfficeXpress Logo" 
-                className="h-12 w-auto"
+                className="h-16 w-auto object-contain"
               />
             </div>
             <p className="text-gray-300 mb-4">
