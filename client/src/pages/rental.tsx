@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Car } from "lucide-react";
+import rentalImage from "@/assets/rental-illustration.png";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -76,7 +77,7 @@ export default function Rental() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <img 
-                src="/assets/rental_illustration_1756953496199.png" 
+                src={rentalImage} 
                 alt="Professional rental service illustration" 
                 className="rounded-xl shadow-lg w-full h-auto"
                 data-testid="rental-fleet-image"
