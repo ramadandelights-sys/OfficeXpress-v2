@@ -23,6 +23,7 @@ export default function Corporate() {
       customerName: "",
       phone: "",
       email: "",
+      officeAddress: "",
       serviceType: "",
       contractType: "",
     },
@@ -138,13 +139,31 @@ export default function Corporate() {
 
                     <FormField
                       control={form.control}
+                      name="officeAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Office Address</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Enter office address" 
+                              {...field} 
+                              data-testid="input-office-address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
                       name="customerName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Customer Name *</FormLabel>
+                          <FormLabel>Primary Contact Person's Name *</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Enter contact person name" 
+                              placeholder="Contact person full name" 
                               {...field} 
                               data-testid="input-customer-name"
                             />
@@ -160,7 +179,7 @@ export default function Corporate() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone *</FormLabel>
+                            <FormLabel>Primary Contact Person's Phone Number *</FormLabel>
                             <FormControl>
                               <Input 
                                 type="tel" 
@@ -179,7 +198,7 @@ export default function Corporate() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email *</FormLabel>
+                            <FormLabel>Company Email Address *</FormLabel>
                             <FormControl>
                               <Input 
                                 type="email" 
