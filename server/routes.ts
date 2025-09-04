@@ -18,6 +18,20 @@ import { db } from "./db";
 import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check for Railway
+  app.get("/health", (req, res) => {
+    res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+  });
+
+  // Basic health check at root for Railway load balancer
+  app.get("/", (req, res) => {
+    res.status(200).json({ 
+      status: "OfficeXpress API Running", 
+      environment: process.env.NODE_ENV,
+      timestamp: new Date().toISOString() 
+    });
+  });
+
   // Diagnostic endpoint for debugging production issues
   app.get("/api/diagnostic", async (req, res) => {
     try {

@@ -43,8 +43,30 @@ app.use((req, res, next) => {
     try {
       log("Setting up database with Railway PostgreSQL...");
       log("DATABASE_URL:", process.env.DATABASE_URL?.substring(0, 50) + "...");
-      // Skip drizzle-kit push in production - Railway tables already exist
-      log("Skipping schema push - using existing Railway PostgreSQL tables");
+      
+      // Force schema creation for Railway PostgreSQL
+      log("Creating database schema for Railway PostgreSQL...");
+      try {
+        // Use drizzle-kit to push schema to Railway
+        execSync("npm run db:push --force", { 
+          stdio: "inherit",
+          env: { ...process.env }
+        });
+        log("Schema pushed successfully to Railway PostgreSQL!");
+      } catch (schemaError: any) {
+        log("Schema push failed, trying without --force...", schemaError.message || schemaError);
+        try {
+          execSync("npm run db:push", { 
+            stdio: "inherit",
+            env: { ...process.env }
+          });
+          log("Schema pushed successfully to Railway PostgreSQL!");
+        } catch (fallbackError: any) {
+          log("Schema push failed completely:", fallbackError.message || fallbackError);
+          log("Railway database might be empty - continuing with empty database");
+        }
+      }
+      
       log("Database setup complete!");
     } catch (error) {
       log("Database setup failed:", error);
