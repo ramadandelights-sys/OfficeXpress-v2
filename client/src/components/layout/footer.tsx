@@ -10,9 +10,9 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-3 mb-6">
               <img 
-                src="/attached_assets/OfficeXpress_logo_1756863810405.png" 
+                src="@assets/logo_v2_1756987631987.png" 
                 alt="OfficeXpress Logo" 
-                className="h-8 w-auto"
+                className="h-12 w-auto"
               />
             </div>
             <p className="text-gray-300 mb-4">
