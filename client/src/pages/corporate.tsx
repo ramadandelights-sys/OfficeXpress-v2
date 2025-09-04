@@ -24,6 +24,7 @@ export default function Corporate() {
       phone: "",
       email: "",
       serviceType: "",
+      contractType: "",
     },
   });
 
@@ -193,29 +194,53 @@ export default function Corporate() {
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="serviceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Service Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-service-type">
-                                <SelectValue placeholder="Select service type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="employee-pickup">Employee Pick & Drop</SelectItem>
-                              <SelectItem value="monthly-contract">Monthly Contract</SelectItem>
-                              <SelectItem value="airport-transfer">Airport Transfer</SelectItem>
-                              <SelectItem value="custom-package">Custom Package</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="serviceType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Service Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-service-type">
+                                  <SelectValue placeholder="Select service type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="office-pick-drop">Office Pick & Drop</SelectItem>
+                                <SelectItem value="rental">Rental</SelectItem>
+                                <SelectItem value="airport-transfer">Airport Transfer</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="contractType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Contract Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-contract-type">
+                                  <SelectValue placeholder="Select contract type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="ad-hoc">Ad Hoc Basis</SelectItem>
+                                <SelectItem value="monthly">Monthly Contract</SelectItem>
+                                <SelectItem value="custom-dates">Custom Dates</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
 
                     <Button 
                       type="submit" 

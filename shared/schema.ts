@@ -18,6 +18,7 @@ export const corporateBookings = pgTable("corporate_bookings", {
   phone: text("phone").notNull(),
   email: text("email").notNull(),
   serviceType: text("service_type"),
+  contractType: text("contract_type"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
