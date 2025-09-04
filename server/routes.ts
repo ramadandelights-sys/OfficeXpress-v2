@@ -394,6 +394,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Export locations as JSON for static file generation
+  app.get("/api/export-bangladesh-locations-json", async (req, res) => {
+    try {
+      const locations = await storage.getBangladeshLocations();
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', 'attachment; filename="bangladesh-locations.json"');
+      res.json(locations);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to export Bangladesh locations" });
+    }
+  });
+
   app.post("/api/admin/import-bangladesh-locations", async (req, res) => {
     try {
       await storage.importComprehensiveBangladeshLocations();

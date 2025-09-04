@@ -1,9 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { createApiUrl } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ChevronDown, X } from "lucide-react";
+import bangladeshLocations from "@/data/bangladesh-locations.json";
 
 interface BangladeshLocation {
   id: number;
@@ -45,10 +44,9 @@ export function SimpleLocationDropdown({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedValue, setSelectedValue] = useState(value || "");
 
-  // Load all locations once
-  const { data: allLocations = [], isLoading } = useQuery<BangladeshLocation[]>({
-    queryKey: ["/api/bangladesh-locations"],
-  });
+  // Use static locations data (no API call needed)
+  const allLocations = bangladeshLocations as BangladeshLocation[];
+  const isLoading = false;
 
   // Filter locations based on search term
   const filteredLocations = useMemo(() => {
