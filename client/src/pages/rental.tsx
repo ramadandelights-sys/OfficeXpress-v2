@@ -102,7 +102,8 @@ export default function Rental() {
       setSelectedRange(undefined);
       queryClient.invalidateQueries({ queryKey: ["/api/rental-bookings"] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Booking submission error:', error);
       toast({
         title: "Booking Failed",
         description: "Please check your information and try again.",
@@ -112,11 +113,16 @@ export default function Rental() {
   });
 
   const onSubmit = (data: ExtendedRentalBooking) => {
+    console.log('Form data before submission:', data);
+    console.log('Form validation errors:', form.formState.errors);
+    
     // Convert empty email to undefined for optional field
     const submitData = {
       ...data,
       email: data.email || undefined,
     };
+    
+    console.log('Data being sent to API:', submitData);
     mutation.mutate(submitData);
   };
 

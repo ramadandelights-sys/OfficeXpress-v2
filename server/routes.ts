@@ -71,11 +71,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rental booking routes
   app.post("/api/rental-bookings", validateRentalBooking, async (req, res) => {
     try {
+      console.log('=== RENTAL BOOKING DEBUG ===');
+      console.log('Received body:', JSON.stringify(req.body, null, 2));
+      
       const bookingData = insertRentalBookingSchema.parse(req.body);
+      console.log('Parsed booking data:', JSON.stringify(bookingData, null, 2));
+      
       const booking = await storage.createRentalBooking(bookingData);
+      console.log('Created booking:', booking);
       res.json(booking);
     } catch (error) {
+      console.error('=== RENTAL BOOKING ERROR ===');
+      console.error('Error details:', error);
+      
       if (error instanceof z.ZodError) {
+        console.error('Zod validation errors:', error.errors);
         res.status(400).json({ message: "Invalid booking data", errors: error.errors });
       } else {
         res.status(500).json({ message: "Failed to create rental booking" });
