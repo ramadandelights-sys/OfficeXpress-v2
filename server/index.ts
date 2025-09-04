@@ -37,43 +37,74 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  // Auto-setup database in production
-  if (app.get("env") === "production") {
+// Railway health check - respond immediately before anything else
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'healthy', 
+    timestamp: new Date().toISOString(),
+    service: 'officexpress-api'
+  });
+});
+
+async function setupDatabase() {
+  try {
+    log("Setting up database with Railway PostgreSQL...");
+    log("DATABASE_URL:", process.env.DATABASE_URL?.substring(0, 50) + "...");
+    
+    // Force schema creation for Railway PostgreSQL
+    log("Creating database schema for Railway PostgreSQL...");
+    
+    // Ensure drizzle-kit uses Railway DATABASE_URL, not development Neon URL
+    const railwayEnv = {
+      ...process.env,
+      // Explicitly override DATABASE_URL for Railway production
+      DATABASE_URL: process.env.DATABASE_URL?.includes('railway') ? 
+        process.env.DATABASE_URL : 
+        process.env.DATABASE_URL,
+      NODE_ENV: 'production'
+    };
+    
+    log("Using DATABASE_URL for schema push:", railwayEnv.DATABASE_URL?.substring(0, 50) + "...");
+    
     try {
-      log("Setting up database with Railway PostgreSQL...");
-      log("DATABASE_URL:", process.env.DATABASE_URL?.substring(0, 50) + "...");
-      
-      // Force schema creation for Railway PostgreSQL
-      log("Creating database schema for Railway PostgreSQL...");
+      // Use drizzle-kit to push schema to Railway with correct URL
+      execSync("npm run db:push --force", { 
+        stdio: "inherit",
+        env: railwayEnv
+      });
+      log("Schema pushed successfully to Railway PostgreSQL!");
+    } catch (schemaError: any) {
+      log("Schema push failed, trying without --force...", schemaError.message || schemaError);
       try {
-        // Use drizzle-kit to push schema to Railway
-        execSync("npm run db:push --force", { 
+        execSync("npm run db:push", { 
           stdio: "inherit",
-          env: { ...process.env }
+          env: railwayEnv
         });
         log("Schema pushed successfully to Railway PostgreSQL!");
-      } catch (schemaError: any) {
-        log("Schema push failed, trying without --force...", schemaError.message || schemaError);
+      } catch (fallbackError: any) {
+        log("Schema push failed completely:", fallbackError.message || fallbackError);
+        log("Will create tables manually using direct SQL...");
+        
+        // Fallback: Create tables directly using our db connection
         try {
-          execSync("npm run db:push", { 
-            stdio: "inherit",
-            env: { ...process.env }
-          });
-          log("Schema pushed successfully to Railway PostgreSQL!");
-        } catch (fallbackError: any) {
-          log("Schema push failed completely:", fallbackError.message || fallbackError);
-          log("Railway database might be empty - continuing with empty database");
+          const { createTables } = await import("./createTables");
+          await createTables();
+          log("Tables created successfully via direct SQL!");
+        } catch (directError: any) {
+          log("Direct table creation failed:", directError.message || directError);
+          log("Railway database setup incomplete - APIs may fail");
         }
       }
-      
-      log("Database setup complete!");
-    } catch (error) {
-      log("Database setup failed:", error);
-      log("Continuing anyway...");
     }
+    
+    log("Database setup complete!");
+  } catch (error) {
+    log("Database setup failed:", error);
+    log("Continuing anyway...");
   }
-  
+}
+
+(async () => {
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -102,7 +133,14 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
+    
+    // Setup database AFTER server starts to avoid Railway timeout
+    if (app.get("env") === "production") {
+      log("Server started, now setting up database asynchronously...");
+      // Don't await - let it run in background to avoid blocking
+      setupDatabase().catch(err => log("Background database setup failed:", err));
+    }
   });
 })();
