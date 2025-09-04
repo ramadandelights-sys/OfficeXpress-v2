@@ -388,7 +388,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/admin/import-bangladesh-locations", async (req, res) => {
     try {
-      await storage.importBangladeshLocations();
+      await storage.importComprehensiveBangladeshLocations();
       res.json({ message: "Bangladesh locations imported successfully" });
     } catch (error) {
       console.error("Import error:", error);

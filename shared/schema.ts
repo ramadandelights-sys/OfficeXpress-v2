@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, json } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, json, numeric } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -97,15 +97,35 @@ export const portfolioClients = pgTable("portfolio_clients", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const bangladeshLocations = pgTable("bangladesh_locations", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  division: text("division").notNull(),
-  district: text("district").notNull(),
-  subordinate: text("subordinate"),
-  branch: text("branch"),
-  postCode: text("post_code"),
-  fullName: text("full_name").notNull(), // Combined display name
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const bangladeshLocations = pgTable("bangladesh_locations_complete", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  
+  // Administrative Hierarchy
+  divisionId: integer("division_id"),
+  divisionName: varchar("division_name").notNull(),
+  divisionNameBn: varchar("division_name_bn"),
+  divisionLat: numeric("division_lat"),
+  divisionLng: numeric("division_lng"),
+  
+  districtId: integer("district_id"),
+  districtName: varchar("district_name").notNull(),
+  districtNameBn: varchar("district_name_bn"),
+  districtLat: numeric("district_lat"),
+  districtLng: numeric("district_lng"),
+  
+  upazilaId: integer("upazila_id"),
+  upazilaName: varchar("upazila_name"),
+  upazilaNameBn: varchar("upazila_name_bn"),
+  
+  // Post Office Information
+  postOffice: varchar("post_office"),
+  postCode: varchar("post_code"),
+  
+  // Search and Display Fields
+  fullLocationEn: varchar("full_location_en").notNull(), // "Post Office, Upazila, District, Division"
+  fullLocationBn: varchar("full_location_bn"), // Bengali equivalent
+  searchText: varchar("search_text"), // Combined searchable text
+  locationType: varchar("location_type").default("post_office"),
 });
 
 // Insert schemas
@@ -142,7 +162,6 @@ export const insertPortfolioClientSchema = createInsertSchema(portfolioClients).
 
 export const insertBangladeshLocationSchema = createInsertSchema(bangladeshLocations).omit({
   id: true,
-  createdAt: true,
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({

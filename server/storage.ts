@@ -70,7 +70,7 @@ export interface IStorage {
   // Bangladesh locations
   getBangladeshLocations(): Promise<BangladeshLocation[]>;
   searchBangladeshLocations(query: string): Promise<BangladeshLocation[]>;
-  importBangladeshLocations(): Promise<void>;
+  importComprehensiveBangladeshLocations(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -222,7 +222,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getBangladeshLocations(): Promise<BangladeshLocation[]> {
-    return await db.select().from(bangladeshLocations).orderBy(bangladeshLocations.fullName);
+    return await db.select().from(bangladeshLocations).orderBy(bangladeshLocations.fullLocationEn);
   }
 
   async searchBangladeshLocations(query: string): Promise<BangladeshLocation[]> {
@@ -232,49 +232,130 @@ export class DatabaseStorage implements IStorage {
       .from(bangladeshLocations)
       .where(
         or(
-          ilike(bangladeshLocations.branch, searchTerm),
-          ilike(bangladeshLocations.subordinate, searchTerm),
-          ilike(bangladeshLocations.district, searchTerm),
-          ilike(bangladeshLocations.division, searchTerm),
-          ilike(bangladeshLocations.fullName, searchTerm)
+          ilike(bangladeshLocations.postOffice, searchTerm),
+          ilike(bangladeshLocations.upazilaName, searchTerm),
+          ilike(bangladeshLocations.districtName, searchTerm),
+          ilike(bangladeshLocations.divisionName, searchTerm),
+          ilike(bangladeshLocations.fullLocationEn, searchTerm),
+          ilike(bangladeshLocations.searchText, searchTerm)
         )
       )
-      .orderBy(bangladeshLocations.fullName)
-      .limit(10);
+      .orderBy(bangladeshLocations.fullLocationEn)
+      .limit(15);
   }
 
-  async importBangladeshLocations(): Promise<void> {
-    // Parse the Google Sheets data and import to database
-    const locationsData = [
-      // Sample of processed data from the Google Sheet
-      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Demra", postCode: "1360", fullName: "Demra, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Sarulia", postCode: "1361", fullName: "Sarulia, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Demra", branch: "Matuail", postCode: "1362", fullName: "Matuail, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka GPO", branch: "Dhaka GPO", postCode: "1000", fullName: "Dhaka GPO" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Main PO", branch: "Dhaka Main PO", postCode: "1100", fullName: "Dhaka Main PO" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Wari TSO", postCode: "1203", fullName: "Wari, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Gendaria TSO", postCode: "1204", fullName: "Gendaria, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "New Market TSO", postCode: "1205", fullName: "New Market, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Gulshan Model Town", postCode: "1212", fullName: "Gulshan, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Banani TSO", postCode: "1213", fullName: "Banani, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Mirpur TSO", postCode: "1218", fullName: "Mirpur, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Dhaka Sadar", branch: "Uttara Model TwonTSO", postCode: "1231", fullName: "Uttara, Dhaka" },
-      { division: "Dhaka", district: "Dhaka", subordinate: "Savar", branch: "Savar", postCode: "1340", fullName: "Savar, Dhaka" },
-      { division: "Chittagong", district: "Chittagong", subordinate: "Chittagong Sadar", branch: "Chittagong GPO", postCode: "4000", fullName: "Chittagong" },
-      { division: "Chittagong", district: "Cox's Bazar", subordinate: "Cox's Bazar Sadar", branch: "Cox's Bazar", postCode: "4700", fullName: "Cox's Bazar" },
-      { division: "Sylhet", district: "Sylhet", subordinate: "Sylhet Sadar", branch: "Sylhet", postCode: "3100", fullName: "Sylhet" },
-      { division: "Rajshahi", district: "Rajshahi", subordinate: "Rajshahi Sadar", branch: "Rajshahi", postCode: "6000", fullName: "Rajshahi" },
-      { division: "Khulna", district: "Khulna", subordinate: "Khulna Sadar", branch: "Khulna", postCode: "9000", fullName: "Khulna" },
-      { division: "Barisal", district: "Barisal", subordinate: "Barisal Sadar", branch: "Barisal", postCode: "8200", fullName: "Barisal" },
-      { division: "Rangpur", district: "Rangpur", subordinate: "Rangpur Sadar", branch: "Rangpur", postCode: "5400", fullName: "Rangpur" },
-      { division: "Mymensingh", district: "Mymensingh", subordinate: "Mymensingh Sadar", branch: "Mymensingh", postCode: "2200", fullName: "Mymensingh" }
-    ];
+  async importComprehensiveBangladeshLocations(): Promise<void> {
+    try {
+      console.log("Fetching comprehensive Bangladesh location data...");
+      
+      // Fetch all data from GitHub repository
+      const [divisionsRes, districtsRes, upazilasRes, postcodesRes] = await Promise.all([
+        fetch('https://raw.githubusercontent.com/ifahimreza/bangladesh-geojson/master/bd-divisions.json'),
+        fetch('https://raw.githubusercontent.com/ifahimreza/bangladesh-geojson/master/bd-districts.json'),
+        fetch('https://raw.githubusercontent.com/ifahimreza/bangladesh-geojson/master/bd-upazilas.json'),
+        fetch('https://raw.githubusercontent.com/ifahimreza/bangladesh-geojson/master/bd-postcodes.json')
+      ]);
 
-    // Clear existing data and insert new data
-    await db.delete(bangladeshLocations);
-    
-    for (const location of locationsData) {
-      await db.insert(bangladeshLocations).values(location);
+      const [divisionsData, districtsData, upazilasData, postcodesData] = await Promise.all([
+        divisionsRes.json(),
+        districtsRes.json(),
+        upazilasRes.json(),
+        postcodesRes.json()
+      ]);
+
+      console.log("Data fetched successfully, processing...");
+
+      // Create lookup maps for faster processing
+      const divisionsMap = new Map(
+        divisionsData.divisions.map((div: any) => [div.id, div])
+      );
+      const districtsMap = new Map(
+        districtsData.districts.map((dist: any) => [dist.id, dist])
+      );
+      const upazilasMap = new Map(
+        upazilasData.upazilas.map((upz: any) => [upz.id, upz])
+      );
+
+      // Clear existing data
+      await db.delete(bangladeshLocations);
+
+      const processedLocations: any[] = [];
+      let processedCount = 0;
+
+      // Process postcodes data to create comprehensive location entries
+      for (const postcode of postcodesData.postcodes) {
+        const division = divisionsMap.get(postcode.division_id);
+        const district = districtsMap.get(postcode.district_id);
+        
+        if (!division || !district) continue;
+
+        // Find matching upazila
+        const upazila = Array.from(upazilasMap.values()).find(
+          (u: any) => u.district_id === postcode.district_id && 
+                     u.name.toLowerCase().includes(postcode.upazila.toLowerCase().replace(' sadar', '').replace(' upo', ''))
+        );
+
+        // Create search text combining all searchable fields
+        const searchParts = [
+          postcode.postOffice,
+          postcode.upazila,
+          district.name,
+          division.name,
+          district.bn_name,
+          division.bn_name
+        ].filter(Boolean);
+
+        // Create display name: "Post Office, Upazila, District, Division (PostCode)"
+        const fullLocationEn = `${postcode.postOffice}, ${postcode.upazila}, ${district.name}, ${division.name} (${postcode.postCode})`;
+        const fullLocationBn = upazila?.bn_name ? 
+          `${postcode.postOffice}, ${upazila.bn_name}, ${district.bn_name}, ${division.bn_name} (${postcode.postCode})` : null;
+
+        const locationEntry = {
+          divisionId: division.id,
+          divisionName: division.name,
+          divisionNameBn: division.bn_name,
+          divisionLat: division.lat ? Number(division.lat) : null,
+          divisionLng: division.long ? Number(division.long) : null,
+          
+          districtId: district.id,
+          districtName: district.name,
+          districtNameBn: district.bn_name,
+          districtLat: district.lat ? Number(district.lat) : null,
+          districtLng: district.long ? Number(district.long) : null,
+          
+          upazilaId: upazila?.id || null,
+          upazilaName: postcode.upazila,
+          upazilaNameBn: upazila?.bn_name || null,
+          
+          postOffice: postcode.postOffice,
+          postCode: postcode.postCode,
+          
+          fullLocationEn,
+          fullLocationBn,
+          searchText: searchParts.join(' ').toLowerCase(),
+          locationType: 'post_office' as const
+        };
+
+        processedLocations.push(locationEntry);
+        processedCount++;
+
+        // Batch insert every 100 records for better performance
+        if (processedLocations.length >= 100) {
+          await db.insert(bangladeshLocations).values(processedLocations);
+          processedLocations.length = 0;
+          console.log(`Processed ${processedCount} locations...`);
+        }
+      }
+
+      // Insert remaining locations
+      if (processedLocations.length > 0) {
+        await db.insert(bangladeshLocations).values(processedLocations);
+      }
+
+      console.log(`Successfully imported ${processedCount} comprehensive Bangladesh locations`);
+    } catch (error) {
+      console.error("Error importing comprehensive Bangladesh locations:", error);
+      throw error;
     }
   }
 }
