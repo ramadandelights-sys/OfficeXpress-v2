@@ -246,22 +246,6 @@ export default function Rental() {
                           )}
                         </Button>
 
-                        {/* Quick Day Selector */}
-                        <div className="flex flex-wrap gap-2">
-                          <span className="text-sm text-muted-foreground mr-2">Quick select:</span>
-                          {[1, 2, 3, 5, 7].map(days => (
-                            <Button
-                              key={days}
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleQuickDaySelect(days)}
-                              data-testid={`button-quick-${days}-day`}
-                            >
-                              {days} day{days !== 1 ? "s" : ""}
-                            </Button>
-                          ))}
-                        </div>
 
                         {/* Calendar */}
                         {isCalendarOpen && (
@@ -298,6 +282,18 @@ export default function Rental() {
                                 day_hidden: "invisible",
                               }}
                             />
+                            
+                            {/* Confirm Button */}
+                            <div className="flex justify-end mt-4 pt-4 border-t">
+                              <Button
+                                type="button"
+                                onClick={() => setIsCalendarOpen(false)}
+                                disabled={!selectedRange?.from || !selectedRange?.to}
+                                data-testid="button-confirm-dates"
+                              >
+                                Confirm Dates
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
