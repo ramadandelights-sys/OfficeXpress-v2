@@ -60,23 +60,50 @@ export const validateRentalBooking = [
     .matches(/^(\+880|880|0)?1[3-9]\d{8}$/)
     .withMessage('Please enter a valid Bangladeshi phone number'),
   body('email')
+    .optional()
     .isEmail()
     .normalizeEmail()
     .withMessage('Please enter a valid email address'),
-  body('pickupLocation')
-    .isLength({ min: 5, max: 200 })
-    .withMessage('Pickup location must be between 5 and 200 characters')
-    .customSanitizer(sanitizeInput),
-  body('destination')
-    .isLength({ min: 5, max: 200 })
-    .withMessage('Destination must be between 5 and 200 characters')
-    .customSanitizer(sanitizeInput),
-  body('pickupDate')
+  body('startDate')
     .isISO8601()
-    .withMessage('Please provide a valid pickup date'),
-  body('vehicleType')
-    .isIn(['sedan', 'suv', 'microbus', 'bus'])
-    .withMessage('Please select a valid vehicle type'),
+    .withMessage('Please provide a valid start date')
+    .isAfter(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Allow today or future
+    .withMessage('Start date must be today or in the future'),
+  body('endDate')
+    .isISO8601()
+    .withMessage('Please provide a valid end date')
+    .custom((value, { req }) => {
+      if (new Date(value) < new Date(req.body.startDate)) {
+        throw new Error('End date must be on or after start date');
+      }
+      return true;
+    }),
+  body('startTime')
+    .optional()
+    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Please provide a valid start time (HH:MM format)'),
+  body('endTime')
+    .optional()
+    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    .withMessage('Please provide a valid end time (HH:MM format)'),
+  body('pickupLocation')
+    .optional()
+    .isLength({ min: 3, max: 200 })
+    .withMessage('Pickup location must be between 3 and 200 characters')
+    .customSanitizer(sanitizeInput),
+  body('dropoffLocation')
+    .optional()
+    .isLength({ min: 3, max: 200 })
+    .withMessage('Drop-off location must be between 3 and 200 characters')
+    .customSanitizer(sanitizeInput),
+  body('serviceType')
+    .optional()
+    .isIn(['personal', 'business', 'airport', 'wedding', 'event', 'tourism'])
+    .withMessage('Please select a valid service type'),
+  body('duration')
+    .optional()
+    .isIn(['half-day', 'full-day', 'custom'])
+    .withMessage('Please select a valid duration'),
   handleValidationErrors
 ];
 

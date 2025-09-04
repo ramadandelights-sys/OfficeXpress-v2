@@ -27,10 +27,15 @@ export const rentalBookings = pgTable("rental_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
-  email: text("email").notNull(),
-  pickupDate: text("pickup_date"),
-  duration: text("duration"),
+  email: text("email"), // Made optional
+  startDate: text("start_date").notNull(),
+  endDate: text("end_date").notNull(),
+  startTime: text("start_time"),
+  endTime: text("end_time"),
+  duration: text("duration"), // Only for single day rentals
   serviceType: text("service_type"),
+  pickupLocation: text("pickup_location"),
+  dropoffLocation: text("dropoff_location"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
