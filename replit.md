@@ -8,6 +8,26 @@ OfficeXpress is a comprehensive transportation services platform built for busin
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates
+
+### Security Enhancements (Latest)
+- **Rate Limiting**: All form endpoints protected with 15 requests per 15-minute window
+- **Helmet Security**: HTTP security headers implemented (HSTS, XSS protection, etc.)
+- **Input Validation**: Server-side validation middleware for all form submissions  
+- **Sanitization**: Client and server-side content sanitization with DOMPurify
+- **CSRF Protection**: Form validation tokens and secure request handling
+
+### Facebook Pixel Integration
+- **Client-side Tracking**: Facebook Pixel script initialization and event tracking
+- **Conversions API**: Server-side conversion tracking for improved accuracy
+- **Context Provider**: React context for centralized pixel management
+- **Environment Configuration**: VITE_FACEBOOK_PIXEL_ID and FACEBOOK_ACCESS_TOKEN support
+
+### Form Enhancements
+- **Professional Labels**: Updated corporate form with "Primary Contact Person" and "Company Email Address"
+- **Office Address Field**: Added office address to corporate booking schema
+- **reCAPTCHA Integration**: Optional spam protection for all forms
+
 ## System Architecture
 
 ### Frontend Architecture

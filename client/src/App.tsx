@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { FacebookPixelProvider } from "@/contexts/FacebookPixelContext";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import Home from "@/pages/home";
@@ -36,18 +37,26 @@ function Router() {
 }
 
 function App() {
+  // Facebook Pixel configuration
+  const facebookPixelConfig = {
+    pixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || '',
+    accessToken: import.meta.env.VITE_FACEBOOK_ACCESS_TOKEN,
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <div className="min-h-screen bg-background">
-          <Header />
-          <main>
-            <Router />
-          </main>
-          <Footer />
-          <Toaster />
-        </div>
-      </TooltipProvider>
+      <FacebookPixelProvider config={facebookPixelConfig}>
+        <TooltipProvider>
+          <div className="min-h-screen bg-background">
+            <Header />
+            <main>
+              <Router />
+            </main>
+            <Footer />
+            <Toaster />
+          </div>
+        </TooltipProvider>
+      </FacebookPixelProvider>
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { 
+  validateCorporateBooking,
+  validateRentalBooking,
+  validateVendorRegistration,
+  validateContactMessage 
+} from "./validation";
 import path from "path";
 import fs from "fs";
 import { 
@@ -31,7 +37,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Corporate booking routes
-  app.post("/api/corporate-bookings", async (req, res) => {
+  app.post("/api/corporate-bookings", validateCorporateBooking, async (req, res) => {
     try {
       const bookingData = insertCorporateBookingSchema.parse(req.body);
       const booking = await storage.createCorporateBooking(bookingData);
@@ -55,7 +61,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rental booking routes
-  app.post("/api/rental-bookings", async (req, res) => {
+  app.post("/api/rental-bookings", validateRentalBooking, async (req, res) => {
     try {
       const bookingData = insertRentalBookingSchema.parse(req.body);
       const booking = await storage.createRentalBooking(bookingData);
@@ -79,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor registration routes
-  app.post("/api/vendor-registrations", async (req, res) => {
+  app.post("/api/vendor-registrations", validateVendorRegistration, async (req, res) => {
     try {
       const vendorData = insertVendorRegistrationSchema.parse(req.body);
       const vendor = await storage.createVendorRegistration(vendorData);
@@ -103,7 +109,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contact message routes
-  app.post("/api/contact-messages", async (req, res) => {
+  app.post("/api/contact-messages", validateContactMessage, async (req, res) => {
     try {
       const messageData = insertContactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(messageData);
@@ -367,6 +373,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ message: "Portfolio client deleted successfully" });
     } catch (error) {
       res.status(500).json({ message: "Failed to delete portfolio client" });
+    }
+  });
+
+  // Facebook Conversions API endpoint
+  app.post("/api/facebook-conversion", async (req, res) => {
+    try {
+      const { pixelId, event, customData, userData, timestamp, actionSource, eventSourceUrl } = req.body;
+      
+      const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+      if (!accessToken) {
+        return res.status(500).json({ error: "Facebook access token not configured" });
+      }
+
+      const conversionData = {
+        data: [{
+          event_name: event,
+          event_time: timestamp,
+          action_source: actionSource,
+          event_source_url: eventSourceUrl,
+          custom_data: customData,
+          user_data: userData,
+        }],
+        access_token: accessToken,
+      };
+
+      const response = await fetch(`https://graph.facebook.com/v18.0/${pixelId}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(conversionData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Facebook Conversions API error:', errorText);
+        return res.status(response.status).json({ error: errorText });
+      }
+
+      const result = await response.json();
+      res.json(result);
+    } catch (error) {
+      console.error('Facebook Conversions API error:', error);
+      res.status(500).json({ error: "Failed to send conversion data" });
     }
   });
 
