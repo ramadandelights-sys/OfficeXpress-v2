@@ -3,12 +3,23 @@ import { useQuery } from "@tanstack/react-query";
 import { Autocomplete, type AutocompleteOption } from "@/components/ui/autocomplete";
 
 interface BangladeshLocation {
-  division: string;
-  district: string;
-  subordinate: string;
-  branch: string;
-  postCode: string;
-  fullName: string;
+  id: number;
+  divisionId: number;
+  divisionName: string;
+  divisionNameBn: string | null;
+  districtId: number;
+  districtName: string;
+  districtNameBn: string | null;
+  upazilaId: number | null;
+  upazilaName: string | null;
+  upazilaNameBn: string | null;
+  postOffice: string | null;
+  postCode: string | null;
+  fullLocationEn: string;
+  fullLocationBn: string | null;
+  searchText: string | null;
+  locationType: string;
+  displayName: string; // Added by the API based on language detection
 }
 
 interface LocationAutocompleteProps {
@@ -65,8 +76,8 @@ export function LocationAutocomplete({
   };
 
   const options: AutocompleteOption[] = locations.map((location) => ({
-    value: location.fullName,
-    label: formatLocationDisplay(location)
+    value: location.displayName,
+    label: location.displayName
   }));
 
   return (
@@ -84,14 +95,3 @@ export function LocationAutocomplete({
   );
 }
 
-function formatLocationDisplay(location: BangladeshLocation): string {
-  // Format: Branch, Subordinate, District, Division (PostCode)
-  const parts = [
-    location.branch,
-    location.subordinate !== location.branch ? location.subordinate : null,
-    location.district !== location.subordinate ? location.district : null,
-    location.division !== location.district ? location.division : null
-  ].filter(Boolean);
-  
-  return `${parts.join(", ")} (${location.postCode})`;
-}

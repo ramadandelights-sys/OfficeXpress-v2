@@ -402,8 +402,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!q || typeof q !== 'string' || q.trim().length < 2) {
         return res.json([]);
       }
+      
+      // Detect if input contains Bengali characters
+      const containsBengali = /[\u0980-\u09FF]/.test(q.trim());
+      
       const results = await storage.searchBangladeshLocations(q.trim());
-      res.json(results);
+      
+      // Transform results to show appropriate language field
+      const transformedResults = results.map(location => ({
+        ...location,
+        displayName: containsBengali 
+          ? (location.fullLocationBn || location.fullLocationEn)
+          : location.fullLocationEn
+      }));
+      
+      res.json(transformedResults);
     } catch (error) {
       res.status(500).json({ message: "Failed to search Bangladesh locations" });
     }
