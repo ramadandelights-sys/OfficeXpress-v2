@@ -16,7 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertRentalBookingSchema, type InsertRentalBooking } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { LocationAutocomplete } from "@/components/location-autocomplete";
+import { SimpleLocationDropdown } from "@/components/simple-location-dropdown";
 
 // Extended schema for the new rental form
 const extendedRentalBookingSchema = insertRentalBookingSchema.extend({
@@ -501,7 +501,7 @@ export default function Rental() {
                               Pickup Location
                             </FormLabel>
                             <FormControl>
-                              <LocationAutocomplete
+                              <SimpleLocationDropdown
                                 value={field.value}
                                 placeholder="Type to search pickup location..."
                                 onSelect={field.onChange}
@@ -523,7 +523,7 @@ export default function Rental() {
                               Drop-off Location
                             </FormLabel>
                             <FormControl>
-                              <LocationAutocomplete
+                              <SimpleLocationDropdown
                                 value={field.value}
                                 placeholder="Type to search drop-off location..."
                                 onSelect={field.onChange}
