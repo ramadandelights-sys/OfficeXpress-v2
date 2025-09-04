@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Autocomplete, type AutocompleteOption } from "@/components/ui/autocomplete";
+import { createApiUrl } from "@/lib/api";
 
 interface BangladeshLocation {
   id: number;
@@ -36,7 +37,8 @@ async function searchLocations(query: string): Promise<BangladeshLocation[]> {
     return [];
   }
   
-  const response = await fetch(`/api/search-bangladesh-locations?q=${encodeURIComponent(query.trim())}`);
+  const apiUrl = createApiUrl(`/api/search-bangladesh-locations?q=${encodeURIComponent(query.trim())}`);
+  const response = await fetch(apiUrl);
   if (!response.ok) {
     throw new Error('Failed to search locations');
   }

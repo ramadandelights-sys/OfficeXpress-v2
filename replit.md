@@ -23,6 +23,12 @@ Preferred communication style: Simple, everyday language.
 - **Context Provider**: React context for centralized pixel management
 - **Environment Configuration**: VITE_FACEBOOK_PIXEL_ID and FACEBOOK_ACCESS_TOKEN support
 
+### Deployment & Production Configuration (Latest)
+- **API Base URL System**: Environment-aware API configuration for production deployment
+- **Location Search Fix**: Fixed location autocomplete to work properly on deployed site
+- **SSL Certificate Management**: Automatic SSL/TLS certificate provisioning by Replit for custom domains
+- **Production Environment Variables**: VITE_API_URL support for custom API endpoints
+
 ### Form Enhancements
 - **Professional Labels**: Updated corporate form with "Primary Contact Person" and "Company Email Address"
 - **Office Address Field**: Added office address to corporate booking schema
