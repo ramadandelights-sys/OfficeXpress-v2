@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertRentalBookingSchema, type InsertRentalBooking } from "@shared/schema";
+import { sortedBangladeshLocations } from "@/data/bangladeshLocations";
 import { z } from "zod";
 
 // Extended schema for the new rental form
@@ -51,6 +52,7 @@ export default function Rental() {
       duration: "",
       serviceType: "",
       vehicleType: "",
+      vehicleCapacity: "",
       pickupLocation: "",
       dropoffLocation: "",
     },
@@ -458,6 +460,33 @@ export default function Rental() {
                       )}
                     />
 
+                    {/* Vehicle Capacity */}
+                    <FormField
+                      control={form.control}
+                      name="vehicleCapacity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vehicle Capacity</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-vehicle-capacity">
+                                <SelectValue placeholder="Select vehicle capacity" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="4-sedan">4 seater (sedan)</SelectItem>
+                              <SelectItem value="7-microbus">7 seater (microbus)</SelectItem>
+                              <SelectItem value="11-microbus">11 seater (microbus)</SelectItem>
+                              <SelectItem value="28-coaster">28 seater (coaster)</SelectItem>
+                              <SelectItem value="32-coaster">32 seater (coaster)</SelectItem>
+                              <SelectItem value="40-bus">40 seater (bus)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
                     {/* Location Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
@@ -469,14 +498,20 @@ export default function Rental() {
                               <MapPin className="w-4 h-4" />
                               Pickup Location
                             </FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter pickup address" 
-                                {...field} 
-                                value={field.value || ""}
-                                data-testid="input-pickup-location"
-                              />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-pickup-location">
+                                  <SelectValue placeholder="Select pickup location" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-60">
+                                {sortedBangladeshLocations.map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -491,14 +526,20 @@ export default function Rental() {
                               <MapPin className="w-4 h-4" />
                               Drop-off Location
                             </FormLabel>
-                            <FormControl>
-                              <Input 
-                                placeholder="Enter drop-off address" 
-                                {...field} 
-                                value={field.value || ""}
-                                data-testid="input-dropoff-location"
-                              />
-                            </FormControl>
+                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-dropoff-location">
+                                  <SelectValue placeholder="Select drop-off location" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent className="max-h-60">
+                                {sortedBangladeshLocations.map((location) => (
+                                  <SelectItem key={location} value={location}>
+                                    {location}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}

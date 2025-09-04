@@ -35,6 +35,7 @@ export const rentalBookings = pgTable("rental_bookings", {
   duration: text("duration"), // Only for single day rentals
   serviceType: text("service_type"),
   vehicleType: text("vehicle_type"),
+  vehicleCapacity: text("vehicle_capacity"),
   pickupLocation: text("pickup_location"),
   dropoffLocation: text("dropoff_location"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
