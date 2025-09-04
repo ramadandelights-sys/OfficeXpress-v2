@@ -38,9 +38,17 @@ async function searchLocations(query: string): Promise<BangladeshLocation[]> {
   }
   
   const apiUrl = createApiUrl(`/api/search-bangladesh-locations?q=${encodeURIComponent(query.trim())}`);
-  const response = await fetch(apiUrl);
+  const response = await fetch(apiUrl, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    },
+    credentials: 'same-origin',
+  });
+  
   if (!response.ok) {
-    throw new Error('Failed to search locations');
+    throw new Error(`Failed to search locations: ${response.status} ${response.statusText}`);
   }
   
   return response.json();

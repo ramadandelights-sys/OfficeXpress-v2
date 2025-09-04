@@ -25,6 +25,14 @@ import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
+  // Health check endpoint for debugging
+  app.get("/api/health", (req, res) => {
+    res.json({ 
+      status: "ok", 
+      timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development'
+    });
+  });
 
   // Logo serving route
   app.get("/logo.jpg", (req, res) => {
