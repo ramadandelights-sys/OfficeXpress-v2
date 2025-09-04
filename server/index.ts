@@ -54,13 +54,16 @@ async function setupDatabase() {
     // Force schema creation for Railway PostgreSQL
     log("Creating database schema for Railway PostgreSQL...");
     
-    // Ensure drizzle-kit uses Railway DATABASE_URL, not development Neon URL
+    // Ensure drizzle-kit uses Railway DATABASE_URL, override any development URLs
     const railwayEnv = {
       ...process.env,
-      // Explicitly override DATABASE_URL for Railway production
-      DATABASE_URL: process.env.DATABASE_URL?.includes('railway') ? 
-        process.env.DATABASE_URL : 
-        process.env.DATABASE_URL,
+      // Force Railway DATABASE_URL and clear any development database env vars
+      DATABASE_URL: process.env.DATABASE_URL,
+      PGHOST: undefined,
+      PGDATABASE: undefined, 
+      PGUSER: undefined,
+      PGPASSWORD: undefined,
+      PGPORT: undefined,
       NODE_ENV: 'production'
     };
     
@@ -91,7 +94,7 @@ async function setupDatabase() {
           await createTables();
           log("Tables created successfully via direct SQL!");
         } catch (directError: any) {
-          log("Direct table creation failed:", directError.message || directError);
+          log("Direct table creation failed:", (directError as Error).message || String(directError));
           log("Railway database setup incomplete - APIs may fail");
         }
       }
@@ -136,11 +139,18 @@ async function setupDatabase() {
   }, async () => {
     log(`serving on port ${port}`);
     
+    // For Railway: Send immediate ready signal
+    if (process.send) {
+      process.send('ready');
+    }
+    
     // Setup database AFTER server starts to avoid Railway timeout
     if (app.get("env") === "production") {
       log("Server started, now setting up database asynchronously...");
-      // Don't await - let it run in background to avoid blocking
-      setupDatabase().catch(err => log("Background database setup failed:", err));
+      // Delay database setup to ensure server is fully ready
+      setTimeout(() => {
+        setupDatabase().catch(err => log("Background database setup failed:", err));
+      }, 1000);
     }
   });
 })();
