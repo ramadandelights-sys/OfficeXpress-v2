@@ -43,7 +43,8 @@ app.use((req, res, next) => {
     try {
       log("Setting up database with Railway PostgreSQL...");
       log("DATABASE_URL:", process.env.DATABASE_URL?.substring(0, 50) + "...");
-      execSync("npx drizzle-kit push", { stdio: "inherit" });
+      // Skip drizzle-kit push in production - Railway tables already exist
+      log("Skipping schema push - using existing Railway PostgreSQL tables");
       log("Database setup complete!");
     } catch (error) {
       log("Database setup failed:", error);
