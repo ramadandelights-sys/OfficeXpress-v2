@@ -1,7 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
-import { execSync } from "child_process";
 
 const app = express();
 app.use(express.json({ limit: '50mb' }));
@@ -37,76 +36,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Railway health check - respond immediately before anything else
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    service: 'officexpress-api'
-  });
-});
-
-async function setupDatabase() {
-  try {
-    log("Setting up database with Railway PostgreSQL...");
-    log("DATABASE_URL:", process.env.DATABASE_URL?.substring(0, 50) + "...");
-    
-    // Force schema creation for Railway PostgreSQL
-    log("Creating database schema for Railway PostgreSQL...");
-    
-    // Ensure drizzle-kit uses Railway DATABASE_URL, override any development URLs
-    const railwayEnv = {
-      ...process.env,
-      // Force Railway DATABASE_URL and clear any development database env vars
-      DATABASE_URL: process.env.DATABASE_URL,
-      PGHOST: undefined,
-      PGDATABASE: undefined, 
-      PGUSER: undefined,
-      PGPASSWORD: undefined,
-      PGPORT: undefined,
-      NODE_ENV: 'production'
-    };
-    
-    log("Using DATABASE_URL for schema push:", railwayEnv.DATABASE_URL?.substring(0, 50) + "...");
-    
-    try {
-      // Use drizzle-kit to push schema to Railway with correct URL
-      execSync("npm run db:push --force", { 
-        stdio: "inherit",
-        env: railwayEnv
-      });
-      log("Schema pushed successfully to Railway PostgreSQL!");
-    } catch (schemaError: any) {
-      log("Schema push failed, trying without --force...", schemaError.message || schemaError);
-      try {
-        execSync("npm run db:push", { 
-          stdio: "inherit",
-          env: railwayEnv
-        });
-        log("Schema pushed successfully to Railway PostgreSQL!");
-      } catch (fallbackError: any) {
-        log("Schema push failed completely:", fallbackError.message || fallbackError);
-        log("Will create tables manually using direct SQL...");
-        
-        // Fallback: Create tables directly using our db connection
-        try {
-          const { createTables } = await import("./createTables");
-          await createTables();
-          log("Tables created successfully via direct SQL!");
-        } catch (directError: any) {
-          log("Direct table creation failed:", (directError as Error).message || String(directError));
-          log("Railway database setup incomplete - APIs may fail");
-        }
-      }
-    }
-    
-    log("Database setup complete!");
-  } catch (error) {
-    log("Database setup failed:", error);
-    log("Continuing anyway...");
-  }
-}
-
 (async () => {
   const server = await registerRoutes(app);
 
@@ -136,21 +65,7 @@ async function setupDatabase() {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, async () => {
+  }, () => {
     log(`serving on port ${port}`);
-    
-    // For Railway: Send immediate ready signal
-    if (process.send) {
-      process.send('ready');
-    }
-    
-    // Setup database AFTER server starts to avoid Railway timeout
-    if (app.get("env") === "production") {
-      log("Server started, now setting up database asynchronously...");
-      // Delay database setup to ensure server is fully ready
-      setTimeout(() => {
-        setupDatabase().catch(err => log("Background database setup failed:", err));
-      }, 1000);
-    }
   });
 })();
