@@ -14,8 +14,57 @@ import {
   updatePortfolioClientSchema
 } from "@shared/schema";
 import { z } from "zod";
+import { db } from "./db";
+import { sql } from "drizzle-orm";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Diagnostic endpoint for debugging production issues
+  app.get("/api/diagnostic", async (req, res) => {
+    try {
+      const diagnostics: any = {
+        environment: process.env.NODE_ENV,
+        databaseUrl: process.env.DATABASE_URL ? `${process.env.DATABASE_URL.split('@')[0]}@***` : 'NOT_SET',
+        timestamp: new Date().toISOString(),
+        server: 'Railway Production'
+      };
+
+      // Test basic database connection
+      const testQuery = await db.execute(sql`SELECT 1 as test`);
+      diagnostics.basicConnection = 'SUCCESS';
+      diagnostics.testResult = testQuery.rows[0];
+
+      // Test table existence
+      const tableCheck = await db.execute(sql`
+        SELECT table_name 
+        FROM information_schema.tables 
+        WHERE table_schema = 'public'
+        ORDER BY table_name
+      `);
+      diagnostics.tables = tableCheck.rows.map((row: any) => row.table_name);
+
+      // Test data counts
+      try {
+        const counts: any = {};
+        counts.corporateBookings = (await db.execute(sql`SELECT COUNT(*) as count FROM corporate_bookings`)).rows[0].count;
+        counts.blogPosts = (await db.execute(sql`SELECT COUNT(*) as count FROM blog_posts`)).rows[0].count;
+        counts.portfolioClients = (await db.execute(sql`SELECT COUNT(*) as count FROM portfolio_clients`)).rows[0].count;
+        diagnostics.dataCounts = counts;
+      } catch (countError: any) {
+        diagnostics.dataCountsError = countError.message;
+      }
+
+      res.json(diagnostics);
+    } catch (error: any) {
+      res.status(500).json({
+        error: 'Diagnostic failed',
+        message: error.message,
+        stack: error.stack,
+        environment: process.env.NODE_ENV,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Logo serving route
   app.get("/logo.jpg", (req, res) => {
     const logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "OfficeXpress_logo_1756864809144.jpg");
