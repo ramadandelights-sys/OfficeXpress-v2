@@ -30,8 +30,8 @@ export const validateCorporateBooking = [
     .withMessage('Contact person name must be between 2 and 50 characters')
     .customSanitizer(sanitizeInput),
   body('phone')
-    .matches(/^(\+880|880|0)?1[3-9]\d{8}$/)
-    .withMessage('Please enter a valid Bangladeshi phone number'),
+    .matches(/^(?:\+?88)?01[3-9]\d{8}$/)
+    .withMessage('Please enter a valid Bangladeshi phone number (01XXXXXXXX)'),
   body('email')
     .isEmail()
     .normalizeEmail()
@@ -57,8 +57,8 @@ export const validateRentalBooking = [
     .withMessage('Customer name must be between 2 and 50 characters')
     .customSanitizer(sanitizeInput),
   body('phone')
-    .matches(/^(\+880|880|0)?1[3-9]\d{8}$/)
-    .withMessage('Please enter a valid Bangladeshi phone number'),
+    .matches(/^(?:\+?88)?01[3-9]\d{8}$/)
+    .withMessage('Please enter a valid Bangladeshi phone number (01XXXXXXXX)'),
   body('email')
     .optional()
     .isEmail()
@@ -79,31 +79,39 @@ export const validateRentalBooking = [
       return true;
     }),
   body('startTime')
-    .optional()
-    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Please provide a valid start time (HH:MM format)'),
+    .notEmpty()
+    .matches(/^(1[0-2]|0?[1-9]):(00)\s?(AM|PM)$/)
+    .withMessage('Please select a valid start time (e.g., 1:00 PM)'),
   body('endTime')
     .optional()
-    .matches(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    .withMessage('Please provide a valid end time (HH:MM format)'),
-  body('pickupLocation')
-    .optional()
+    .matches(/^(1[0-2]|0?[1-9]):(00)\s?(AM|PM)$/)
+    .withMessage('Please select a valid end time (e.g., 2:00 PM)'),
+  body('fromLocation')
+    .notEmpty()
     .isLength({ min: 3, max: 200 })
-    .withMessage('Pickup location must be between 3 and 200 characters')
+    .withMessage('From location is required and must be between 3 and 200 characters')
     .customSanitizer(sanitizeInput),
-  body('dropoffLocation')
-    .optional()
+  body('toLocation')
+    .notEmpty()
     .isLength({ min: 3, max: 200 })
-    .withMessage('Drop-off location must be between 3 and 200 characters')
+    .withMessage('To location is required and must be between 3 and 200 characters')
     .customSanitizer(sanitizeInput),
   body('serviceType')
-    .optional()
+    .notEmpty()
     .isIn(['personal', 'business', 'airport', 'wedding', 'event', 'tourism'])
     .withMessage('Please select a valid service type'),
-  body('duration')
+  body('vehicleType')
+    .notEmpty()
+    .isIn(['standard', 'premium', 'suv', 'microbus', 'coaster'])
+    .withMessage('Please select a valid vehicle type'),
+  body('vehicleCapacity')
+    .notEmpty()
+    .isIn(['4-sedan', '4-suv', '7-microbus', '15-microbus', '20-coaster', '25-coaster', '28-coaster', '32-coaster', '40-bus'])
+    .withMessage('Please select a valid vehicle capacity'),
+  body('isReturnTrip')
     .optional()
-    .isIn(['half-day', 'full-day', 'custom'])
-    .withMessage('Please select a valid duration'),
+    .isBoolean()
+    .withMessage('Return trip must be true or false'),
   handleValidationErrors
 ];
 
@@ -118,8 +126,8 @@ export const validateVendorRegistration = [
     .withMessage('Contact person name must be between 2 and 50 characters')
     .customSanitizer(sanitizeInput),
   body('phone')
-    .matches(/^(\+880|880|0)?1[3-9]\d{8}$/)
-    .withMessage('Please enter a valid Bangladeshi phone number'),
+    .matches(/^(?:\+?88)?01[3-9]\d{8}$/)
+    .withMessage('Please enter a valid Bangladeshi phone number (01XXXXXXXX)'),
   body('email')
     .isEmail()
     .normalizeEmail()

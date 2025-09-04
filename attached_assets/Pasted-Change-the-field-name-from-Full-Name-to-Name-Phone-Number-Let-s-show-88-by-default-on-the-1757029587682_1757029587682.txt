@@ -1,0 +1,22 @@
+Change the field name from “Full Name” to “Name”
+
+Phone Number: Let’s show (+88) by default on the right side of the input field. The input field should only accept numbers without +88 prefix, check which phone number sequences are present in bangladesh, and make the field’s input checks accordingly.
+
+Email address is OK.
+
+Let’s bring the Service Type, Vehicle Type, Vehicle Capacity up in the list.
+
+Rental Period:
+The calendar should select one date by default and auto populate the start and end date with that date value, until there’s a second date input in the calendar, in which case the date range will be selected.
+The calendar Ui should show only one month, with continuous date to next month, instead of showing the next month separately. E.g. 29,30,31,1,2,3.. Etc
+Start Time should be a mandatory field. The minutes entry is not required, let’s show a drop down that has hours in the 12hr format. E.g. 1:00 PM
+End time field should only show up if the rental trip is for 1 day. In which case, the end time field would also be mandatory. The minutes entry is not required, let’s show a drop down that has hours in the 12hr format. E.g. 1:00 PM
+
+Based on the vehicle type and capacity selection, show 1:1 dimension pictures of some relevant popular cars available in Bangladesh. For SUV we can show X-trail’s picture, and for Coasters, we can show vehicles from Mitshubishi along with Toyota. This will give the users an idea of what the vehicles might look like. For e.g. Super Economy & 4 seater sedan can show Corolla X, Nissan Sunny, etc.
+Do your homework to select pictures before code change. If required, ask me which pictures to select from options.
+
+For the location fields, let’s name them “From” and “To” instead of pick and drop, and should also include a checkbox that asks if the user will come back to the pickup location after visit. We can call it “Both Way / Return Trip?” and have a small note at the bottom with a description of what that option is for.
+
+Once all the changes are made, please run some sample form entries to check if the form submission works end to end. Test all the scenarios.
+
+All the fields will be required, except email address.

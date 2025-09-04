@@ -2,47 +2,100 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Car, Calendar, Clock, MapPin } from "lucide-react";
-import { DayPicker, type DateRange } from "react-day-picker";
-import { format, addDays, differenceInDays } from "date-fns";
-import rentalImage from "@/assets/rental-illustration.png";
+import { Car, Calendar, Clock, MapPin, Users, ArrowLeftRight, Info } from "lucide-react";
+import { format, addDays, differenceInDays, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { insertRentalBookingSchema, type InsertRentalBooking } from "@shared/schema";
-import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { SimpleLocationDropdown } from "@/components/simple-location-dropdown";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 
-// Extended schema for the new rental form
-const extendedRentalBookingSchema = insertRentalBookingSchema.extend({
+// New rental booking schema matching the new requirements
+const newRentalBookingSchema = z.object({
+  customerName: z.string().min(2, "Name must be at least 2 characters"),
+  phone: z.string().regex(/^01[3-9]\d{8}$/, "Please enter a valid phone number (01XXXXXXXX)"),
+  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().min(1, "End date is required"),
-  email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().optional(),
+  serviceType: z.enum(["personal", "business", "airport", "wedding", "event", "tourism"]),
+  vehicleType: z.enum(["standard", "premium", "suv", "microbus", "coaster"]),
+  vehicleCapacity: z.enum(["4-sedan", "4-suv", "7-microbus", "15-microbus", "20-coaster", "25-coaster", "28-coaster", "32-coaster", "40-bus"]),
+  fromLocation: z.string().min(3, "From location is required"),
+  toLocation: z.string().min(3, "To location is required"),
+  isReturnTrip: z.boolean().default(false),
 });
 
-type ExtendedRentalBooking = z.infer<typeof extendedRentalBookingSchema>;
+type NewRentalBooking = z.infer<typeof newRentalBookingSchema>;
+
+// Time options for 12-hour format
+const timeOptions = [
+  "1:00 AM", "2:00 AM", "3:00 AM", "4:00 AM", "5:00 AM", "6:00 AM",
+  "7:00 AM", "8:00 AM", "9:00 AM", "10:00 AM", "11:00 AM", "12:00 PM",
+  "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM", "6:00 PM", 
+  "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM", "12:00 AM"
+];
+
+// Vehicle capacity options by type
+const vehicleCapacityOptions = {
+  standard: [
+    { value: "4-sedan", label: "4 seater (sedan)" }
+  ],
+  premium: [
+    { value: "4-sedan", label: "4 seater (sedan)" }
+  ],
+  suv: [
+    { value: "4-suv", label: "4 seater (SUV)" }
+  ],
+  microbus: [
+    { value: "7-microbus", label: "7 seater (microbus)" },
+    { value: "15-microbus", label: "15 seater (microbus)" }
+  ],
+  coaster: [
+    { value: "20-coaster", label: "20 seater (coaster)" },
+    { value: "25-coaster", label: "25 seater (coaster)" },
+    { value: "28-coaster", label: "28 seater (coaster)" },
+    { value: "32-coaster", label: "32 seater (coaster)" },
+    { value: "40-bus", label: "40 seater (bus)" }
+  ]
+};
+
+import toyotaCorollaImg from '@assets/generated_images/Toyota_Corolla_sedan_Bangladesh_a3630964.png';
+import nissanXTrailImg from '@assets/generated_images/Nissan_X-Trail_SUV_Bangladesh_b2b5d75d.png';
+import toyotaNoahImg from '@assets/generated_images/Toyota_Noah_microbus_Bangladesh_6c155568.png';
+import toyotaHiaceImg from '@assets/generated_images/Toyota_Hiace_microbus_Bangladesh_768af3f9.png';
+import toyotaCoasterImg from '@assets/generated_images/Toyota_Coaster_bus_Bangladesh_33049011.png';
+
+// Vehicle images based on type and capacity
+const vehicleImages = {
+  "4-sedan": toyotaCorollaImg,
+  "4-suv": nissanXTrailImg,
+  "7-microbus": toyotaNoahImg,
+  "15-microbus": toyotaHiaceImg,
+  "20-coaster": toyotaCoasterImg,
+  "25-coaster": toyotaCoasterImg,
+  "28-coaster": toyotaCoasterImg,
+  "32-coaster": toyotaCoasterImg,
+  "40-bus": toyotaCoasterImg
+};
 
 export default function Rental() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
-  
-  // Calculate number of months to show - 2 months if current date > 28th, otherwise 1
-  const getNumberOfMonths = () => {
-    const today = new Date();
-    const dayOfMonth = today.getDate();
-    return dayOfMonth > 28 ? 2 : 1;
-  };
-  
-  const form = useForm<ExtendedRentalBooking>({
-    resolver: zodResolver(extendedRentalBookingSchema),
+  const form = useForm<NewRentalBooking>({
+    resolver: zodResolver(newRentalBookingSchema),
     defaultValues: {
       customerName: "",
       phone: "",
@@ -51,45 +104,42 @@ export default function Rental() {
       endDate: "",
       startTime: "",
       endTime: "",
-      duration: "",
-      serviceType: "",
-      vehicleType: "",
-      vehicleCapacity: "",
-      pickupLocation: "",
-      dropoffLocation: "",
+      serviceType: "business",
+      vehicleType: "standard",
+      vehicleCapacity: "4-sedan",
+      fromLocation: "",
+      toLocation: "",
+      isReturnTrip: false,
     },
   });
 
+  const watchedVehicleType = form.watch("vehicleType");
+  const watchedVehicleCapacity = form.watch("vehicleCapacity");
   const watchedStartDate = form.watch("startDate");
   const watchedEndDate = form.watch("endDate");
 
-  // Calculate if rental is single day and show/hide duration field
-  const isSingleDay = watchedStartDate && watchedEndDate && watchedStartDate === watchedEndDate;
+  // Check if it's a single day rental
+  const isSingleDayRental = watchedStartDate && watchedEndDate && watchedStartDate === watchedEndDate;
 
-  // Update form when date range changes
+  // Auto-set today as default date on mount
   useEffect(() => {
-    if (selectedRange?.from) {
-      form.setValue("startDate", format(selectedRange.from, "yyyy-MM-dd"));
-    }
-    if (selectedRange?.to) {
-      form.setValue("endDate", format(selectedRange.to, "yyyy-MM-dd"));
-    } else if (selectedRange?.from) {
-      // If only start date is selected, set end date to same day
-      form.setValue("endDate", format(selectedRange.from, "yyyy-MM-dd"));
-    }
-  }, [selectedRange, form]);
+    const today = new Date();
+    setSelectedDate(today);
+    setEndDate(today);
+    form.setValue("startDate", format(today, "yyyy-MM-dd"));
+    form.setValue("endDate", format(today, "yyyy-MM-dd"));
+  }, [form]);
 
-  // Quick day selector handler
-  const handleQuickDaySelect = (days: number) => {
-    const startDate = new Date();
-    const endDate = addDays(startDate, days - 1);
-    
-    setSelectedRange({ from: startDate, to: endDate });
-    setIsCalendarOpen(false);
-  };
+  // Update vehicle capacity options when vehicle type changes
+  useEffect(() => {
+    if (watchedVehicleType && vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]) {
+      const options = vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions];
+      form.setValue("vehicleCapacity", options[0].value as any);
+    }
+  }, [watchedVehicleType, form]);
 
   const mutation = useMutation({
-    mutationFn: async (data: ExtendedRentalBooking) => {
+    mutationFn: async (data: NewRentalBooking) => {
       const response = await apiRequest("POST", "/api/rental-bookings", data);
       return response.json();
     },
@@ -99,7 +149,8 @@ export default function Rental() {
         description: "Thank you for your rental request. We will contact you shortly to confirm the details.",
       });
       form.reset();
-      setSelectedRange(undefined);
+      setSelectedDate(undefined);
+      setEndDate(undefined);
       queryClient.invalidateQueries({ queryKey: ["/api/rental-bookings"] });
     },
     onError: (error) => {
@@ -112,7 +163,7 @@ export default function Rental() {
     },
   });
 
-  const onSubmit = (data: ExtendedRentalBooking) => {
+  const onSubmit = (data: NewRentalBooking) => {
     console.log('Form data before submission:', data);
     console.log('Form validation errors:', form.formState.errors);
     
@@ -127,18 +178,42 @@ export default function Rental() {
   };
 
   const formatDateRange = () => {
-    if (!selectedRange?.from) return "Select rental dates";
-    if (!selectedRange.to) return format(selectedRange.from, "MMM dd, yyyy");
-    if (selectedRange.from.getTime() === selectedRange.to.getTime()) {
-      return format(selectedRange.from, "MMM dd, yyyy");
+    if (!selectedDate) return "Select rental dates";
+    if (!endDate || isSameDay(selectedDate, endDate)) {
+      return format(selectedDate, "MMM dd, yyyy");
     }
-    return `${format(selectedRange.from, "MMM dd")} - ${format(selectedRange.to, "MMM dd, yyyy")}`;
+    return `${format(selectedDate, "MMM dd")} - ${format(endDate, "MMM dd, yyyy")}`;
   };
 
   const getDayCount = () => {
-    if (!selectedRange?.from || !selectedRange?.to) return 0;
-    return differenceInDays(selectedRange.to, selectedRange.from) + 1;
+    if (!selectedDate || !endDate) return 0;
+    return differenceInDays(endDate, selectedDate) + 1;
   };
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return;
+    
+    if (!selectedDate || (selectedDate && endDate && !isSameDay(selectedDate, endDate))) {
+      // First selection or reset range
+      setSelectedDate(date);
+      setEndDate(date);
+      form.setValue("startDate", format(date, "yyyy-MM-dd"));
+      form.setValue("endDate", format(date, "yyyy-MM-dd"));
+    } else if (date > selectedDate) {
+      // Second selection for range
+      setEndDate(date);
+      form.setValue("endDate", format(date, "yyyy-MM-dd"));
+    } else {
+      // New first date
+      setSelectedDate(date);
+      setEndDate(date);
+      form.setValue("startDate", format(date, "yyyy-MM-dd"));
+      form.setValue("endDate", format(date, "yyyy-MM-dd"));
+    }
+    setIsCalendarOpen(false);
+  };
+
+  const currentVehicleImage = vehicleImages[watchedVehicleCapacity as keyof typeof vehicleImages];
 
   return (
     <div className="min-h-screen bg-background">
@@ -158,16 +233,35 @@ export default function Rental() {
       {/* Booking Form Section */}
       <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <img 
-                src={rentalImage} 
-                alt="Professional rental service illustration" 
-                className="rounded-xl shadow-lg w-full h-auto"
-                data-testid="rental-fleet-image"
-              />
+          <div className="grid lg:grid-cols-2 gap-12 items-start">
+            {/* Vehicle Image Display */}
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Your Selected Vehicle</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <img 
+                    src={currentVehicleImage}
+                    alt={`${watchedVehicleCapacity} vehicle`}
+                    className="w-full h-48 object-cover rounded-lg mb-4"
+                    data-testid="vehicle-image"
+                  />
+                  <div className="text-center">
+                    <h3 className="font-semibold text-lg">
+                      {vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]?.find(
+                        option => option.value === watchedVehicleCapacity
+                      )?.label}
+                    </h3>
+                    <p className="text-muted-foreground">
+                      Popular {watchedVehicleType === 'standard' ? 'economy' : watchedVehicleType} vehicle in Bangladesh
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
+            {/* Booking Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-center">
@@ -187,11 +281,11 @@ export default function Rental() {
                         name="customerName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name *</FormLabel>
+                            <FormLabel>Name *</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Enter your full name" 
-                                {...field} 
+                                placeholder="Enter your name"
+                                {...field}
                                 data-testid="input-customer-name"
                               />
                             </FormControl>
@@ -207,11 +301,17 @@ export default function Rental() {
                           <FormItem>
                             <FormLabel>Phone Number *</FormLabel>
                             <FormControl>
-                              <Input 
-                                placeholder="Enter your phone number" 
-                                {...field} 
-                                data-testid="input-phone"
-                              />
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                                  (+88)
+                                </span>
+                                <Input 
+                                  placeholder="01XXXXXXXXX"
+                                  className="pl-12"
+                                  {...field}
+                                  data-testid="input-phone"
+                                />
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -224,12 +324,12 @@ export default function Rental() {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Email Address (Optional)</FormLabel>
+                          <FormLabel>Email Address</FormLabel>
                           <FormControl>
                             <Input 
                               type="email" 
-                              placeholder="Enter your email address" 
-                              {...field} 
+                              placeholder="your.email@example.com"
+                              {...field}
                               data-testid="input-email"
                             />
                           </FormControl>
@@ -238,110 +338,120 @@ export default function Rental() {
                       )}
                     />
 
-                    {/* Date Selection */}
+                    {/* Service, Vehicle Type, Capacity moved up */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="serviceType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Service Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-service-type">
+                                  <SelectValue placeholder="Select service" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="personal">Personal</SelectItem>
+                                <SelectItem value="business">Business</SelectItem>
+                                <SelectItem value="airport">Airport Transfer</SelectItem>
+                                <SelectItem value="wedding">Wedding</SelectItem>
+                                <SelectItem value="event">Event</SelectItem>
+                                <SelectItem value="tourism">Tourism</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="vehicleType"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Vehicle Type *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-vehicle-type">
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="standard">Standard (Cars 2006-2010)</SelectItem>
+                                <SelectItem value="premium">Premium (Cars 2011+)</SelectItem>
+                                <SelectItem value="suv">SUV</SelectItem>
+                                <SelectItem value="microbus">Microbus</SelectItem>
+                                <SelectItem value="coaster">Coaster/Bus</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="vehicleCapacity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Vehicle Capacity *</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-vehicle-capacity">
+                                  <SelectValue placeholder="Select capacity" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {watchedVehicleType && vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]?.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    {/* Rental Period */}
                     <div className="space-y-4">
                       <FormLabel>Rental Period *</FormLabel>
-                      
-                      {/* Date Display and Calendar Toggle */}
-                      <div className="space-y-3">
+                      <div className="border rounded-lg p-4">
                         <Button
                           type="button"
                           variant="outline"
-                          className="w-full justify-start"
+                          className="w-full justify-start text-left font-normal"
                           onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-                          data-testid="button-date-selector"
+                          data-testid="button-calendar"
                         >
-                          <Calendar className="w-4 h-4 mr-2" />
+                          <Calendar className="mr-2 h-4 w-4" />
                           {formatDateRange()}
-                          {getDayCount() > 0 && (
-                            <span className="ml-auto text-primary font-medium">
-                              {getDayCount()} day{getDayCount() !== 1 ? "s" : ""}
+                          {getDayCount() > 1 && (
+                            <span className="ml-auto text-primary">
+                              {getDayCount()} days
                             </span>
                           )}
                         </Button>
-
-
-                        {/* Calendar */}
                         {isCalendarOpen && (
-                          <div className="border rounded-lg p-6 bg-background shadow-lg">
-                            <DayPicker
-                              mode="range"
-                              selected={selectedRange}
-                              onSelect={setSelectedRange}
-                              disabled={{ before: new Date() }}
-                              numberOfMonths={getNumberOfMonths()}
-                              className="w-full"
-                              classNames={{
-                                months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
-                                month: "space-y-4",
-                                caption: "flex justify-center pt-1 relative items-center",
-                                caption_label: "text-sm font-medium",
-                                nav: "space-x-1 flex items-center",
-                                nav_button: "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-                                nav_button_previous: "absolute left-1",
-                                nav_button_next: "absolute right-1",
-                                table: "w-full border-collapse space-y-1",
-                                head_row: "flex",
-                                head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                                row: "flex w-full mt-2",
-                                cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100 hover:bg-accent hover:text-accent-foreground rounded-md",
-                                day_range_end: "day-range-end",
-                                day_range_start: "day-range-start",
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                day_today: "bg-accent text-accent-foreground",
-                                day_outside: "day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30",
-                                day_disabled: "text-muted-foreground opacity-50",
-                                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                                day_hidden: "invisible",
-                              }}
+                          <div className="mt-4">
+                            <CalendarComponent
+                              mode="single"
+                              selected={selectedDate}
+                              onSelect={handleDateSelect}
+                              disabled={(date) => date < new Date()}
+                              className="rounded-md border"
+                              data-testid="calendar-component"
                             />
-                            
-                            {/* Confirm Button */}
-                            <div className="flex justify-end mt-4 pt-4 border-t">
-                              <Button
-                                type="button"
-                                onClick={() => setIsCalendarOpen(false)}
-                                disabled={!selectedRange?.from || !selectedRange?.to}
-                                data-testid="button-confirm-dates"
-                              >
-                                Confirm Dates
-                              </Button>
-                            </div>
                           </div>
                         )}
                       </div>
-
-                      {/* Hidden date fields for form validation */}
-                      <div className="hidden">
-                        <FormField
-                          control={form.control}
-                          name="startDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="endDate"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormControl>
-                                <Input {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
                     </div>
 
-                    {/* Time Selection */}
+                    {/* Time Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -350,168 +460,75 @@ export default function Rental() {
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                               <Clock className="w-4 h-4" />
-                              Start Time
+                              Start Time *
                             </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="time" 
-                                {...field} 
-                                value={field.value || ""}
-                                data-testid="input-start-time"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="endTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              End Time
-                            </FormLabel>
-                            <FormControl>
-                              <Input 
-                                type="time" 
-                                {...field} 
-                                value={field.value || ""}
-                                data-testid="input-end-time"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Duration field - only show for single day rentals */}
-                    {isSingleDay && (
-                      <FormField
-                        control={form.control}
-                        name="duration"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Duration (for single day rental)</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-duration">
-                                  <SelectValue placeholder="Select duration" />
+                                <SelectTrigger data-testid="select-start-time">
+                                  <SelectValue placeholder="Select start time" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="half-day">Half Day (4 hours)</SelectItem>
-                                <SelectItem value="full-day">Full Day (8 hours)</SelectItem>
-                                <SelectItem value="custom">Custom Duration</SelectItem>
+                                {timeOptions.map((time) => (
+                                  <SelectItem key={time} value={time}>
+                                    {time}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    )}
 
-                    {/* Service Type */}
-                    <FormField
-                      control={form.control}
-                      name="serviceType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Service Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-service-type">
-                                <SelectValue placeholder="Select service type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="personal">Personal Use</SelectItem>
-                              <SelectItem value="business">Business</SelectItem>
-                              <SelectItem value="airport">Airport Transfer</SelectItem>
-                              <SelectItem value="wedding">Wedding</SelectItem>
-                              <SelectItem value="event">Special Event</SelectItem>
-                              <SelectItem value="tourism">Tourism</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                      {isSingleDayRental && (
+                        <FormField
+                          control={form.control}
+                          name="endTime"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-2">
+                                <Clock className="w-4 h-4" />
+                                End Time *
+                              </FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || ""}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-end-time">
+                                    <SelectValue placeholder="Select end time" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {timeOptions.map((time) => (
+                                    <SelectItem key={time} value={time}>
+                                      {time}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
                       )}
-                    />
-
-                    {/* Vehicle Type */}
-                    <FormField
-                      control={form.control}
-                      name="vehicleType"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Vehicle Type</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-vehicle-type">
-                                <SelectValue placeholder="Select vehicle type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="super-economy">Super Economy (Cars before 2000)</SelectItem>
-                              <SelectItem value="economy">Economy (Cars 2001-2005)</SelectItem>
-                              <SelectItem value="standard">Standard (Cars 2006-2010)</SelectItem>
-                              <SelectItem value="premium">Premium (Cars 2011-2015)</SelectItem>
-                              <SelectItem value="luxury">Luxury (Cars 2016-2020)</SelectItem>
-                              <SelectItem value="ultra-luxury">Ultra Luxury (Cars 2021-2025)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Vehicle Capacity */}
-                    <FormField
-                      control={form.control}
-                      name="vehicleCapacity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Vehicle Capacity</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ""}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-vehicle-capacity">
-                                <SelectValue placeholder="Select vehicle capacity" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="4-sedan">4 seater (sedan)</SelectItem>
-                              <SelectItem value="7-microbus">7 seater (microbus)</SelectItem>
-                              <SelectItem value="11-microbus">11 seater (microbus)</SelectItem>
-                              <SelectItem value="28-coaster">28 seater (coaster)</SelectItem>
-                              <SelectItem value="32-coaster">32 seater (coaster)</SelectItem>
-                              <SelectItem value="40-bus">40 seater (bus)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    </div>
 
                     {/* Location Fields */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="pickupLocation"
+                        name="fromLocation"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                               <MapPin className="w-4 h-4" />
-                              Pickup Location
+                              From *
                             </FormLabel>
                             <FormControl>
                               <SimpleLocationDropdown
                                 value={field.value}
                                 placeholder="Type to search pickup location..."
                                 onSelect={field.onChange}
-                                error={!!form.formState.errors.pickupLocation}
+                                error={!!form.formState.errors.fromLocation}
                               />
                             </FormControl>
                             <FormMessage />
@@ -521,19 +538,19 @@ export default function Rental() {
 
                       <FormField
                         control={form.control}
-                        name="dropoffLocation"
+                        name="toLocation"
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="flex items-center gap-2">
                               <MapPin className="w-4 h-4" />
-                              Drop-off Location
+                              To *
                             </FormLabel>
                             <FormControl>
                               <SimpleLocationDropdown
                                 value={field.value}
-                                placeholder="Type to search drop-off location..."
+                                placeholder="Type to search destination..."
                                 onSelect={field.onChange}
-                                error={!!form.formState.errors.dropoffLocation}
+                                error={!!form.formState.errors.toLocation}
                               />
                             </FormControl>
                             <FormMessage />
@@ -541,6 +558,36 @@ export default function Rental() {
                         )}
                       />
                     </div>
+
+                    {/* Return Trip Checkbox */}
+                    <FormField
+                      control={form.control}
+                      name="isReturnTrip"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center space-x-2">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                data-testid="checkbox-return-trip"
+                              />
+                            </FormControl>
+                            <FormLabel className="text-sm flex items-center gap-2">
+                              <ArrowLeftRight className="w-4 h-4" />
+                              Both Way / Return Trip?
+                            </FormLabel>
+                          </div>
+                          <Alert>
+                            <Info className="h-4 w-4" />
+                            <AlertDescription className="text-sm">
+                              Check this if you need transportation back to your pickup location after reaching your destination.
+                            </AlertDescription>
+                          </Alert>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
                     <Button 
                       type="submit" 
@@ -554,50 +601,6 @@ export default function Rental() {
                 </Form>
               </CardContent>
             </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose Our Rental Service?</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              We provide reliable, professional transportation solutions for all your needs
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-6">
-              <div className="bg-primary/10 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Car className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Quality Fleet</h3>
-              <p className="text-muted-foreground">
-                Well-maintained vehicles with professional drivers for your safety and comfort
-              </p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="bg-primary/10 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Flexible Scheduling</h3>
-              <p className="text-muted-foreground">
-                Book for single days or extended periods with flexible timing options
-              </p>
-            </div>
-
-            <div className="text-center p-6">
-              <div className="bg-primary/10 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MapPin className="w-8 h-8" />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Convenient Locations</h3>
-              <p className="text-muted-foreground">
-                Pickup and drop-off at your preferred locations across the city
-              </p>
-            </div>
           </div>
         </div>
       </section>

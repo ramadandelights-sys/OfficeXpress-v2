@@ -30,14 +30,14 @@ export const rentalBookings = pgTable("rental_bookings", {
   email: text("email"), // Made optional
   startDate: text("start_date").notNull(),
   endDate: text("end_date").notNull(),
-  startTime: text("start_time"),
-  endTime: text("end_time"),
-  duration: text("duration"), // Only for single day rentals
-  serviceType: text("service_type"),
-  vehicleType: text("vehicle_type"),
-  vehicleCapacity: text("vehicle_capacity"),
-  pickupLocation: text("pickup_location"),
-  dropoffLocation: text("dropoff_location"),
+  startTime: text("start_time").notNull(), // Now required
+  endTime: text("end_time"), // Required only for single day rentals
+  serviceType: text("service_type").notNull(), // Now required
+  vehicleType: text("vehicle_type").notNull(), // Now required
+  vehicleCapacity: text("vehicle_capacity").notNull(), // Now required
+  fromLocation: text("from_location").notNull(), // Renamed from pickupLocation
+  toLocation: text("to_location").notNull(), // Renamed from dropoffLocation
+  isReturnTrip: boolean("is_return_trip").default(false), // New field for return trips
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
