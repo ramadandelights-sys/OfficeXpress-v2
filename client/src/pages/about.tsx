@@ -7,8 +7,8 @@ export default function About() {
           <div className="flex flex-col lg:flex-row items-center gap-12">
             <div className="lg:w-1/2">
               <img 
-                src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600" 
-                alt="Professional transportation team" 
+                src="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600" 
+                alt="Premium car ride experience" 
                 className="rounded-xl shadow-lg w-full h-auto"
                 data-testid="about-hero-image"
               />
@@ -117,10 +117,10 @@ export default function About() {
 
             <div className="bg-white rounded-xl p-6 shadow-md border border-border text-center">
               <div className="w-16 h-16 bg-brand-secondary/20 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">📱</span>
+                <span className="text-2xl">💰</span>
               </div>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">Tech-Enabled</h3>
-              <p className="text-muted-foreground">Modern booking systems and real-time tracking for better service.</p>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">Affordable Service Options</h3>
+              <p className="text-muted-foreground">From super affordable Toyota 100s to latest 2020+ model cars of any brand.</p>
             </div>
           </div>
         </div>

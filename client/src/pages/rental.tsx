@@ -50,6 +50,7 @@ export default function Rental() {
       endTime: "",
       duration: "",
       serviceType: "",
+      vehicleType: "",
       pickupLocation: "",
       dropoffLocation: "",
     },
@@ -423,6 +424,33 @@ export default function Rental() {
                               <SelectItem value="wedding">Wedding</SelectItem>
                               <SelectItem value="event">Special Event</SelectItem>
                               <SelectItem value="tourism">Tourism</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Vehicle Type */}
+                    <FormField
+                      control={form.control}
+                      name="vehicleType"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vehicle Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || ""}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-vehicle-type">
+                                <SelectValue placeholder="Select vehicle type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="super-economy">Super Economy (Cars before 2000)</SelectItem>
+                              <SelectItem value="economy">Economy (Cars 2001-2005)</SelectItem>
+                              <SelectItem value="standard">Standard (Cars 2006-2010)</SelectItem>
+                              <SelectItem value="premium">Premium (Cars 2011-2015)</SelectItem>
+                              <SelectItem value="luxury">Luxury (Cars 2016-2020)</SelectItem>
+                              <SelectItem value="ultra-luxury">Ultra Luxury (Cars 2021-2025)</SelectItem>
                             </SelectContent>
                           </Select>
                           <FormMessage />

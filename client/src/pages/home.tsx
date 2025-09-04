@@ -102,7 +102,7 @@ export default function Home() {
               <p className="text-muted-foreground mb-6">Quality cars at affordable rates across Bangladesh with professional chauffeur support for city tours.</p>
               <Link 
                 href="/rental" 
-                className="inline-flex items-center text-brand-secondary font-semibold hover:text-brand-secondary/80 transition-colors"
+                className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="rental-learn-more"
               >
                 Learn More <ArrowRight className="ml-2 w-4 h-4" />
@@ -118,7 +118,7 @@ export default function Home() {
               <p className="text-muted-foreground mb-6">Reliable airport pickup and drop services with English-speaking, tech-savvy chauffeurs for foreign visitors.</p>
               <Link 
                 href="/contact" 
-                className="inline-flex items-center text-accent-foreground font-semibold hover:text-accent-foreground/80 transition-colors"
+                className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="airport-learn-more"
               >
                 Learn More <ArrowRight className="ml-2 w-4 h-4" />

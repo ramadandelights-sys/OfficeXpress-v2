@@ -33,15 +33,17 @@ export default function Header() {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-3 md:justify-start justify-center flex-1 md:flex-initial" data-testid="logo-link">
-            <div className="flex items-center space-x-2">
-              <img 
-                src={logoImage} 
-                alt="OfficeXpress Logo" 
-                className="h-32 w-auto object-contain"
-              />
-            </div>
-          </Link>
+          <div className="flex-1 flex justify-center md:justify-start">
+            <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
+              <div className="flex items-center space-x-2">
+                <img 
+                  src={logoImage} 
+                  alt="OfficeXpress Logo" 
+                  className="h-32 w-auto object-contain"
+                />
+              </div>
+            </Link>
+          </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-4">
@@ -62,7 +64,7 @@ export default function Header() {
           </nav>
 
           {/* Search & Mobile Menu */}
-          <div className="flex items-center space-x-4 md:flex md:order-last order-first">
+          <div className="flex items-center space-x-4 absolute right-4 md:relative md:right-auto">
             <div className="relative hidden sm:block">
               <Input
                 type="text"
