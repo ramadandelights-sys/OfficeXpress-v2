@@ -41,7 +41,7 @@ app.use((req, res, next) => {
   // Auto-setup database in production
   if (app.get("env") === "production") {
     try {
-      log("Setting up database...");
+      log("Setting up database with Railway PostgreSQL...");
       execSync("npx drizzle-kit push", { stdio: "inherit" });
       log("Database setup complete!");
     } catch (error) {
