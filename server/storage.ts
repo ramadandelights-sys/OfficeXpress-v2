@@ -27,7 +27,7 @@ import {
   type InsertBangladeshLocation
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -69,6 +69,7 @@ export interface IStorage {
   
   // Bangladesh locations
   getBangladeshLocations(): Promise<BangladeshLocation[]>;
+  searchBangladeshLocations(query: string): Promise<BangladeshLocation[]>;
   importBangladeshLocations(): Promise<void>;
 }
 
@@ -222,6 +223,24 @@ export class DatabaseStorage implements IStorage {
 
   async getBangladeshLocations(): Promise<BangladeshLocation[]> {
     return await db.select().from(bangladeshLocations).orderBy(bangladeshLocations.fullName);
+  }
+
+  async searchBangladeshLocations(query: string): Promise<BangladeshLocation[]> {
+    const searchTerm = `%${query}%`;
+    return await db
+      .select()
+      .from(bangladeshLocations)
+      .where(
+        or(
+          ilike(bangladeshLocations.branch, searchTerm),
+          ilike(bangladeshLocations.subordinate, searchTerm),
+          ilike(bangladeshLocations.district, searchTerm),
+          ilike(bangladeshLocations.division, searchTerm),
+          ilike(bangladeshLocations.fullName, searchTerm)
+        )
+      )
+      .orderBy(bangladeshLocations.fullName)
+      .limit(10);
   }
 
   async importBangladeshLocations(): Promise<void> {

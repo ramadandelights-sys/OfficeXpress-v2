@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { insertRentalBookingSchema, type InsertRentalBooking } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { LocationAutocomplete } from "@/components/location-autocomplete";
 
 // Extended schema for the new rental form
 const extendedRentalBookingSchema = insertRentalBookingSchema.extend({
@@ -32,11 +33,6 @@ export default function Rental() {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
-  // Fetch Bangladesh locations from database
-  const { data: locations = [] } = useQuery({
-    queryKey: ['/api/bangladesh-locations'],
-    select: (data: any[]) => data.map(location => location.fullName).sort()
-  });
   
   // Calculate number of months to show - 2 months if current date > 28th, otherwise 1
   const getNumberOfMonths = () => {
@@ -504,20 +500,14 @@ export default function Rental() {
                               <MapPin className="w-4 h-4" />
                               Pickup Location
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-pickup-location">
-                                  <SelectValue placeholder="Select pickup location" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-60">
-                                {locations.map((location) => (
-                                  <SelectItem key={location} value={location}>
-                                    {location}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <LocationAutocomplete
+                                value={field.value}
+                                placeholder="Type to search pickup location..."
+                                onSelect={field.onChange}
+                                error={!!form.formState.errors.pickupLocation}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -532,20 +522,14 @@ export default function Rental() {
                               <MapPin className="w-4 h-4" />
                               Drop-off Location
                             </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || ""}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-dropoff-location">
-                                  <SelectValue placeholder="Select drop-off location" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent className="max-h-60">
-                                {locations.map((location) => (
-                                  <SelectItem key={location} value={location}>
-                                    {location}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <FormControl>
+                              <LocationAutocomplete
+                                value={field.value}
+                                placeholder="Type to search drop-off location..."
+                                onSelect={field.onChange}
+                                error={!!form.formState.errors.dropoffLocation}
+                              />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}

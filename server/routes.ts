@@ -396,6 +396,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/search-bangladesh-locations", async (req, res) => {
+    try {
+      const { q } = req.query;
+      if (!q || typeof q !== 'string' || q.trim().length < 2) {
+        return res.json([]);
+      }
+      const results = await storage.searchBangladeshLocations(q.trim());
+      res.json(results);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to search Bangladesh locations" });
+    }
+  });
+
   // Facebook Conversions API endpoint
   app.post("/api/facebook-conversion", async (req, res) => {
     try {
