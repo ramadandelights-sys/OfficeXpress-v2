@@ -76,7 +76,7 @@ export default function Rental() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <img 
-                src="/attached_assets/rental_illustration_1756953496199.png" 
+                src="/assets/rental_illustration_1756953496199.png" 
                 alt="Professional rental service illustration" 
                 className="rounded-xl shadow-lg w-full h-auto"
                 data-testid="rental-fleet-image"
