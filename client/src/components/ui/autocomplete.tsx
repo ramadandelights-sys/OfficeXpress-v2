@@ -35,7 +35,7 @@ export function Autocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value || "");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
-  const [justSelected, setJustSelected] = useState(false);
+  const isSelectingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -46,21 +46,21 @@ export function Autocomplete({
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (inputValue.trim().length >= 2 && !justSelected) {
+      if (inputValue.trim().length >= 2 && !isSelectingRef.current) {
         onSearch(inputValue.trim());
         setIsOpen(true);
       } else if (inputValue.trim().length < 2) {
         setIsOpen(false);
       }
       
-      // Reset the justSelected flag after processing
-      if (justSelected) {
-        setJustSelected(false);
+      // Reset the selecting flag after processing
+      if (isSelectingRef.current) {
+        isSelectingRef.current = false;
       }
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [inputValue, onSearch, justSelected]);
+  }, [inputValue, onSearch]);
 
   useEffect(() => {
     setHighlightedIndex(-1);
@@ -79,11 +79,12 @@ export function Autocomplete({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+    isSelectingRef.current = false; // Clear the flag when user manually types
   };
 
   const handleOptionSelect = (option: AutocompleteOption) => {
+    isSelectingRef.current = true;
     setInputValue(option.label);
-    setJustSelected(true);
     onSelect(option.value);
     setIsOpen(false);
     inputRef.current?.blur();
