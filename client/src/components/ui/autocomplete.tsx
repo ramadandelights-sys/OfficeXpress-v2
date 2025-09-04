@@ -35,6 +35,7 @@ export function Autocomplete({
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value || "");
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [justSelected, setJustSelected] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -45,16 +46,21 @@ export function Autocomplete({
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      if (inputValue.trim().length >= 2) {
+      if (inputValue.trim().length >= 2 && !justSelected) {
         onSearch(inputValue.trim());
         setIsOpen(true);
-      } else {
+      } else if (inputValue.trim().length < 2) {
         setIsOpen(false);
+      }
+      
+      // Reset the justSelected flag after processing
+      if (justSelected) {
+        setJustSelected(false);
       }
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [inputValue, onSearch]);
+  }, [inputValue, onSearch, justSelected]);
 
   useEffect(() => {
     setHighlightedIndex(-1);
@@ -77,6 +83,7 @@ export function Autocomplete({
 
   const handleOptionSelect = (option: AutocompleteOption) => {
     setInputValue(option.label);
+    setJustSelected(true);
     onSelect(option.value);
     setIsOpen(false);
     inputRef.current?.blur();
