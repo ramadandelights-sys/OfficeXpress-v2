@@ -54,11 +54,11 @@ const vehicleCapacityOptions = [
   { value: "40-seater", label: "40 seater" }
 ];
 
-import toyotaCorollaImg from '@assets/generated_images/Toyota_Corolla_sedan_Bangladesh_a3630964.png';
-import nissanXTrailImg from '@assets/generated_images/Nissan_X-Trail_SUV_Bangladesh_b2b5d75d.png';
-import toyotaNoahImg from '@assets/generated_images/Toyota_Noah_microbus_Bangladesh_6c155568.png';
-import toyotaHiaceImg from '@assets/generated_images/Toyota_Hiace_microbus_Bangladesh_768af3f9.png';
-import toyotaCoasterImg from '@assets/generated_images/Toyota_Coaster_bus_Bangladesh_33049011.png';
+import toyotaCorollaImg from '@assets/generated_images/Toyota_Corolla_no_background_58143ea8.png';
+import nissanXTrailImg from '@assets/generated_images/Nissan_X-Trail_no_background_9afd440e.png';
+import toyotaNoahImg from '@assets/generated_images/Toyota_Noah_no_background_818e72bc.png';
+import toyotaHiaceImg from '@assets/generated_images/Toyota_Hiace_no_background_dc94ebb5.png';
+import toyotaCoasterImg from '@assets/generated_images/Toyota_Coaster_no_background_fa225ee4.png';
 
 // Vehicle images based on capacity
 const vehicleImages = {
@@ -78,6 +78,7 @@ export default function Rental() {
   const [tempSelectedDate, setTempSelectedDate] = useState<Date | undefined>();
   const [tempEndDate, setTempEndDate] = useState<Date | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [imageLoading, setImageLoading] = useState(false);
   
   const form = useForm<NewRentalBooking>({
     resolver: zodResolver(newRentalBookingSchema),
@@ -211,6 +212,13 @@ export default function Rental() {
   };
 
   const currentVehicleImage = vehicleImages[watchedVehicleCapacity as keyof typeof vehicleImages];
+  
+  // Handle image loading state
+  useEffect(() => {
+    setImageLoading(true);
+    const timer = setTimeout(() => setImageLoading(false), 100);
+    return () => clearTimeout(timer);
+  }, [watchedVehicleCapacity, watchedVehicleType]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -271,13 +279,13 @@ export default function Rental() {
                           <FormItem>
                             <FormLabel>Phone Number *</FormLabel>
                             <FormControl>
-                              <div className="relative">
-                                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                              <div className="flex gap-1">
+                                <div className="bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground flex items-center">
                                   (+88)
-                                </span>
+                                </div>
                                 <Input 
                                   placeholder="01XXXXXXXXX"
-                                  className="pl-12"
+                                  className="flex-1"
                                   {...field}
                                   data-testid="input-phone"
                                 />
@@ -392,12 +400,20 @@ export default function Rental() {
                     {currentVehicleImage && (
                       <div className="flex justify-center">
                         <div className="text-center">
-                          <img 
-                            src={currentVehicleImage}
-                            alt={`${watchedVehicleCapacity} vehicle`}
-                            className="w-[150px] h-[150px] object-cover rounded-lg mb-2 mx-auto"
-                            data-testid="vehicle-image"
-                          />
+                          <div className="relative w-[200px] h-[200px] mx-auto mb-2">
+                            {imageLoading && (
+                              <div className="absolute inset-0 bg-muted rounded-lg animate-pulse" />
+                            )}
+                            <img 
+                              src={currentVehicleImage}
+                              alt={`${watchedVehicleCapacity} vehicle`}
+                              className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${
+                                imageLoading ? 'opacity-0' : 'opacity-100'
+                              }`}
+                              data-testid="vehicle-image"
+                              onLoad={() => setImageLoading(false)}
+                            />
+                          </div>
                           <p className="text-sm text-muted-foreground">
                             {vehicleCapacityOptions.find(option => option.value === watchedVehicleCapacity)?.label} - {watchedVehicleType}
                           </p>
@@ -443,7 +459,26 @@ export default function Rental() {
                                 }
                               }}
                               disabled={(date) => date < new Date()}
-                              className="rounded-md border"
+                              className="rounded-md border p-2"
+                              classNames={{
+                                months: "flex flex-col sm:flex-row space-y-2 sm:space-x-2 sm:space-y-0",
+                                month: "space-y-2",
+                                caption: "flex justify-center pt-1 relative items-center",
+                                caption_label: "text-sm font-medium",
+                                nav: "space-x-1 flex items-center",
+                                table: "w-full border-collapse space-y-1",
+                                head_row: "flex",
+                                head_cell: "text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+                                row: "flex w-full mt-1",
+                                cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                                day: "h-8 w-8 p-0 font-normal aria-selected:opacity-100",
+                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                                day_today: "bg-accent text-accent-foreground",
+                                day_outside: "text-muted-foreground opacity-50",
+                                day_disabled: "text-muted-foreground opacity-50",
+                                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                                day_hidden: "invisible"
+                              }}
                               data-testid="calendar-component"
                             />
                             <div className="flex gap-2 justify-end">
