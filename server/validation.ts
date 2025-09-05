@@ -102,11 +102,11 @@ export const validateRentalBooking = [
     .withMessage('Please select a valid service type'),
   body('vehicleType')
     .notEmpty()
-    .isIn(['standard', 'premium', 'suv', 'microbus', 'coaster'])
+    .isIn(['super-economy', 'economy', 'standard', 'premium', 'luxury', 'ultra-luxury'])
     .withMessage('Please select a valid vehicle type'),
   body('vehicleCapacity')
     .notEmpty()
-    .isIn(['4-sedan', '4-suv', '7-microbus', '15-microbus', '20-coaster', '25-coaster', '28-coaster', '32-coaster', '40-bus'])
+    .isIn(['4-seater', '7-seater', '11-seater', '28-seater', '32-seater', '40-seater'])
     .withMessage('Please select a valid vehicle capacity'),
   body('isReturnTrip')
     .optional()

@@ -27,8 +27,8 @@ const newRentalBookingSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().optional(),
   serviceType: z.enum(["personal", "business", "airport", "wedding", "event", "tourism"]),
-  vehicleType: z.enum(["standard", "premium", "suv", "microbus", "coaster"]),
-  vehicleCapacity: z.enum(["4-sedan", "4-suv", "7-microbus", "15-microbus", "20-coaster", "25-coaster", "28-coaster", "32-coaster", "40-bus"]),
+  vehicleType: z.enum(["super-economy", "economy", "standard", "premium", "luxury", "ultra-luxury"]),
+  vehicleCapacity: z.enum(["4-seater", "7-seater", "11-seater", "28-seater", "32-seater", "40-seater"]),
   fromLocation: z.string().min(3, "From location is required"),
   toLocation: z.string().min(3, "To location is required"),
   isReturnTrip: z.boolean().default(false),
@@ -44,29 +44,15 @@ const timeOptions = [
   "7:00 PM", "8:00 PM", "9:00 PM", "10:00 PM", "11:00 PM", "12:00 AM"
 ];
 
-// Vehicle capacity options by type
-const vehicleCapacityOptions = {
-  standard: [
-    { value: "4-sedan", label: "4 seater (sedan)" }
-  ],
-  premium: [
-    { value: "4-sedan", label: "4 seater (sedan)" }
-  ],
-  suv: [
-    { value: "4-suv", label: "4 seater (SUV)" }
-  ],
-  microbus: [
-    { value: "7-microbus", label: "7 seater (microbus)" },
-    { value: "15-microbus", label: "15 seater (microbus)" }
-  ],
-  coaster: [
-    { value: "20-coaster", label: "20 seater (coaster)" },
-    { value: "25-coaster", label: "25 seater (coaster)" },
-    { value: "28-coaster", label: "28 seater (coaster)" },
-    { value: "32-coaster", label: "32 seater (coaster)" },
-    { value: "40-bus", label: "40 seater (bus)" }
-  ]
-};
+// Vehicle capacity options (all available for any vehicle type)
+const vehicleCapacityOptions = [
+  { value: "4-seater", label: "4 seater" },
+  { value: "7-seater", label: "7 seater" },
+  { value: "11-seater", label: "11 seater" },
+  { value: "28-seater", label: "28 seater" },
+  { value: "32-seater", label: "32 seater" },
+  { value: "40-seater", label: "40 seater" }
+];
 
 import toyotaCorollaImg from '@assets/generated_images/Toyota_Corolla_sedan_Bangladesh_a3630964.png';
 import nissanXTrailImg from '@assets/generated_images/Nissan_X-Trail_SUV_Bangladesh_b2b5d75d.png';
@@ -74,17 +60,14 @@ import toyotaNoahImg from '@assets/generated_images/Toyota_Noah_microbus_Banglad
 import toyotaHiaceImg from '@assets/generated_images/Toyota_Hiace_microbus_Bangladesh_768af3f9.png';
 import toyotaCoasterImg from '@assets/generated_images/Toyota_Coaster_bus_Bangladesh_33049011.png';
 
-// Vehicle images based on type and capacity
+// Vehicle images based on capacity
 const vehicleImages = {
-  "4-sedan": toyotaCorollaImg,
-  "4-suv": nissanXTrailImg,
-  "7-microbus": toyotaNoahImg,
-  "15-microbus": toyotaHiaceImg,
-  "20-coaster": toyotaCoasterImg,
-  "25-coaster": toyotaCoasterImg,
-  "28-coaster": toyotaCoasterImg,
-  "32-coaster": toyotaCoasterImg,
-  "40-bus": toyotaCoasterImg
+  "4-seater": toyotaCorollaImg,
+  "7-seater": toyotaNoahImg,
+  "11-seater": toyotaHiaceImg,
+  "28-seater": toyotaCoasterImg,
+  "32-seater": toyotaCoasterImg,
+  "40-seater": toyotaCoasterImg
 };
 
 export default function Rental() {
@@ -92,6 +75,8 @@ export default function Rental() {
   const queryClient = useQueryClient();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
+  const [tempSelectedDate, setTempSelectedDate] = useState<Date | undefined>();
+  const [tempEndDate, setTempEndDate] = useState<Date | undefined>();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   
   const form = useForm<NewRentalBooking>({
@@ -105,8 +90,8 @@ export default function Rental() {
       startTime: "",
       endTime: "",
       serviceType: "business",
-      vehicleType: "standard",
-      vehicleCapacity: "4-sedan",
+      vehicleType: "economy",
+      vehicleCapacity: "4-seater",
       fromLocation: "",
       toLocation: "",
       isReturnTrip: false,
@@ -130,13 +115,7 @@ export default function Rental() {
     form.setValue("endDate", format(today, "yyyy-MM-dd"));
   }, [form]);
 
-  // Update vehicle capacity options when vehicle type changes
-  useEffect(() => {
-    if (watchedVehicleType && vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]) {
-      const options = vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions];
-      form.setValue("vehicleCapacity", options[0].value as any);
-    }
-  }, [watchedVehicleType, form]);
+  // No need to change capacity options based on vehicle type anymore
 
   const mutation = useMutation({
     mutationFn: async (data: NewRentalBooking) => {
@@ -164,16 +143,12 @@ export default function Rental() {
   });
 
   const onSubmit = (data: NewRentalBooking) => {
-    console.log('Form data before submission:', data);
-    console.log('Form validation errors:', form.formState.errors);
-    
     // Convert empty email to undefined for optional field
     const submitData = {
       ...data,
       email: data.email || undefined,
     };
     
-    console.log('Data being sent to API:', submitData);
     mutation.mutate(submitData);
   };
 
@@ -184,6 +159,14 @@ export default function Rental() {
     }
     return `${format(selectedDate, "MMM dd")} - ${format(endDate, "MMM dd, yyyy")}`;
   };
+  
+  const formatTempDateRange = () => {
+    if (!tempSelectedDate) return "Select rental dates";
+    if (!tempEndDate || isSameDay(tempSelectedDate, tempEndDate)) {
+      return format(tempSelectedDate, "MMM dd, yyyy");
+    }
+    return `${format(tempSelectedDate, "MMM dd")} - ${format(tempEndDate, "MMM dd, yyyy")}`;
+  };
 
   const getDayCount = () => {
     if (!selectedDate || !endDate) return 0;
@@ -193,23 +176,37 @@ export default function Rental() {
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
     
-    if (!selectedDate || (selectedDate && endDate && !isSameDay(selectedDate, endDate))) {
+    if (!tempSelectedDate || (tempSelectedDate && tempEndDate && !isSameDay(tempSelectedDate, tempEndDate))) {
       // First selection or reset range
-      setSelectedDate(date);
-      setEndDate(date);
-      form.setValue("startDate", format(date, "yyyy-MM-dd"));
-      form.setValue("endDate", format(date, "yyyy-MM-dd"));
-    } else if (date > selectedDate) {
+      setTempSelectedDate(date);
+      setTempEndDate(date);
+    } else if (date > tempSelectedDate) {
       // Second selection for range
-      setEndDate(date);
-      form.setValue("endDate", format(date, "yyyy-MM-dd"));
+      setTempEndDate(date);
+    } else if (date < tempSelectedDate) {
+      // Earlier date selected, make it start date
+      setTempEndDate(tempSelectedDate);
+      setTempSelectedDate(date);
     } else {
-      // New first date
-      setSelectedDate(date);
-      setEndDate(date);
-      form.setValue("startDate", format(date, "yyyy-MM-dd"));
-      form.setValue("endDate", format(date, "yyyy-MM-dd"));
+      // Same date clicked
+      setTempSelectedDate(date);
+      setTempEndDate(date);
     }
+  };
+  
+  const confirmDateSelection = () => {
+    if (tempSelectedDate) {
+      setSelectedDate(tempSelectedDate);
+      setEndDate(tempEndDate || tempSelectedDate);
+      form.setValue("startDate", format(tempSelectedDate, "yyyy-MM-dd"));
+      form.setValue("endDate", format(tempEndDate || tempSelectedDate, "yyyy-MM-dd"));
+      setIsCalendarOpen(false);
+    }
+  };
+  
+  const cancelDateSelection = () => {
+    setTempSelectedDate(selectedDate);
+    setTempEndDate(endDate);
     setIsCalendarOpen(false);
   };
 
@@ -233,35 +230,8 @@ export default function Rental() {
       {/* Booking Form Section */}
       <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
-            {/* Vehicle Image Display */}
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Your Selected Vehicle</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <img 
-                    src={currentVehicleImage}
-                    alt={`${watchedVehicleCapacity} vehicle`}
-                    className="w-full h-48 object-cover rounded-lg mb-4"
-                    data-testid="vehicle-image"
-                  />
-                  <div className="text-center">
-                    <h3 className="font-semibold text-lg">
-                      {vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]?.find(
-                        option => option.value === watchedVehicleCapacity
-                      )?.label}
-                    </h3>
-                    <p className="text-muted-foreground">
-                      Popular {watchedVehicleType === 'standard' ? 'economy' : watchedVehicleType} vehicle in Bangladesh
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="max-w-2xl mx-auto">
 
-            {/* Booking Form */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-2xl font-bold text-center">
@@ -379,11 +349,12 @@ export default function Rental() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="standard">Standard (Cars 2006-2010)</SelectItem>
-                                <SelectItem value="premium">Premium (Cars 2011+)</SelectItem>
-                                <SelectItem value="suv">SUV</SelectItem>
-                                <SelectItem value="microbus">Microbus</SelectItem>
-                                <SelectItem value="coaster">Coaster/Bus</SelectItem>
+                                <SelectItem value="super-economy">Super Economy</SelectItem>
+                                <SelectItem value="economy">Economy</SelectItem>
+                                <SelectItem value="standard">Standard</SelectItem>
+                                <SelectItem value="premium">Premium</SelectItem>
+                                <SelectItem value="luxury">Luxury</SelectItem>
+                                <SelectItem value="ultra-luxury">Ultra Luxury</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -404,7 +375,7 @@ export default function Rental() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {watchedVehicleType && vehicleCapacityOptions[watchedVehicleType as keyof typeof vehicleCapacityOptions]?.map((option) => (
+                                {vehicleCapacityOptions.map((option) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
@@ -417,6 +388,23 @@ export default function Rental() {
                       />
                     </div>
 
+                    {/* Vehicle Image Preview */}
+                    {currentVehicleImage && (
+                      <div className="flex justify-center">
+                        <div className="text-center">
+                          <img 
+                            src={currentVehicleImage}
+                            alt={`${watchedVehicleCapacity} vehicle`}
+                            className="w-[150px] h-[150px] object-cover rounded-lg mb-2 mx-auto"
+                            data-testid="vehicle-image"
+                          />
+                          <p className="text-sm text-muted-foreground">
+                            {vehicleCapacityOptions.find(option => option.value === watchedVehicleCapacity)?.label} - {watchedVehicleType}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Rental Period */}
                     <div className="space-y-4">
                       <FormLabel>Rental Period *</FormLabel>
@@ -425,7 +413,11 @@ export default function Rental() {
                           type="button"
                           variant="outline"
                           className="w-full justify-start text-left font-normal"
-                          onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+                          onClick={() => {
+                            setTempSelectedDate(selectedDate);
+                            setTempEndDate(endDate);
+                            setIsCalendarOpen(!isCalendarOpen);
+                          }}
                           data-testid="button-calendar"
                         >
                           <Calendar className="mr-2 h-4 w-4" />
@@ -437,15 +429,41 @@ export default function Rental() {
                           )}
                         </Button>
                         {isCalendarOpen && (
-                          <div className="mt-4">
+                          <div className="mt-4 space-y-4">
+                            <div className="text-center text-sm text-muted-foreground mb-2">
+                              {formatTempDateRange()}
+                            </div>
                             <CalendarComponent
-                              mode="single"
-                              selected={selectedDate}
-                              onSelect={handleDateSelect}
+                              mode="range"
+                              selected={tempSelectedDate ? { from: tempSelectedDate, to: tempEndDate } : undefined}
+                              onSelect={(range) => {
+                                if (range?.from) {
+                                  setTempSelectedDate(range.from);
+                                  setTempEndDate(range.to || range.from);
+                                }
+                              }}
                               disabled={(date) => date < new Date()}
                               className="rounded-md border"
                               data-testid="calendar-component"
                             />
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={cancelDateSelection}
+                                data-testid="button-cancel-date"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                type="button"
+                                onClick={confirmDateSelection}
+                                disabled={!tempSelectedDate}
+                                data-testid="button-confirm-date"
+                              >
+                                Confirm
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
