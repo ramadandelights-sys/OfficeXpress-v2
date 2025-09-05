@@ -16,6 +16,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
 import { SimpleLocationDropdown } from "@/components/simple-location-dropdown";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 // New rental booking schema matching the new requirements
 const newRentalBookingSchema = z.object({
@@ -424,33 +425,31 @@ export default function Rental() {
                     {/* Rental Period */}
                     <div className="space-y-4">
                       <FormLabel>Rental Period *</FormLabel>
-                      <div className="border rounded-lg p-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full justify-start text-left font-normal"
-                          onClick={() => {
-                            if (isCalendarOpen) {
-                              setIsCalendarOpen(false);
-                            } else {
+                      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                            onClick={() => {
                               setTempSelectedDate(undefined);
                               setTempEndDate(undefined);
                               setIsCalendarOpen(true);
-                            }
-                          }}
-                          data-testid="button-calendar"
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formatDateRange()}
-                          {getDayCount() > 1 && (
-                            <span className="ml-auto text-primary">
-                              {getDayCount()} days
-                            </span>
-                          )}
-                        </Button>
-                        {isCalendarOpen && (
-                          <div className="mt-4 space-y-4">
-                            <div className="text-center text-sm text-muted-foreground mb-2">
+                            }}
+                            data-testid="button-calendar"
+                          >
+                            <Calendar className="mr-2 h-4 w-4" />
+                            {formatDateRange()}
+                            {getDayCount() > 1 && (
+                              <span className="ml-auto text-primary">
+                                {getDayCount()} days
+                              </span>
+                            )}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <div className="space-y-4 p-4">
+                            <div className="text-center text-sm text-muted-foreground">
                               {formatTempDateRange()}
                             </div>
                             <CalendarComponent
@@ -463,26 +462,7 @@ export default function Rental() {
                                 }
                               }}
                               disabled={(date) => date < new Date()}
-                              className="rounded-md border p-3 w-fit mx-auto"
-                              classNames={{
-                                months: "flex flex-col space-y-2",
-                                month: "space-y-3",
-                                caption: "flex justify-center pt-1 relative items-center",
-                                caption_label: "text-sm font-medium",
-                                nav: "space-x-1 flex items-center",
-                                table: "w-full border-collapse",
-                                head_row: "flex",
-                                head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem] text-center",
-                                row: "flex w-full mt-2",
-                                cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                                day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                                day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                                day_today: "bg-accent text-accent-foreground",
-                                day_outside: "text-muted-foreground opacity-50",
-                                day_disabled: "text-muted-foreground opacity-50",
-                                day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                                day_hidden: "invisible"
-                              }}
+                              className="rounded-md"
                               data-testid="calendar-component"
                             />
                             <div className="flex gap-2 justify-end">
@@ -504,8 +484,8 @@ export default function Rental() {
                               </Button>
                             </div>
                           </div>
-                        )}
-                      </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
 
                     {/* Time Fields */}

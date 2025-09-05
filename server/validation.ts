@@ -80,11 +80,11 @@ export const validateRentalBooking = [
     }),
   body('startTime')
     .notEmpty()
-    .matches(/^(1[0-2]|0?[1-9]):(00)\s?(AM|PM)$/)
+    .matches(/^(1[0-2]|0?[1-9]):00\s?(AM|PM)$/)
     .withMessage('Please select a valid start time (e.g., 1:00 PM)'),
   body('endTime')
     .optional()
-    .matches(/^(1[0-2]|0?[1-9]):(00)\s?(AM|PM)$/)
+    .matches(/^(1[0-2]|0?[1-9]):00\s?(AM|PM)$/)
     .withMessage('Please select a valid end time (e.g., 2:00 PM)'),
   body('fromLocation')
     .notEmpty()
