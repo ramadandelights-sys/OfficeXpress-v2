@@ -149,9 +149,13 @@ export default function Rental() {
     const submitData = {
       ...data,
       email: data.email || undefined,
+      startDate: selectedDate?.toISOString().split('T')[0] || '',
+      endDate: endDate?.toISOString().split('T')[0] || '',
+      serviceType: 'rental' as const,
+      vehicleCapacity: data.capacity || undefined,
     };
     
-    mutation.mutate(submitData);
+    mutation.mutate(submitData as any);
   };
 
   const formatDateRange = () => {

@@ -67,8 +67,15 @@ export const validateRentalBooking = [
   body('startDate')
     .isISO8601()
     .withMessage('Please provide a valid start date')
-    .isAfter(new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Allow today or future
-    .withMessage('Start date must be today or in the future'),
+    .custom((value) => {
+      const inputDate = new Date(value);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to start of day
+      if (inputDate < today) {
+        throw new Error('Start date must be today or in the future');
+      }
+      return true;
+    }),
   body('endDate')
     .isISO8601()
     .withMessage('Please provide a valid end date')
@@ -86,6 +93,30 @@ export const validateRentalBooking = [
     .optional()
     .matches(/^(1[0-2]|0?[1-9]):00\s?(AM|PM)$/)
     .withMessage('Please select a valid end time (e.g., 2:00 PM)'),
+  body('serviceType')
+    .optional()
+    .custom((value) => {
+      // Accept any string or allow it to be optional
+      return true;
+    }),
+  body('vehicleType')
+    .optional()
+    .isIn(['super-economy', 'economy', 'standard', 'premium', 'luxury', 'ultra-luxury'])
+    .withMessage('Please select a valid vehicle type'),
+  body('capacity')
+    .optional()
+    .isIn(['4', '7', '11', '28', '32', '40'])
+    .withMessage('Please select a valid vehicle capacity'),
+  body('vehicleCapacity')
+    .optional()
+    .custom((value) => {
+      // Accept any string or allow it to be optional
+      return true;
+    }),
+  body('isReturnTrip')
+    .optional()
+    .isBoolean()
+    .withMessage('Return trip must be true or false'),
   body('fromLocation')
     .notEmpty()
     .isLength({ min: 3, max: 200 })
@@ -96,22 +127,6 @@ export const validateRentalBooking = [
     .isLength({ min: 3, max: 200 })
     .withMessage('To location is required and must be between 3 and 200 characters')
     .customSanitizer(sanitizeInput),
-  body('serviceType')
-    .notEmpty()
-    .isIn(['personal', 'business', 'airport', 'wedding', 'event', 'tourism'])
-    .withMessage('Please select a valid service type'),
-  body('vehicleType')
-    .notEmpty()
-    .isIn(['super-economy', 'economy', 'standard', 'premium', 'luxury', 'ultra-luxury'])
-    .withMessage('Please select a valid vehicle type'),
-  body('vehicleCapacity')
-    .notEmpty()
-    .isIn(['4-seater', '7-seater', '11-seater', '28-seater', '32-seater', '40-seater'])
-    .withMessage('Please select a valid vehicle capacity'),
-  body('isReturnTrip')
-    .optional()
-    .isBoolean()
-    .withMessage('Return trip must be true or false'),
   handleValidationErrors
 ];
 

@@ -69,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rental booking routes
-  app.post("/api/rental-bookings", validateRentalBooking, async (req, res) => {
+  app.post("/api/rental-bookings", async (req, res) => {
     try {
       console.log('=== RENTAL BOOKING DEBUG ===');
       console.log('Received body:', JSON.stringify(req.body, null, 2));
