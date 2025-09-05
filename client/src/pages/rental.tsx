@@ -152,7 +152,8 @@ export default function Rental() {
       startDate: selectedDate?.toISOString().split('T')[0] || '',
       endDate: endDate?.toISOString().split('T')[0] || '',
       serviceType: 'rental' as const,
-      vehicleCapacity: data.capacity || undefined,
+      capacity: (data as any).capacity || undefined,
+      vehicleCapacity: (data as any).capacity || undefined,
     };
     
     mutation.mutate(submitData as any);
