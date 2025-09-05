@@ -45,7 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Corporate booking routes
-  app.post("/api/corporate-bookings", validateCorporateBooking, async (req, res) => {
+  app.post("/api/corporate-bookings", validateCorporateBooking, async (req: any, res: any) => {
     try {
       const bookingData = insertCorporateBookingSchema.parse(req.body);
       const booking = await storage.createCorporateBooking(bookingData);
@@ -93,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor registration routes
-  app.post("/api/vendor-registrations", validateVendorRegistration, async (req, res) => {
+  app.post("/api/vendor-registrations", validateVendorRegistration, async (req: any, res: any) => {
     try {
       const vendorData = insertVendorRegistrationSchema.parse(req.body);
       const vendor = await storage.createVendorRegistration(vendorData);
@@ -117,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Contact message routes
-  app.post("/api/contact-messages", validateContactMessage, async (req, res) => {
+  app.post("/api/contact-messages", validateContactMessage, async (req: any, res: any) => {
     try {
       const messageData = insertContactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(messageData);

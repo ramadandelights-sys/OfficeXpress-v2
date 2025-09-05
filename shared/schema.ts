@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, json, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, json, numeric, serial } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -27,18 +27,20 @@ export const rentalBookings = pgTable("rental_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
-  email: text("email"), // Made optional
-  startDate: text("start_date").notNull(),
-  endDate: text("end_date").notNull(),
-  startTime: text("start_time").notNull(), // Now required
-  endTime: text("end_time"), // Required only for single day rentals
-  serviceType: text("service_type"), // Made optional for rental type
-  vehicleType: text("vehicle_type").notNull(), // Now required
-  capacity: text("capacity"), // Vehicle capacity
-  vehicleCapacity: text("vehicle_capacity"), // Alternative capacity field
-  fromLocation: text("from_location").notNull(), // Renamed from pickupLocation
-  toLocation: text("to_location").notNull(), // Renamed from dropoffLocation
-  isReturnTrip: boolean("is_return_trip").default(false), // New field for return trips
+  email: text("email"),
+  pickupDate: text("pickup_date"), // Keep existing field
+  duration: text("duration"), // Keep existing field
+  startDate: text("start_date"),
+  endDate: text("end_date"),
+  startTime: text("start_time").notNull(),
+  endTime: text("end_time"),
+  serviceType: text("service_type"),
+  vehicleType: text("vehicle_type").notNull(),
+  capacity: text("capacity"),
+  vehicleCapacity: text("vehicle_capacity").notNull(),
+  fromLocation: text("from_location").notNull(),
+  toLocation: text("to_location").notNull(),
+  isReturnTrip: boolean("is_return_trip").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -99,7 +101,7 @@ export const portfolioClients = pgTable("portfolio_clients", {
 });
 
 export const bangladeshLocations = pgTable("bangladesh_locations_complete", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: serial("id").primaryKey(),
   
   // Administrative Hierarchy
   divisionId: integer("division_id"),

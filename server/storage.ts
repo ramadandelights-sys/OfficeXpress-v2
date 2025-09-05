@@ -299,33 +299,33 @@ export class DatabaseStorage implements IStorage {
         const searchParts = [
           postcode.postOffice,
           postcode.upazila,
-          district.name,
-          division.name,
-          district.bn_name,
-          division.bn_name
+          (district as any).name,
+          (division as any).name,
+          (district as any).bn_name,
+          (division as any).bn_name
         ].filter(Boolean);
 
         // Create display name: "Post Office, Upazila, District, Division (PostCode)"
-        const fullLocationEn = `${postcode.postOffice}, ${postcode.upazila}, ${district.name}, ${division.name} (${postcode.postCode})`;
-        const fullLocationBn = upazila?.bn_name ? 
-          `${postcode.postOffice}, ${upazila.bn_name}, ${district.bn_name}, ${division.bn_name} (${postcode.postCode})` : null;
+        const fullLocationEn = `${postcode.postOffice}, ${postcode.upazila}, ${(district as any).name}, ${(division as any).name} (${postcode.postCode})`;
+        const fullLocationBn = (upazila as any)?.bn_name ? 
+          `${postcode.postOffice}, ${(upazila as any).bn_name}, ${(district as any).bn_name}, ${(division as any).bn_name} (${postcode.postCode})` : null;
 
         const locationEntry = {
-          divisionId: division.id,
-          divisionName: division.name,
-          divisionNameBn: division.bn_name,
-          divisionLat: division.lat ? Number(division.lat) : null,
-          divisionLng: division.long ? Number(division.long) : null,
+          divisionId: (division as any).id,
+          divisionName: (division as any).name,
+          divisionNameBn: (division as any).bn_name,
+          divisionLat: (division as any).lat ? Number((division as any).lat) : null,
+          divisionLng: (division as any).long ? Number((division as any).long) : null,
           
-          districtId: district.id,
-          districtName: district.name,
-          districtNameBn: district.bn_name,
-          districtLat: district.lat ? Number(district.lat) : null,
-          districtLng: district.long ? Number(district.long) : null,
+          districtId: (district as any).id,
+          districtName: (district as any).name,
+          districtNameBn: (district as any).bn_name,
+          districtLat: (district as any).lat ? Number((district as any).lat) : null,
+          districtLng: (district as any).long ? Number((district as any).long) : null,
           
-          upazilaId: upazila?.id || null,
+          upazilaId: (upazila as any)?.id || null,
           upazilaName: postcode.upazila,
-          upazilaNameBn: upazila?.bn_name || null,
+          upazilaNameBn: (upazila as any)?.bn_name || null,
           
           postOffice: postcode.postOffice,
           postCode: postcode.postCode,
