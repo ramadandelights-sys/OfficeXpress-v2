@@ -17,7 +17,9 @@ import {
   insertBlogPostSchema,
   insertPortfolioClientSchema,
   updateBlogPostSchema,
-  updatePortfolioClientSchema
+  updatePortfolioClientSchema,
+  insertMarketingSettingsSchema,
+  updateMarketingSettingsSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
@@ -497,6 +499,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Facebook Conversions API error:', error);
       res.status(500).json({ error: "Failed to send conversion data" });
+    }
+  });
+
+  // Marketing Settings API endpoints
+  app.get("/api/admin/marketing-settings", async (req, res) => {
+    try {
+      const settings = await storage.getMarketingSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Failed to fetch marketing settings:', error);
+      res.status(500).json({ message: "Failed to fetch marketing settings" });
+    }
+  });
+
+  app.post("/api/admin/marketing-settings", async (req, res) => {
+    try {
+      const settingsData = insertMarketingSettingsSchema.parse(req.body);
+      const settings = await storage.createMarketingSettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid marketing settings data", errors: error.errors });
+      } else {
+        console.error('Failed to create marketing settings:', error);
+        res.status(500).json({ message: "Failed to create marketing settings" });
+      }
+    }
+  });
+
+  app.put("/api/admin/marketing-settings/:id", async (req, res) => {
+    try {
+      const settingsData = updateMarketingSettingsSchema.parse({
+        id: req.params.id,
+        ...req.body
+      });
+      const settings = await storage.updateMarketingSettings(settingsData);
+      if (!settings) {
+        return res.status(404).json({ message: "Marketing settings not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid marketing settings data", errors: error.errors });
+      } else {
+        console.error('Failed to update marketing settings:', error);
+        res.status(500).json({ message: "Failed to update marketing settings" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/marketing-settings/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteMarketingSettings(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Marketing settings not found" });
+      }
+      res.json({ message: "Marketing settings deleted successfully" });
+    } catch (error) {
+      console.error('Failed to delete marketing settings:', error);
+      res.status(500).json({ message: "Failed to delete marketing settings" });
     }
   });
 

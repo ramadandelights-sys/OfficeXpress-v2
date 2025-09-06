@@ -7,6 +7,7 @@ import {
   blogPosts,
   portfolioClients,
   bangladeshLocations,
+  marketingSettings,
   type User, 
   type InsertUser,
   type CorporateBooking,
@@ -24,7 +25,10 @@ import {
   type InsertPortfolioClient,
   type UpdatePortfolioClient,
   type BangladeshLocation,
-  type InsertBangladeshLocation
+  type InsertBangladeshLocation,
+  type MarketingSettings,
+  type InsertMarketingSettings,
+  type UpdateMarketingSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike } from "drizzle-orm";
@@ -71,6 +75,12 @@ export interface IStorage {
   getBangladeshLocations(): Promise<BangladeshLocation[]>;
   searchBangladeshLocations(query: string): Promise<BangladeshLocation[]>;
   importComprehensiveBangladeshLocations(): Promise<void>;
+  
+  // Marketing settings
+  getMarketingSettings(): Promise<MarketingSettings | null>;
+  createMarketingSettings(settings: InsertMarketingSettings): Promise<MarketingSettings>;
+  updateMarketingSettings(settings: UpdateMarketingSettings): Promise<MarketingSettings | null>;
+  deleteMarketingSettings(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -357,6 +367,32 @@ export class DatabaseStorage implements IStorage {
       console.error("Error importing comprehensive Bangladesh locations:", error);
       throw error;
     }
+  }
+
+  // Marketing settings implementation
+  async getMarketingSettings(): Promise<MarketingSettings | null> {
+    const [settings] = await db.select().from(marketingSettings).limit(1);
+    return settings || null;
+  }
+
+  async createMarketingSettings(settingsData: InsertMarketingSettings): Promise<MarketingSettings> {
+    const [settings] = await db.insert(marketingSettings).values([settingsData]).returning();
+    return settings;
+  }
+
+  async updateMarketingSettings(settingsData: UpdateMarketingSettings): Promise<MarketingSettings | null> {
+    const { id, ...updateData } = settingsData;
+    const [settings] = await db
+      .update(marketingSettings)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(marketingSettings.id, id))
+      .returning();
+    return settings || null;
+  }
+
+  async deleteMarketingSettings(id: string): Promise<boolean> {
+    const result = await db.delete(marketingSettings).where(eq(marketingSettings.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 
