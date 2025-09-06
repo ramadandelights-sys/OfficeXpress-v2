@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -37,6 +37,23 @@ function Router() {
   );
 }
 
+function ConditionalFooter() {
+  const [location] = useLocation();
+  const isAdminPage = location === "/admin";
+  
+  if (isAdminPage) {
+    return (
+      <div className="bg-gray-100 dark:bg-gray-900 py-8">
+        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+          OfficeXpress Admin Panel
+        </div>
+      </div>
+    );
+  }
+  
+  return <Footer />;
+}
+
 function App() {
   // Facebook Pixel configuration
   const facebookPixelConfig = {
@@ -59,7 +76,7 @@ function App() {
               <main>
                 <Router />
               </main>
-              <Footer />
+              <ConditionalFooter />
               <Toaster />
             </div>
           </TooltipProvider>
