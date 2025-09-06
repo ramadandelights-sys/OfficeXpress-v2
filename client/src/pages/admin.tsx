@@ -33,9 +33,12 @@ import type {
   ContactMessage,
   MarketingSettings,
   InsertMarketingSettings,
-  UpdateMarketingSettings
+  UpdateMarketingSettings,
+  LegalPage,
+  InsertLegalPage,
+  UpdateLegalPage
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertLegalPageSchema, updateLegalPageSchema } from "@shared/schema";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
