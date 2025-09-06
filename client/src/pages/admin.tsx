@@ -82,6 +82,10 @@ function AdminDashboard() {
   
   // Marketing settings state
   const [editingMarketingSettings, setEditingMarketingSettings] = useState(false);
+  
+  // Legal pages state
+  const [editingLegalPage, setEditingLegalPage] = useState<string | null>(null);
+  const [showLegalPageCreator, setShowLegalPageCreator] = useState(false);
 
   // CSV Export functionality
   const exportToCSV = (data: any[], filename: string) => {
@@ -231,6 +235,10 @@ function AdminDashboard() {
     queryKey: ["/api/admin/marketing-settings"],
   });
 
+  const { data: legalPages = [], isLoading: loadingLegalPages } = useQuery<LegalPage[]>({
+    queryKey: ["/api/admin/legal-pages"],
+  });
+
   const createBlogPostMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/admin/blog-posts", data);
@@ -342,6 +350,49 @@ function AdminDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to update marketing settings", variant: "destructive" });
+    },
+  });
+
+  // Legal Pages Mutations
+  const createLegalPageMutation = useMutation({
+    mutationFn: async (data: InsertLegalPage) => {
+      return await apiRequest("POST", "/api/admin/legal-pages", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Legal page created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/legal-pages"] });
+      setEditingLegalPage(null);
+      setShowLegalPageCreator(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create legal page", variant: "destructive" });
+    },
+  });
+
+  const updateLegalPageMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateLegalPage }) => {
+      return await apiRequest("PUT", `/api/admin/legal-pages/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Legal page updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/legal-pages"] });
+      setEditingLegalPage(null);
+    },
+    onError: () => {
+      toast({ title: "Failed to update legal page", variant: "destructive" });
+    },
+  });
+
+  const deleteLegalPageMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/admin/legal-pages/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Legal page deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/legal-pages"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete legal page", variant: "destructive" });
     },
   });
 
