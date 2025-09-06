@@ -525,7 +525,7 @@ function AdminDashboard() {
               contactMessages={contactMessages}
               searchQuery={searchQuery}
               formTypeFilter={formTypeFilter}
-              loading={loadingCorporate || loadingRental || loadingVendors || loadingContacts}
+              loading={loadingCorporate || loadingRental || loadingVendors || loadingMessages}
             />
           </CardContent>
         </Card>
