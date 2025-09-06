@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
+import { MarketingSettingsForm, MarketingSettingsDisplay } from "@/components/marketing-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -29,9 +30,12 @@ import type {
   CorporateBooking,
   RentalBooking,
   VendorRegistration,
-  ContactMessage
+  ContactMessage,
+  MarketingSettings,
+  InsertMarketingSettings,
+  UpdateMarketingSettings
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema } from "@shared/schema";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -72,6 +76,9 @@ function AdminDashboard() {
   const [vendorDateTo, setVendorDateTo] = useState<Date | undefined>(undefined);
   const [contactDateFrom, setContactDateFrom] = useState<Date | undefined>(undefined);
   const [contactDateTo, setContactDateTo] = useState<Date | undefined>(undefined);
+  
+  // Marketing settings state
+  const [editingMarketingSettings, setEditingMarketingSettings] = useState(false);
 
   // CSV Export functionality
   const exportToCSV = (data: any[], filename: string) => {
@@ -217,6 +224,10 @@ function AdminDashboard() {
     queryKey: ["/api/admin/contact-messages"],
   });
 
+  const { data: marketingSettings = null, isLoading: loadingMarketingSettings } = useQuery<MarketingSettings | null>({
+    queryKey: ["/api/admin/marketing-settings"],
+  });
+
   const createBlogPostMutation = useMutation({
     mutationFn: async (data: any) => {
       return await apiRequest("POST", "/api/admin/blog-posts", data);
@@ -299,6 +310,35 @@ function AdminDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to delete portfolio client", variant: "destructive" });
+    },
+  });
+
+  // Marketing Settings Mutations
+  const createMarketingSettingsMutation = useMutation({
+    mutationFn: async (data: InsertMarketingSettings) => {
+      return await apiRequest("POST", "/api/admin/marketing-settings", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Marketing settings created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/marketing-settings"] });
+      setEditingMarketingSettings(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create marketing settings", variant: "destructive" });
+    },
+  });
+
+  const updateMarketingSettingsMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateMarketingSettings }) => {
+      return await apiRequest("PUT", `/api/admin/marketing-settings/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Marketing settings updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/marketing-settings"] });
+      setEditingMarketingSettings(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update marketing settings", variant: "destructive" });
     },
   });
 
@@ -588,7 +628,77 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-
+        {/* Marketing Settings Management */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-marketing-settings">
+                <Target className="h-5 w-5" />
+                Marketing Settings
+              </CardTitle>
+              {!marketingSettings && !editingMarketingSettings && (
+                <Button 
+                  onClick={() => setEditingMarketingSettings(true)}
+                  className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                  data-testid="button-create-marketing"
+                >
+                  <Plus className="h-4 w-4" />
+                  Setup Marketing
+                </Button>
+              )}
+              {marketingSettings && !editingMarketingSettings && (
+                <Button 
+                  onClick={() => setEditingMarketingSettings(true)}
+                  className="flex items-center gap-2"
+                  variant="outline"
+                  data-testid="button-edit-marketing"
+                >
+                  <Settings className="h-4 w-4" />
+                  Edit Settings
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingMarketingSettings ? (
+              <div className="flex justify-center py-8">
+                <div className="text-gray-500">Loading marketing settings...</div>
+              </div>
+            ) : editingMarketingSettings ? (
+              <MarketingSettingsForm
+                settings={marketingSettings}
+                onSave={(data) => {
+                  if (marketingSettings) {
+                    updateMarketingSettingsMutation.mutate({ id: marketingSettings.id, data });
+                  } else {
+                    createMarketingSettingsMutation.mutate(data);
+                  }
+                }}
+                onCancel={() => setEditingMarketingSettings(false)}
+                isLoading={createMarketingSettingsMutation.isPending || updateMarketingSettingsMutation.isPending}
+              />
+            ) : marketingSettings ? (
+              <MarketingSettingsDisplay settings={marketingSettings} />
+            ) : (
+              <div className="text-center py-8">
+                <Target className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No Marketing Settings Configured
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Set up your Facebook Pixel, Google Analytics, and other marketing tools to track your website performance.
+                </p>
+                <Button 
+                  onClick={() => setEditingMarketingSettings(true)}
+                  className="bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Setup Marketing Settings
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
       </div>
     </div>
