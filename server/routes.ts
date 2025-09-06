@@ -19,7 +19,9 @@ import {
   updateBlogPostSchema,
   updatePortfolioClientSchema,
   insertMarketingSettingsSchema,
-  updateMarketingSettingsSchema
+  updateMarketingSettingsSchema,
+  insertLegalPageSchema,
+  updateLegalPageSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
@@ -559,6 +561,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to delete marketing settings:', error);
       res.status(500).json({ message: "Failed to delete marketing settings" });
+    }
+  });
+
+  // Legal Pages API endpoints
+  app.get("/api/admin/legal-pages", async (req, res) => {
+    try {
+      const pages = await storage.getLegalPages();
+      res.json(pages);
+    } catch (error) {
+      console.error('Failed to fetch legal pages:', error);
+      res.status(500).json({ message: "Failed to fetch legal pages" });
+    }
+  });
+
+  app.get("/api/admin/legal-pages/:id", async (req, res) => {
+    try {
+      const page = await storage.getLegalPage(req.params.id);
+      if (!page) {
+        return res.status(404).json({ message: "Legal page not found" });
+      }
+      res.json(page);
+    } catch (error) {
+      console.error('Failed to fetch legal page:', error);
+      res.status(500).json({ message: "Failed to fetch legal page" });
+    }
+  });
+
+  app.get("/api/legal-pages/:type", async (req, res) => {
+    try {
+      if (req.params.type !== 'terms' && req.params.type !== 'privacy') {
+        return res.status(400).json({ message: "Invalid legal page type" });
+      }
+      const page = await storage.getLegalPageByType(req.params.type);
+      if (!page) {
+        return res.status(404).json({ message: "Legal page not found" });
+      }
+      res.json(page);
+    } catch (error) {
+      console.error('Failed to fetch legal page:', error);
+      res.status(500).json({ message: "Failed to fetch legal page" });
+    }
+  });
+
+  app.post("/api/admin/legal-pages", async (req, res) => {
+    try {
+      const pageData = insertLegalPageSchema.parse(req.body);
+      const page = await storage.createLegalPage(pageData);
+      res.json(page);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid legal page data", errors: error.errors });
+      } else {
+        console.error('Failed to create legal page:', error);
+        res.status(500).json({ message: "Failed to create legal page" });
+      }
+    }
+  });
+
+  app.put("/api/admin/legal-pages/:id", async (req, res) => {
+    try {
+      const pageData = updateLegalPageSchema.parse({
+        id: req.params.id,
+        ...req.body
+      });
+      const page = await storage.updateLegalPage(pageData);
+      if (!page) {
+        return res.status(404).json({ message: "Legal page not found" });
+      }
+      res.json(page);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid legal page data", errors: error.errors });
+      } else {
+        console.error('Failed to update legal page:', error);
+        res.status(500).json({ message: "Failed to update legal page" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/legal-pages/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteLegalPage(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Legal page not found" });
+      }
+      res.json({ message: "Legal page deleted successfully" });
+    } catch (error) {
+      console.error('Failed to delete legal page:', error);
+      res.status(500).json({ message: "Failed to delete legal page" });
     }
   });
 

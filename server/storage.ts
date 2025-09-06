@@ -8,6 +8,7 @@ import {
   portfolioClients,
   bangladeshLocations,
   marketingSettings,
+  legalPages,
   type User, 
   type InsertUser,
   type CorporateBooking,
@@ -28,7 +29,10 @@ import {
   type InsertBangladeshLocation,
   type MarketingSettings,
   type InsertMarketingSettings,
-  type UpdateMarketingSettings
+  type UpdateMarketingSettings,
+  type LegalPage,
+  type InsertLegalPage,
+  type UpdateLegalPage
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike } from "drizzle-orm";
@@ -81,6 +85,14 @@ export interface IStorage {
   createMarketingSettings(settings: InsertMarketingSettings): Promise<MarketingSettings>;
   updateMarketingSettings(settings: UpdateMarketingSettings): Promise<MarketingSettings | null>;
   deleteMarketingSettings(id: string): Promise<boolean>;
+  
+  // Legal pages
+  getLegalPages(): Promise<LegalPage[]>;
+  getLegalPage(id: string): Promise<LegalPage | undefined>;
+  getLegalPageByType(type: 'terms' | 'privacy'): Promise<LegalPage | undefined>;
+  createLegalPage(page: InsertLegalPage): Promise<LegalPage>;
+  updateLegalPage(page: UpdateLegalPage): Promise<LegalPage | null>;
+  deleteLegalPage(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -392,6 +404,41 @@ export class DatabaseStorage implements IStorage {
 
   async deleteMarketingSettings(id: string): Promise<boolean> {
     const result = await db.delete(marketingSettings).where(eq(marketingSettings.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Legal pages implementation
+  async getLegalPages(): Promise<LegalPage[]> {
+    return await db.select().from(legalPages).orderBy(desc(legalPages.updatedAt));
+  }
+
+  async getLegalPage(id: string): Promise<LegalPage | undefined> {
+    const [page] = await db.select().from(legalPages).where(eq(legalPages.id, id));
+    return page || undefined;
+  }
+
+  async getLegalPageByType(type: 'terms' | 'privacy'): Promise<LegalPage | undefined> {
+    const [page] = await db.select().from(legalPages).where(eq(legalPages.type, type));
+    return page || undefined;
+  }
+
+  async createLegalPage(pageData: InsertLegalPage): Promise<LegalPage> {
+    const [page] = await db.insert(legalPages).values([pageData]).returning();
+    return page;
+  }
+
+  async updateLegalPage(pageData: UpdateLegalPage): Promise<LegalPage | null> {
+    const { id, ...updateData } = pageData;
+    const [page] = await db
+      .update(legalPages)
+      .set({ ...updateData, updatedAt: new Date(), lastUpdated: new Date() })
+      .where(eq(legalPages.id, id))
+      .returning();
+    return page || null;
+  }
+
+  async deleteLegalPage(id: string): Promise<boolean> {
+    const result = await db.delete(legalPages).where(eq(legalPages.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }
