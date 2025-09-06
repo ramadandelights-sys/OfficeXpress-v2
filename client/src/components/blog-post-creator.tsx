@@ -315,6 +315,35 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                         <FormLabel className="flex items-center justify-between">
                           Content *
                           <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                type="button"
+                                variant={isRichTextMode ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  if (!isRichTextMode && contentRef.current) {
+                                    contentRef.current.innerHTML = convertFromMarkdown(field.value || '');
+                                  }
+                                  setIsRichTextMode(true);
+                                }}
+                              >
+                                Rich Text
+                              </Button>
+                              <Button
+                                type="button"
+                                variant={!isRichTextMode ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => {
+                                  if (isRichTextMode && contentRef.current) {
+                                    const markdown = convertToMarkdown(contentRef.current.innerHTML);
+                                    field.onChange(markdown);
+                                  }
+                                  setIsRichTextMode(false);
+                                }}
+                              >
+                                Markdown
+                              </Button>
+                            </div>
                             <Button
                               type="button"
                               variant="outline"
@@ -348,20 +377,185 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             </Button>
                           </div>
                         )}
-                        <FormControl>
-                          <Textarea 
-                            {...field}
-                            onChange={(e) => {
-                              field.onChange(e);
-                              handleContentChange(e.target.value);
-                            }}
-                            className="min-h-[400px] font-mono"
-                            placeholder="Write your blog post content here... Use Markdown for formatting.
+                        {isRichTextMode ? (
+                          <div className="space-y-2">
+                            {/* Rich Text Toolbar */}
+                            <div className="border rounded-t-lg bg-gray-50 p-2 flex flex-wrap items-center gap-1">
+                              {/* Text Formatting */}
+                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('bold')}
+                                  className="h-8 w-8 p-0"
+                                  title="Bold"
+                                >
+                                  <Bold className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('italic')}
+                                  className="h-8 w-8 p-0"
+                                  title="Italic"
+                                >
+                                  <Italic className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('underline')}
+                                  className="h-8 w-8 p-0"
+                                  title="Underline"
+                                >
+                                  <Underline className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              {/* Headings */}
+                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(1)}
+                                  className="h-8 px-2 text-xs"
+                                  title="Heading 1"
+                                >
+                                  H1
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(2)}
+                                  className="h-8 px-2 text-xs"
+                                  title="Heading 2"
+                                >
+                                  H2
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(3)}
+                                  className="h-8 px-2 text-xs"
+                                  title="Heading 3"
+                                >
+                                  H3
+                                </Button>
+                              </div>
+                              
+                              {/* Lists */}
+                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('insertUnorderedList')}
+                                  className="h-8 w-8 p-0"
+                                  title="Bullet List"
+                                >
+                                  <List className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('insertOrderedList')}
+                                  className="h-8 w-8 p-0"
+                                  title="Numbered List"
+                                >
+                                  <ListOrdered className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              {/* Links & Alignment */}
+                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={insertLink}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Link"
+                                >
+                                  <Link className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              
+                              {/* Alignment */}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('justifyLeft')}
+                                  className="h-8 w-8 p-0"
+                                  title="Align Left"
+                                >
+                                  <AlignLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('justifyCenter')}
+                                  className="h-8 w-8 p-0"
+                                  title="Align Center"
+                                >
+                                  <AlignCenter className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('justifyRight')}
+                                  className="h-8 w-8 p-0"
+                                  title="Align Right"
+                                >
+                                  <AlignRight className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                            
+                            {/* Rich Text Editor */}
+                            <FormControl>
+                              <div
+                                ref={contentRef}
+                                contentEditable
+                                onInput={handleRichTextChange}
+                                onBlur={() => {
+                                  if (contentRef.current) {
+                                    field.onChange(contentRef.current.innerHTML);
+                                  }
+                                }}
+                                className="min-h-[400px] border rounded-b-lg p-4 focus:outline-none focus:ring-2 focus:ring-ring bg-white prose max-w-none"
+                                style={{ maxHeight: '600px', overflowY: 'auto' }}
+                                data-testid="rich-text-editor"
+                                dangerouslySetInnerHTML={{ __html: field.value || '<p>Start writing your blog post content here...</p>' }}
+                              />
+                            </FormControl>
+                          </div>
+                        ) : (
+                          <FormControl>
+                            <Textarea 
+                              {...field}
+                              onChange={(e) => {
+                                field.onChange(e);
+                                handleContentChange(e.target.value);
+                              }}
+                              className="min-h-[400px] font-mono"
+                              placeholder="Write your blog post content here... Use Markdown for formatting.
 
 You can also click 'Insert Image' to add images to your content."
-                            data-testid="input-blog-content"
-                          />
-                        </FormControl>
+                              data-testid="input-blog-content"
+                            />
+                          </FormControl>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
