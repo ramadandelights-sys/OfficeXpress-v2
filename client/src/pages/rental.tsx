@@ -29,7 +29,7 @@ const newRentalBookingSchema = z.object({
   endTime: z.string().optional(),
   serviceType: z.enum(["personal", "business", "airport", "wedding", "event", "tourism"]),
   vehicleType: z.enum(["super-economy", "economy", "standard", "premium", "luxury", "ultra-luxury"]),
-  vehicleCapacity: z.enum(["4-seater", "7-seater", "11-seater", "28-seater", "32-seater", "40-seater"]),
+  vehicleCapacity: z.enum(["4", "7", "11", "28", "32", "40"]),
   fromLocation: z.string().min(3, "From location is required"),
   toLocation: z.string().min(3, "To location is required"),
   isReturnTrip: z.boolean().default(false),
@@ -47,12 +47,12 @@ const timeOptions = [
 
 // Vehicle capacity options (all available for any vehicle type)
 const vehicleCapacityOptions = [
-  { value: "4-seater", label: "4 seater" },
-  { value: "7-seater", label: "7 seater" },
-  { value: "11-seater", label: "11 seater" },
-  { value: "28-seater", label: "28 seater" },
-  { value: "32-seater", label: "32 seater" },
-  { value: "40-seater", label: "40 seater" }
+  { value: "4", label: "4 seater" },
+  { value: "7", label: "7 seater" },
+  { value: "11", label: "11 seater" },
+  { value: "28", label: "28 seater" },
+  { value: "32", label: "32 seater" },
+  { value: "40", label: "40 seater" }
 ];
 
 import toyotaCorollaImg from '@assets/generated_images/Toyota_Corolla_no_background_58143ea8.png';
@@ -63,12 +63,12 @@ import toyotaCoasterImg from '@assets/generated_images/Toyota_Coaster_no_backgro
 
 // Vehicle images based on capacity
 const vehicleImages = {
-  "4-seater": toyotaCorollaImg,
-  "7-seater": toyotaNoahImg,
-  "11-seater": toyotaHiaceImg,
-  "28-seater": toyotaCoasterImg,
-  "32-seater": toyotaCoasterImg,
-  "40-seater": toyotaCoasterImg
+  "4": toyotaCorollaImg,
+  "7": toyotaNoahImg,
+  "11": toyotaHiaceImg,
+  "28": toyotaCoasterImg,
+  "32": toyotaCoasterImg,
+  "40": toyotaCoasterImg
 };
 
 export default function Rental() {
@@ -152,8 +152,8 @@ export default function Rental() {
       startDate: selectedDate?.toISOString().split('T')[0] || '',
       endDate: endDate?.toISOString().split('T')[0] || '',
       serviceType: 'rental' as const,
-      capacity: (data as any).capacity || "",
-      vehicleCapacity: (data as any).capacity || "",
+      capacity: data.vehicleCapacity,
+      vehicleCapacity: data.vehicleCapacity,
     };
     
     mutation.mutate(submitData as any);
