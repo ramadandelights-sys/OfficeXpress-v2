@@ -69,7 +69,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Rental booking routes
-  app.post("/api/rental-bookings", async (req, res) => {
+  app.post("/api/rental-bookings", validateRentalBooking, async (req: any, res: any) => {
     try {
       const bookingData = insertRentalBookingSchema.parse(req.body);
       const booking = await storage.createRentalBooking(bookingData);

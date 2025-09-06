@@ -148,12 +148,12 @@ export default function Rental() {
     // Convert empty email to undefined for optional field
     const submitData = {
       ...data,
-      email: data.email || undefined,
+      email: data.email || "",
       startDate: selectedDate?.toISOString().split('T')[0] || '',
       endDate: endDate?.toISOString().split('T')[0] || '',
       serviceType: 'rental' as const,
-      capacity: (data as any).capacity || undefined,
-      vehicleCapacity: (data as any).capacity || undefined,
+      capacity: (data as any).capacity || "",
+      vehicleCapacity: (data as any).capacity || "",
     };
     
     mutation.mutate(submitData as any);

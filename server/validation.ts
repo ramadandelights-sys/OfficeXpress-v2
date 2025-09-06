@@ -87,12 +87,12 @@ export const validateRentalBooking = [
     }),
   body('startTime')
     .notEmpty()
-    .matches(/^(1[0-2]|0?[1-9]):00\s?(AM|PM)$/)
-    .withMessage('Please select a valid start time (e.g., 1:00 PM)'),
+    .matches(/^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(AM|PM)$/)
+    .withMessage('Please select a valid start time (e.g., 1:00 PM, 1:30 PM)'),
   body('endTime')
     .optional()
-    .matches(/^(1[0-2]|0?[1-9]):00\s?(AM|PM)$/)
-    .withMessage('Please select a valid end time (e.g., 2:00 PM)'),
+    .matches(/^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(AM|PM)$/)
+    .withMessage('Please select a valid end time (e.g., 2:00 PM, 2:30 PM)'),
   body('serviceType')
     .optional()
     .custom((value) => {
@@ -100,7 +100,7 @@ export const validateRentalBooking = [
       return true;
     }),
   body('vehicleType')
-    .optional()
+    .notEmpty()
     .isIn(['super-economy', 'economy', 'standard', 'premium', 'luxury', 'ultra-luxury'])
     .withMessage('Please select a valid vehicle type'),
   body('capacity')
