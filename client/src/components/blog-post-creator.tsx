@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit } from "lucide-react";
+import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,6 +40,8 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [wordCount, setWordCount] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
   const [showContentImageUploader, setShowContentImageUploader] = useState(false);
+  const [isRichTextMode, setIsRichTextMode] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const form = useForm<AdvancedBlogPost>({
     resolver: zodResolver(advancedBlogPostSchema),
@@ -102,6 +104,88 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       title: "Image inserted",
       description: "The image has been added to your blog content"
     });
+  };
+
+  // Rich text editor functions
+  const executeCommand = (command: string, value?: string) => {
+    document.execCommand(command, false, value);
+    if (contentRef.current) {
+      const content = contentRef.current.innerHTML;
+      const textContent = contentRef.current.textContent || contentRef.current.innerText || '';
+      form.setValue("content", content);
+      const words = textContent.trim().split(/\s+/).length;
+      setWordCount(words);
+      const readTime = Math.max(1, Math.ceil(words / 200));
+      form.setValue("readTime", readTime);
+    }
+  };
+
+  const insertLink = () => {
+    const url = prompt('Enter URL:');
+    if (url) {
+      executeCommand('createLink', url);
+    }
+  };
+
+  const insertHeading = (level: number) => {
+    executeCommand('formatBlock', `h${level}`);
+  };
+
+  const handleRichTextChange = () => {
+    if (contentRef.current) {
+      const content = contentRef.current.innerHTML;
+      const textContent = contentRef.current.textContent || contentRef.current.innerText || '';
+      form.setValue("content", content);
+      const words = textContent.trim().split(/\s+/).length;
+      setWordCount(words);
+      const readTime = Math.max(1, Math.ceil(words / 200));
+      form.setValue("readTime", readTime);
+    }
+  };
+
+  const convertToMarkdown = (html: string) => {
+    // Simple HTML to Markdown conversion
+    return html
+      .replace(/<h([1-6])>/g, (match, level) => '#'.repeat(parseInt(level)) + ' ')
+      .replace(/<\/h[1-6]>/g, '\n\n')
+      .replace(/<b>|<strong>/g, '**')
+      .replace(/<\/b>|<\/strong>/g, '**')
+      .replace(/<i>|<em>/g, '*')
+      .replace(/<\/i>|<\/em>/g, '*')
+      .replace(/<u>/g, '<u>')
+      .replace(/<\/u>/g, '</u>')
+      .replace(/<a href="([^"]+)">([^<]+)<\/a>/g, '[$2]($1)')
+      .replace(/<ul>/g, '\n')
+      .replace(/<\/ul>/g, '\n')
+      .replace(/<ol>/g, '\n')
+      .replace(/<\/ol>/g, '\n')
+      .replace(/<li>/g, '- ')
+      .replace(/<\/li>/g, '\n')
+      .replace(/<p>/g, '')
+      .replace(/<\/p>/g, '\n\n')
+      .replace(/<br\s*\/?>/g, '\n')
+      .replace(/<[^>]+>/g, '')
+      .trim();
+  };
+
+  const convertFromMarkdown = (markdown: string) => {
+    // Simple Markdown to HTML conversion
+    return markdown
+      .replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, text) => `<h${hashes.length}>${text}</h${hashes.length}>`)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/<u>([^<]+)<\/u>/g, '<u>$1</u>')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+      .replace(/^-\s(.+)$/gm, '<li>$1</li>')
+      .replace(/((<li>.*<\/li>\s*)+)/gs, '<ul>$1</ul>')
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/^(.+)$/gm, (match) => {
+        if (match.startsWith('<') || match.trim() === '') return match;
+        return `<p>${match}</p>`;
+      })
+      .replace(/^<p><\/p>$/gm, '')
+      .replace(/^<p>(<[^>]+>)/gm, '$1')
+      .replace(/(<\/[^>]+>)<\/p>$/gm, '$1');
   };
 
   // Add tag functionality
