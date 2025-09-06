@@ -17,6 +17,7 @@ import Contact from "@/pages/contact";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
 import Admin from "@/pages/admin";
+import LegalPageView from "@/pages/legal-page";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +33,8 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:id" component={BlogPost} />
       <Route path="/admin" component={Admin} />
+      <Route path="/terms" component={LegalPageView} />
+      <Route path="/privacy" component={LegalPageView} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -40,12 +43,23 @@ function Router() {
 function ConditionalFooter() {
   const [location] = useLocation();
   const isAdminPage = location === "/admin";
+  const isLegalPage = location === "/terms" || location === "/privacy";
   
   if (isAdminPage) {
     return (
       <div className="bg-gray-100 dark:bg-gray-900 py-8">
         <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
           OfficeXpress Admin Panel
+        </div>
+      </div>
+    );
+  }
+  
+  if (isLegalPage) {
+    return (
+      <div className="bg-gray-100 dark:bg-gray-900 py-8">
+        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
+          OfficeXpress Transportation Services © 2024
         </div>
       </div>
     );
