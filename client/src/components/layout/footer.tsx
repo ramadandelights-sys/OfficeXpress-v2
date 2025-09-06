@@ -19,6 +19,20 @@ export default function Footer() {
             <p className="text-gray-300 mb-4">
               Professional transportation solutions for businesses and individuals across Bangladesh.
             </p>
+            <div className="space-y-2 text-gray-300 mb-4">
+              <p className="flex items-center">
+                <MapPin className="w-4 h-4 mr-2" />
+                Dhanmondi, Dhaka 1205
+              </p>
+              <p className="flex items-center">
+                <Phone className="w-4 h-4 mr-2" />
+                +880 1XXX-XXXXXX
+              </p>
+              <p className="flex items-center">
+                <Mail className="w-4 h-4 mr-2" />
+                info@officexpress.org
+              </p>
+            </div>
             <div className="flex space-x-4">
               <a
                 href="#"
@@ -98,36 +112,31 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Legal */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Contact Info</h4>
-            <div className="space-y-2 text-gray-300">
-              <p className="flex items-center">
-                <MapPin className="w-4 h-4 mr-2" />
-                Dhanmondi, Dhaka 1205
-              </p>
-              <p className="flex items-center">
-                <Phone className="w-4 h-4 mr-2" />
-                +880 1XXX-XXXXXX
-              </p>
-              <p className="flex items-center">
-                <Mail className="w-4 h-4 mr-2" />
-                info@officexpress.org
-              </p>
-            </div>
+            <h4 className="text-lg font-semibold mb-4">Legal</h4>
+            <ul className="space-y-2 text-gray-300">
+              <li>
+                <Link href="/terms" className="hover:text-white transition-colors" data-testid="footer-terms">
+                  Terms & Conditions
+                </Link>
+              </li>
+              <li>
+                <Link href="/privacy" className="hover:text-white transition-colors" data-testid="footer-privacy">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="hover:text-white transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+            </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-700 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400">&copy; 2024 OfficeXpress. All rights reserved.</p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              Privacy Policy
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-              Terms of Service
-            </a>
-          </div>
+        <div className="border-t border-gray-700 mt-8 pt-8 text-center">
+          <p className="text-gray-400">&copy; 2024 OfficeXpress Transportation Services. All rights reserved.</p>
         </div>
       </div>
     </footer>
