@@ -19,12 +19,13 @@ import type {
   PortfolioClient, 
   UpdateBlogPost, 
   UpdatePortfolioClient,
+  InsertPortfolioClient,
   CorporateBooking,
   RentalBooking,
   VendorRegistration,
   ContactMessage
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema } from "@shared/schema";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -46,6 +47,7 @@ function AdminDashboard() {
   const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
   const [showBlogCreator, setShowBlogCreator] = useState(false);
+  const [showPortfolioCreator, setShowPortfolioCreator] = useState(false);
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminAuthenticated");
@@ -131,6 +133,20 @@ function AdminDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to update portfolio client", variant: "destructive" });
+    },
+  });
+
+  const createPortfolioClientMutation = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("POST", "/api/admin/portfolio-clients", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Portfolio client created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/portfolio-clients"] });
+      setShowPortfolioCreator(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create portfolio client", variant: "destructive" });
     },
   });
 
@@ -254,14 +270,34 @@ function AdminDashboard() {
         {/* Portfolio Clients Management */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-portfolio-management">
-              <Edit className="h-5 w-5" />
-              Portfolio Clients Management
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-portfolio-management">
+                <Edit className="h-5 w-5" />
+                Portfolio Clients Management
+              </CardTitle>
+              <Button 
+                onClick={() => setShowPortfolioCreator(true)}
+                className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                data-testid="button-create-portfolio-client"
+              >
+                <Plus className="h-4 w-4" />
+                Add New Client
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingClients ? (
+            {showPortfolioCreator ? (
+              <PortfolioClientCreateForm
+                onSave={(data: InsertPortfolioClient) => createPortfolioClientMutation.mutate(data)}
+                isLoading={createPortfolioClientMutation.isPending}
+                onCancel={() => setShowPortfolioCreator(false)}
+              />
+            ) : loadingClients ? (
               <div className="text-center py-8" data-testid="loading-portfolio-clients">Loading portfolio clients...</div>
+            ) : portfolioClients.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No portfolio clients yet. Add your first client!
+              </div>
             ) : (
               <div className="space-y-4">
                 {portfolioClients.map((client) => (
@@ -813,6 +849,136 @@ function PortfolioClientEditForm({ client, onSave, onCancel, isLoading }: Portfo
             {isLoading ? "Saving..." : "Save Changes"}
           </Button>
           <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-client">
+            <X className="h-4 w-4 mr-2" />
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
+interface PortfolioClientCreateFormProps {
+  onSave: (data: InsertPortfolioClient) => void;
+  onCancel: () => void;
+  isLoading: boolean;
+}
+
+function PortfolioClientCreateForm({ onSave, onCancel, isLoading }: PortfolioClientCreateFormProps) {
+  const form = useForm<InsertPortfolioClient>({
+    resolver: zodResolver(insertPortfolioClientSchema),
+    defaultValues: {
+      name: "",
+      logo: "",
+      images: [],
+      testimonial: "",
+      clientRepresentative: "",
+      position: "",
+      rating: 5,
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSave)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Client Name *</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Enter client name" data-testid="input-create-client-name" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="logo"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Logo URL *</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="https://example.com/logo.png" data-testid="input-create-client-logo" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="clientRepresentative"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Client Representative</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Representative name" data-testid="input-create-client-representative" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="position"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Position</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="Position/Title" data-testid="input-create-client-position" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="testimonial"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Testimonial</FormLabel>
+              <FormControl>
+                <Textarea {...field} placeholder="Client testimonial..." rows={4} data-testid="input-create-client-testimonial" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="rating"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rating (1-5)</FormLabel>
+              <FormControl>
+                <Input 
+                  {...field} 
+                  type="number" 
+                  min="1" 
+                  max="5" 
+                  value={field.value || 5}
+                  onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                  data-testid="input-create-client-rating" 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isLoading} data-testid="button-save-new-client">
+            <Save className="h-4 w-4 mr-2" />
+            {isLoading ? "Creating..." : "Create Client"}
+          </Button>
+          <Button type="button" variant="outline" onClick={onCancel} data-testid="button-cancel-new-client">
             <X className="h-4 w-4 mr-2" />
             Cancel
           </Button>

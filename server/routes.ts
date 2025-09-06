@@ -361,6 +361,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/portfolio-clients", async (req, res) => {
+    try {
+      const clientData = insertPortfolioClientSchema.parse(req.body);
+      const client = await storage.createPortfolioClient(clientData);
+      res.json(client);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid client data", errors: error.errors });
+      } else {
+        res.status(500).json({ message: "Failed to create portfolio client" });
+      }
+    }
+  });
+
   app.put("/api/admin/portfolio-clients/:id", async (req, res) => {
     try {
       const clientData = updatePortfolioClientSchema.parse({ ...req.body, id: req.params.id });
