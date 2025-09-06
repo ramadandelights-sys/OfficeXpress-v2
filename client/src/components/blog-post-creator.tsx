@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Paste, RotateCcw } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +42,16 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [showContentImageUploader, setShowContentImageUploader] = useState(false);
   const [isRichTextMode, setIsRichTextMode] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
+  const [fontSize, setFontSize] = useState(14);
+  const [fontFamily, setFontFamily] = useState('Arial');
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('#ffff00');
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [showFontSelector, setShowFontSelector] = useState(false);
+  const [showInsertMenu, setShowInsertMenu] = useState(false);
 
   const form = useForm<AdvancedBlogPost>({
     resolver: zodResolver(advancedBlogPostSchema),
@@ -106,17 +116,41 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     });
   };
 
-  // Rich text editor functions
-  const executeCommand = (command: string, value?: string) => {
-    document.execCommand(command, false, value);
+  // Enhanced rich text editor functions
+  const saveToUndoStack = () => {
     if (contentRef.current) {
-      const content = contentRef.current.innerHTML;
-      const textContent = contentRef.current.textContent || contentRef.current.innerText || '';
-      form.setValue("content", content);
-      const words = textContent.trim().split(/\s+/).length;
-      setWordCount(words);
-      const readTime = Math.max(1, Math.ceil(words / 200));
-      form.setValue("readTime", readTime);
+      setUndoStack(prev => [...prev.slice(-19), contentRef.current!.innerHTML]);
+      setRedoStack([]);
+    }
+  };
+
+  const executeCommand = (command: string, value?: string) => {
+    saveToUndoStack();
+    document.execCommand(command, false, value);
+    handleRichTextChange();
+  };
+
+  const executeUndo = () => {
+    if (undoStack.length > 0) {
+      const lastState = undoStack[undoStack.length - 1];
+      if (contentRef.current) {
+        setRedoStack(prev => [contentRef.current!.innerHTML, ...prev.slice(0, 19)]);
+        contentRef.current.innerHTML = lastState;
+        setUndoStack(prev => prev.slice(0, -1));
+        handleRichTextChange();
+      }
+    }
+  };
+
+  const executeRedo = () => {
+    if (redoStack.length > 0) {
+      const nextState = redoStack[0];
+      if (contentRef.current) {
+        setUndoStack(prev => [...prev.slice(-19), contentRef.current!.innerHTML]);
+        contentRef.current.innerHTML = nextState;
+        setRedoStack(prev => prev.slice(1));
+        handleRichTextChange();
+      }
     }
   };
 
@@ -127,8 +161,79 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     }
   };
 
+  const insertImage = () => {
+    const url = prompt('Enter image URL:');
+    if (url) {
+      executeCommand('insertImage', url);
+    }
+  };
+
+  const insertTable = () => {
+    const rows = prompt('Number of rows:') || '3';
+    const cols = prompt('Number of columns:') || '3';
+    const tableHTML = `
+      <table border="1" style="border-collapse: collapse; width: 100%;">
+        ${Array.from({length: parseInt(rows)}, () => 
+          `<tr>${Array.from({length: parseInt(cols)}, () => '<td style="padding: 8px; border: 1px solid #ccc;">&nbsp;</td>').join('')}</tr>`
+        ).join('')}
+      </table>
+    `;
+    executeCommand('insertHTML', tableHTML);
+  };
+
   const insertHeading = (level: number) => {
     executeCommand('formatBlock', `h${level}`);
+  };
+
+  const changeFontSize = (size: number) => {
+    setFontSize(size);
+    executeCommand('fontSize', '7'); // Use size 7 then change with CSS
+    if (contentRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const span = document.createElement('span');
+        span.style.fontSize = `${size}px`;
+        try {
+          range.surroundContents(span);
+        } catch (e) {
+          span.appendChild(range.extractContents());
+          range.insertNode(span);
+        }
+      }
+    }
+  };
+
+  const changeFontFamily = (family: string) => {
+    setFontFamily(family);
+    executeCommand('fontName', family);
+  };
+
+  const changeTextColor = (color: string) => {
+    setTextColor(color);
+    executeCommand('foreColor', color);
+  };
+
+  const changeHighlightColor = (color: string) => {
+    setHighlightColor(color);
+    executeCommand('backColor', color);
+  };
+
+  const insertSpecialContent = (type: string) => {
+    switch (type) {
+      case 'hr':
+        executeCommand('insertHTML', '<hr style="border: 1px solid #ccc; margin: 20px 0;">');
+        break;
+      case 'blockquote':
+        executeCommand('formatBlock', 'blockquote');
+        break;
+      case 'code':
+        executeCommand('insertHTML', '<code style="background: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;"></code>');
+        break;
+      case 'checklist':
+        executeCommand('insertHTML', '<p><input type="checkbox" disabled> </p>');
+        break;
+    }
   };
 
   const handleRichTextChange = () => {
@@ -136,10 +241,18 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       const content = contentRef.current.innerHTML;
       const textContent = contentRef.current.textContent || contentRef.current.innerText || '';
       form.setValue("content", content);
-      const words = textContent.trim().split(/\s+/).length;
+      const words = textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
       setWordCount(words);
       const readTime = Math.max(1, Math.ceil(words / 200));
       form.setValue("readTime", readTime);
+    }
+  };
+
+  const clearEditor = () => {
+    if (contentRef.current) {
+      saveToUndoStack();
+      contentRef.current.innerHTML = '<p><br></p>';
+      handleRichTextChange();
     }
   };
 
@@ -315,44 +428,15 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                         <FormLabel className="flex items-center justify-between">
                           Content *
                           <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2">
-                              <Button
-                                type="button"
-                                variant={isRichTextMode ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                  if (!isRichTextMode && contentRef.current) {
-                                    contentRef.current.innerHTML = convertFromMarkdown(field.value || '');
-                                  }
-                                  setIsRichTextMode(true);
-                                }}
-                              >
-                                Rich Text
-                              </Button>
-                              <Button
-                                type="button"
-                                variant={!isRichTextMode ? "default" : "outline"}
-                                size="sm"
-                                onClick={() => {
-                                  if (isRichTextMode && contentRef.current) {
-                                    const markdown = convertToMarkdown(contentRef.current.innerHTML);
-                                    field.onChange(markdown);
-                                  }
-                                  setIsRichTextMode(false);
-                                }}
-                              >
-                                Markdown
-                              </Button>
-                            </div>
                             <Button
                               type="button"
                               variant="outline"
                               size="sm"
-                              onClick={() => setShowContentImageUploader(!showContentImageUploader)}
+                              onClick={clearEditor}
                               className="flex items-center gap-1"
                             >
-                              <Image className="h-3 w-3" />
-                              Insert Image
+                              <RotateCcw className="h-3 w-3" />
+                              Clear
                             </Button>
                             <span className="text-sm text-muted-foreground">
                               {wordCount} words • {form.watch("readTime")} min read
@@ -377,12 +461,90 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             </Button>
                           </div>
                         )}
-                        {isRichTextMode ? (
-                          <div className="space-y-2">
-                            {/* Rich Text Toolbar */}
-                            <div className="border rounded-t-lg bg-gray-50 p-2 flex flex-wrap items-center gap-1">
-                              {/* Text Formatting */}
+                        <div className="space-y-2">
+                          {/* Comprehensive Google Docs-style Toolbar */}
+                          <div className="border rounded-t-lg bg-gray-50 p-3 space-y-2">
+                            {/* First Row: Undo/Redo, Font, Size, Format */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {/* Undo/Redo */}
                               <div className="flex items-center gap-1 border-r pr-2 mr-2">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={executeUndo}
+                                  disabled={undoStack.length === 0}
+                                  className="h-8 w-8 p-0"
+                                  title="Undo"
+                                >
+                                  <Undo className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={executeRedo}
+                                  disabled={redoStack.length === 0}
+                                  className="h-8 w-8 p-0"
+                                  title="Redo"
+                                >
+                                  <Redo className="h-4 w-4" />
+                                </Button>
+                              </div>
+
+                              {/* Font Family */}
+                              <div className="relative">
+                                <Select value={fontFamily} onValueChange={changeFontFamily}>
+                                  <SelectTrigger className="w-32 h-8">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="Arial">Arial</SelectItem>
+                                    <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                                    <SelectItem value="Helvetica">Helvetica</SelectItem>
+                                    <SelectItem value="Georgia">Georgia</SelectItem>
+                                    <SelectItem value="Verdana">Verdana</SelectItem>
+                                    <SelectItem value="Courier New">Courier New</SelectItem>
+                                    <SelectItem value="Calibri">Calibri</SelectItem>
+                                    <SelectItem value="Roboto">Roboto</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              {/* Font Size */}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => changeFontSize(Math.max(8, fontSize - 2))}
+                                  className="h-8 w-8 p-0"
+                                  title="Decrease Font Size"
+                                >
+                                  <Minus className="h-3 w-3" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  value={fontSize}
+                                  onChange={(e) => changeFontSize(parseInt(e.target.value) || 14)}
+                                  className="w-16 h-8 text-center"
+                                  min="8"
+                                  max="72"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => changeFontSize(Math.min(72, fontSize + 2))}
+                                  className="h-8 w-8 p-0"
+                                  title="Increase Font Size"
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+
+                              {/* Text Formatting */}
+                              <div className="flex items-center gap-1 border-l pl-2 ml-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -413,42 +575,92 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                 >
                                   <Underline className="h-4 w-4" />
                                 </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => executeCommand('strikeThrough')}
+                                  className="h-8 w-8 p-0"
+                                  title="Strikethrough"
+                                >
+                                  <Strikethrough className="h-4 w-4" />
+                                </Button>
                               </div>
-                              
+
+                              {/* Text Color & Highlight */}
+                              <div className="flex items-center gap-1 border-l pl-2 ml-2">
+                                <div className="relative">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowColorPicker(!showColorPicker)}
+                                    className="h-8 w-8 p-0"
+                                    title="Text Color"
+                                  >
+                                    <Palette className="h-4 w-4" />
+                                  </Button>
+                                  {showColorPicker && (
+                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-2 shadow-lg">
+                                      <input
+                                        type="color"
+                                        value={textColor}
+                                        onChange={(e) => {
+                                          changeTextColor(e.target.value);
+                                          setShowColorPicker(false);
+                                        }}
+                                        className="w-8 h-8"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="relative">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setShowHighlightPicker(!showHighlightPicker)}
+                                    className="h-8 w-8 p-0"
+                                    title="Highlight Color"
+                                  >
+                                    <Highlighter className="h-4 w-4" />
+                                  </Button>
+                                  {showHighlightPicker && (
+                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-2 shadow-lg">
+                                      <input
+                                        type="color"
+                                        value={highlightColor}
+                                        onChange={(e) => {
+                                          changeHighlightColor(e.target.value);
+                                          setShowHighlightPicker(false);
+                                        }}
+                                        className="w-8 h-8"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Second Row: Headings, Lists, Alignment */}
+                            <div className="flex items-center gap-2 flex-wrap">
                               {/* Headings */}
                               <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(1)}
-                                  className="h-8 px-2 text-xs"
-                                  title="Heading 1"
-                                >
-                                  H1
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(2)}
-                                  className="h-8 px-2 text-xs"
-                                  title="Heading 2"
-                                >
-                                  H2
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(3)}
-                                  className="h-8 px-2 text-xs"
-                                  title="Heading 3"
-                                >
-                                  H3
-                                </Button>
+                                <Select onValueChange={(value) => insertHeading(parseInt(value))}>
+                                  <SelectTrigger className="w-20 h-8">
+                                    <SelectValue placeholder="H1" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="1">H1</SelectItem>
+                                    <SelectItem value="2">H2</SelectItem>
+                                    <SelectItem value="3">H3</SelectItem>
+                                    <SelectItem value="4">H4</SelectItem>
+                                    <SelectItem value="5">H5</SelectItem>
+                                    <SelectItem value="6">H6</SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                              
+
                               {/* Lists */}
                               <div className="flex items-center gap-1 border-r pr-2 mr-2">
                                 <Button
@@ -471,24 +683,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                 >
                                   <ListOrdered className="h-4 w-4" />
                                 </Button>
-                              </div>
-                              
-                              {/* Links & Alignment */}
-                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={insertLink}
+                                  onClick={() => insertSpecialContent('checklist')}
                                   className="h-8 w-8 p-0"
-                                  title="Insert Link"
+                                  title="Checklist"
                                 >
-                                  <Link className="h-4 w-4" />
+                                  <CheckSquare className="h-4 w-4" />
                                 </Button>
                               </div>
-                              
+
                               {/* Alignment */}
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -520,42 +728,107 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                   <AlignRight className="h-4 w-4" />
                                 </Button>
                               </div>
-                            </div>
-                            
-                            {/* Rich Text Editor */}
-                            <FormControl>
-                              <div
-                                ref={contentRef}
-                                contentEditable
-                                onInput={handleRichTextChange}
-                                onBlur={() => {
-                                  if (contentRef.current) {
-                                    field.onChange(contentRef.current.innerHTML);
-                                  }
-                                }}
-                                className="min-h-[400px] border rounded-b-lg p-4 focus:outline-none focus:ring-2 focus:ring-ring bg-white prose max-w-none"
-                                style={{ maxHeight: '600px', overflowY: 'auto' }}
-                                data-testid="rich-text-editor"
-                                dangerouslySetInnerHTML={{ __html: field.value || '<p>Start writing your blog post content here...</p>' }}
-                              />
-                            </FormControl>
-                          </div>
-                        ) : (
-                          <FormControl>
-                            <Textarea 
-                              {...field}
-                              onChange={(e) => {
-                                field.onChange(e);
-                                handleContentChange(e.target.value);
-                              }}
-                              className="min-h-[400px] font-mono"
-                              placeholder="Write your blog post content here... Use Markdown for formatting.
 
-You can also click 'Insert Image' to add images to your content."
-                              data-testid="input-blog-content"
+                              {/* Insert Options */}
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={insertLink}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Link"
+                                >
+                                  <Link className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={insertImage}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Image"
+                                >
+                                  <Image className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={insertTable}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Table"
+                                >
+                                  <Table className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertSpecialContent('hr')}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Horizontal Rule"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertSpecialContent('blockquote')}
+                                  className="h-8 w-8 p-0"
+                                  title="Quote"
+                                >
+                                  <Quote className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertSpecialContent('code')}
+                                  className="h-8 w-8 p-0"
+                                  title="Code"
+                                >
+                                  <Code className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Rich Text Editor */}
+                          <FormControl>
+                            <div
+                              ref={contentRef}
+                              contentEditable
+                              onInput={handleRichTextChange}
+                              onBlur={() => {
+                                if (contentRef.current) {
+                                  field.onChange(contentRef.current.innerHTML);
+                                }
+                              }}
+                              onFocus={() => {
+                                if (contentRef.current && (contentRef.current.innerHTML === '<p><br></p>' || contentRef.current.innerHTML === '')) {
+                                  contentRef.current.innerHTML = '';
+                                  contentRef.current.focus();
+                                }
+                              }}
+                              onClick={() => {
+                                if (contentRef.current && contentRef.current.innerHTML === '') {
+                                  contentRef.current.focus();
+                                }
+                              }}
+                              className="min-h-[400px] border rounded-b-lg p-4 focus:outline-none focus:ring-2 focus:ring-ring bg-white prose max-w-none"
+                              style={{ 
+                                maxHeight: '600px', 
+                                overflowY: 'auto',
+                                fontSize: `${fontSize}px`,
+                                fontFamily: fontFamily
+                              }}
+                              data-testid="rich-text-editor"
+                              suppressContentEditableWarning={true}
                             />
                           </FormControl>
-                        )}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
