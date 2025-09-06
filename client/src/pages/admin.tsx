@@ -2,12 +2,14 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -48,6 +50,123 @@ function AdminDashboard() {
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
   const [showBlogCreator, setShowBlogCreator] = useState(false);
   const [showPortfolioCreator, setShowPortfolioCreator] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [formTypeFilter, setFormTypeFilter] = useState("all");
+
+  // CSV Export functionality
+  const exportToCSV = (data: any[], filename: string) => {
+    if (data.length === 0) {
+      toast({ title: "No data to export", variant: "destructive" });
+      return;
+    }
+
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Handle special characters and commas in values
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value || '';
+        }).join(',')
+      )
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: `${filename} exported successfully` });
+  };
+
+  // Get all form data combined for export
+  const getAllFormData = () => {
+    const combined = [];
+    
+    // Add corporate bookings
+    if (formTypeFilter === "all" || formTypeFilter === "corporate") {
+      corporateBookings.forEach(booking => {
+        combined.push({
+          type: "Corporate",
+          name: booking.customerName,
+          email: booking.email,
+          phone: booking.phone,
+          company: booking.companyName,
+          service: booking.serviceType || "",
+          additionalInfo: booking.additionalInfo || "",
+          submitted: new Date(booking.createdAt).toLocaleString()
+        });
+      });
+    }
+
+    // Add rental bookings
+    if (formTypeFilter === "all" || formTypeFilter === "rental") {
+      rentalBookings.forEach(booking => {
+        combined.push({
+          type: "Rental",
+          name: booking.customerName,
+          email: booking.email,
+          phone: booking.phone,
+          service: booking.serviceType || "",
+          duration: booking.duration || "",
+          pickupDate: booking.pickupDate || "",
+          additionalInfo: booking.additionalInfo || "",
+          submitted: new Date(booking.createdAt).toLocaleString()
+        });
+      });
+    }
+
+    // Add vendor registrations
+    if (formTypeFilter === "all" || formTypeFilter === "vendor") {
+      vendorRegistrations.forEach(vendor => {
+        combined.push({
+          type: "Vendor",
+          name: vendor.fullName,
+          email: vendor.email,
+          phone: vendor.phone,
+          location: vendor.location,
+          experience: vendor.experience || "",
+          vehicleTypes: vendor.vehicleTypes?.join(", ") || "",
+          additionalInfo: vendor.additionalInfo || "",
+          submitted: new Date(vendor.createdAt).toLocaleString()
+        });
+      });
+    }
+
+    // Add contact messages
+    if (formTypeFilter === "all" || formTypeFilter === "contact") {
+      contactMessages.forEach(message => {
+        combined.push({
+          type: "Contact",
+          name: message.name,
+          email: message.email,
+          phone: message.phone,
+          subject: message.subject,
+          message: message.message,
+          submitted: new Date(message.createdAt).toLocaleString()
+        });
+      });
+    }
+
+    // Filter by search query
+    if (searchQuery) {
+      return combined.filter(item => 
+        Object.values(item).some(value => 
+          String(value).toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+
+    return combined;
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("adminAuthenticated");
@@ -353,210 +472,66 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Corporate Bookings */}
+        {/* Form Entries Management */}
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-corporate-bookings">
-              <Building className="h-5 w-5" />
-              Corporate Booking Requests
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-form-entries">
+                <MessageSquare className="h-5 w-5" />
+                Form Submissions
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Select value={formTypeFilter} onValueChange={setFormTypeFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Forms</SelectItem>
+                    <SelectItem value="corporate">Corporate</SelectItem>
+                    <SelectItem value="rental">Rental</SelectItem>
+                    <SelectItem value="vendor">Vendor</SelectItem>
+                    <SelectItem value="contact">Contact</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="relative">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+                  <Input
+                    placeholder="Search entries..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 w-60"
+                    data-testid="input-search-forms"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const allData = getAllFormData();
+                    exportToCSV(allData, `form_submissions_${formTypeFilter}`);
+                  }}
+                  className="flex items-center gap-2"
+                  data-testid="button-export-csv"
+                >
+                  <Download className="h-4 w-4" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            {loadingCorporate ? (
-              <div className="text-center py-8" data-testid="loading-corporate-bookings">Loading corporate bookings...</div>
-            ) : corporateBookings.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No corporate bookings yet</div>
-            ) : (
-              <div className="space-y-4">
-                {corporateBookings.map((booking) => (
-                  <div key={booking.id} className="border rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg" data-testid={`corporate-company-${booking.id}`}>
-                          {booking.companyName}
-                        </h3>
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Contact:</span> {booking.customerName}
-                          </div>
-                          <div>
-                            <span className="font-medium">Phone:</span> {booking.phone}
-                          </div>
-                          <div>
-                            <span className="font-medium">Email:</span> {booking.email}
-                          </div>
-                          <div>
-                            <span className="font-medium">Service:</span> {booking.serviceType || "Not specified"}
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Submitted: {new Date(booking.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <FormSubmissionsTable
+              corporateBookings={corporateBookings}
+              rentalBookings={rentalBookings}
+              vendorRegistrations={vendorRegistrations}
+              contactMessages={contactMessages}
+              searchQuery={searchQuery}
+              formTypeFilter={formTypeFilter}
+              loading={loadingCorporate || loadingRental || loadingVendors || loadingContacts}
+            />
           </CardContent>
         </Card>
 
-        {/* Rental Bookings */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-rental-bookings">
-              <Car className="h-5 w-5" />
-              Rental Booking Requests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingRental ? (
-              <div className="text-center py-8" data-testid="loading-rental-bookings">Loading rental bookings...</div>
-            ) : rentalBookings.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No rental bookings yet</div>
-            ) : (
-              <div className="space-y-4">
-                {rentalBookings.map((booking) => (
-                  <div key={booking.id} className="border rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg" data-testid={`rental-customer-${booking.id}`}>
-                          {booking.customerName}
-                        </h3>
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Phone:</span> {booking.phone}
-                          </div>
-                          <div>
-                            <span className="font-medium">Email:</span> {booking.email}
-                          </div>
-                          <div>
-                            <span className="font-medium">Service:</span> {booking.serviceType || "Not specified"}
-                          </div>
-                          <div>
-                            <span className="font-medium">Duration:</span> {booking.duration || "Not specified"}
-                          </div>
-                          <div>
-                            <span className="font-medium">Pickup Date:</span> {booking.pickupDate || "Not specified"}
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Submitted: {new Date(booking.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Vendor Registrations */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-vendor-registrations">
-              <Users className="h-5 w-5" />
-              Vendor Registration Applications
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingVendors ? (
-              <div className="text-center py-8" data-testid="loading-vendor-registrations">Loading vendor registrations...</div>
-            ) : vendorRegistrations.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No vendor applications yet</div>
-            ) : (
-              <div className="space-y-4">
-                {vendorRegistrations.map((vendor) => (
-                  <div key={vendor.id} className="border rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg" data-testid={`vendor-company-${vendor.id}`}>
-                          {vendor.fullName}
-                        </h3>
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Phone:</span> {vendor.phone}
-                          </div>
-                          <div>
-                            <span className="font-medium">Email:</span> {vendor.email}
-                          </div>
-                          <div>
-                            <span className="font-medium">Location:</span> {vendor.location}
-                          </div>
-                          <div>
-                            <span className="font-medium">Service:</span> {vendor.serviceModality}
-                          </div>
-                          <div>
-                            <span className="font-medium">Experience:</span> {vendor.experience || "Not specified"}
-                          </div>
-                          <div>
-                            <span className="font-medium">Vehicle Types:</span> {vendor.vehicleTypes?.join(", ") || "Not specified"}
-                          </div>
-                        </div>
-                        <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="font-medium">Additional Info:</span> {vendor.additionalInfo || "None"}
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Applied: {new Date(vendor.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Contact Messages */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2" data-testid="heading-contact-messages">
-              <MessageSquare className="h-5 w-5" />
-              Contact Form Messages
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loadingMessages ? (
-              <div className="text-center py-8" data-testid="loading-contact-messages">Loading contact messages...</div>
-            ) : contactMessages.length === 0 ? (
-              <div className="text-center py-8 text-gray-500">No contact messages yet</div>
-            ) : (
-              <div className="space-y-4">
-                {contactMessages.map((message) => (
-                  <div key={message.id} className="border rounded-lg p-4 bg-orange-50 dark:bg-orange-900/20">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg" data-testid={`message-name-${message.id}`}>
-                          {message.name}
-                        </h3>
-                        <div className="mt-2 grid grid-cols-2 gap-4 text-sm">
-                          <div>
-                            <span className="font-medium">Phone:</span> {message.phone}
-                          </div>
-                          <div>
-                            <span className="font-medium">Email:</span> {message.email}
-                          </div>
-                          <div className="col-span-2">
-                            <span className="font-medium">Subject:</span> {message.subject}
-                          </div>
-                        </div>
-                        <div className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                          <span className="font-medium">Message:</span>
-                          <p className="mt-1 whitespace-pre-wrap">{message.message}</p>
-                        </div>
-                        <div className="mt-2 text-xs text-gray-500">
-                          Received: {new Date(message.createdAt).toLocaleString()}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
@@ -985,5 +960,192 @@ function PortfolioClientCreateForm({ onSave, onCancel, isLoading }: PortfolioCli
         </div>
       </form>
     </Form>
+  );
+}
+
+interface FormSubmissionsTableProps {
+  corporateBookings: CorporateBooking[];
+  rentalBookings: RentalBooking[];
+  vendorRegistrations: VendorRegistration[];
+  contactMessages: ContactMessage[];
+  searchQuery: string;
+  formTypeFilter: string;
+  loading: boolean;
+}
+
+function FormSubmissionsTable({
+  corporateBookings,
+  rentalBookings,
+  vendorRegistrations,
+  contactMessages,
+  searchQuery,
+  formTypeFilter,
+  loading,
+}: FormSubmissionsTableProps) {
+  
+  const getAllFormDataForTable = () => {
+    const combined = [];
+    
+    // Add corporate bookings
+    if (formTypeFilter === "all" || formTypeFilter === "corporate") {
+      corporateBookings.forEach(booking => {
+        combined.push({
+          id: booking.id,
+          type: "Corporate",
+          name: booking.customerName,
+          email: booking.email,
+          phone: booking.phone,
+          details: `${booking.companyName} - ${booking.serviceType || 'No service specified'}`,
+          submitted: new Date(booking.createdAt).toLocaleString(),
+          rawDate: booking.createdAt
+        });
+      });
+    }
+
+    // Add rental bookings
+    if (formTypeFilter === "all" || formTypeFilter === "rental") {
+      rentalBookings.forEach(booking => {
+        combined.push({
+          id: booking.id,
+          type: "Rental",
+          name: booking.customerName,
+          email: booking.email,
+          phone: booking.phone,
+          details: `${booking.serviceType || 'No service'} - ${booking.duration || 'No duration'} - Pickup: ${booking.pickupDate || 'TBD'}`,
+          submitted: new Date(booking.createdAt).toLocaleString(),
+          rawDate: booking.createdAt
+        });
+      });
+    }
+
+    // Add vendor registrations
+    if (formTypeFilter === "all" || formTypeFilter === "vendor") {
+      vendorRegistrations.forEach(vendor => {
+        combined.push({
+          id: vendor.id,
+          type: "Vendor",
+          name: vendor.fullName,
+          email: vendor.email,
+          phone: vendor.phone,
+          details: `${vendor.location} - ${vendor.experience || 'No experience listed'} - ${vendor.vehicleTypes?.join(", ") || 'No vehicles'}`,
+          submitted: new Date(vendor.createdAt).toLocaleString(),
+          rawDate: vendor.createdAt
+        });
+      });
+    }
+
+    // Add contact messages
+    if (formTypeFilter === "all" || formTypeFilter === "contact") {
+      contactMessages.forEach(message => {
+        combined.push({
+          id: message.id,
+          type: "Contact",
+          name: message.name,
+          email: message.email,
+          phone: message.phone,
+          details: `${message.subject} - ${message.message.substring(0, 100)}${message.message.length > 100 ? '...' : ''}`,
+          submitted: new Date(message.createdAt).toLocaleString(),
+          rawDate: message.createdAt
+        });
+      });
+    }
+
+    // Filter by search query
+    let filtered = combined;
+    if (searchQuery) {
+      filtered = combined.filter(item => 
+        Object.values(item).some(value => 
+          String(value).toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+
+    // Sort by submission date (newest first)
+    return filtered.sort((a, b) => new Date(b.rawDate).getTime() - new Date(a.rawDate).getTime());
+  };
+
+  const tableData = getAllFormDataForTable();
+
+  const getTypeStyle = (type: string) => {
+    switch (type) {
+      case "Corporate":
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+      case "Rental":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "Vendor":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "Contact":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="text-center py-8" data-testid="loading-form-submissions">
+        Loading form submissions...
+      </div>
+    );
+  }
+
+  if (tableData.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        {searchQuery ? "No form submissions match your search." : "No form submissions yet."}
+      </div>
+    );
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[80px]">Type</TableHead>
+            <TableHead className="w-[150px]">Name</TableHead>
+            <TableHead className="w-[200px]">Email</TableHead>
+            <TableHead className="w-[120px]">Phone</TableHead>
+            <TableHead>Details</TableHead>
+            <TableHead className="w-[150px]">Submitted</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {tableData.map((row) => (
+            <TableRow key={`${row.type}-${row.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+              <TableCell>
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getTypeStyle(row.type)}`}>
+                  {row.type}
+                </span>
+              </TableCell>
+              <TableCell className="font-medium" data-testid={`table-name-${row.id}`}>
+                {row.name}
+              </TableCell>
+              <TableCell data-testid={`table-email-${row.id}`}>
+                <a href={`mailto:${row.email}`} className="text-blue-600 hover:underline">
+                  {row.email}
+                </a>
+              </TableCell>
+              <TableCell data-testid={`table-phone-${row.id}`}>
+                <a href={`tel:${row.phone}`} className="text-blue-600 hover:underline">
+                  {row.phone}
+                </a>
+              </TableCell>
+              <TableCell className="max-w-[300px] truncate" title={row.details} data-testid={`table-details-${row.id}`}>
+                {row.details}
+              </TableCell>
+              <TableCell className="text-sm text-gray-500" data-testid={`table-submitted-${row.id}`}>
+                {row.submitted}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <div className="mt-4 text-sm text-gray-500 text-center">
+        Showing {tableData.length} form submission{tableData.length !== 1 ? 's' : ''}
+        {searchQuery && ` matching "${searchQuery}"`}
+        {formTypeFilter !== "all" && ` (${formTypeFilter} only)`}
+      </div>
+    </div>
   );
 }
