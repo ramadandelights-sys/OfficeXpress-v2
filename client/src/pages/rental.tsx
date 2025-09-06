@@ -93,7 +93,7 @@ export default function Rental() {
       endTime: "",
       serviceType: "business",
       vehicleType: "economy",
-      vehicleCapacity: "4-seater",
+      vehicleCapacity: "4",
       fromLocation: "",
       toLocation: "",
       isReturnTrip: false,
