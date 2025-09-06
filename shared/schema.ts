@@ -171,6 +171,16 @@ export const marketingSettings = pgTable("marketing_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const legalPages = pgTable("legal_pages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  type: text("type").notNull(), // 'terms' or 'privacy'
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -241,6 +251,21 @@ export const updateMarketingSettingsSchema = createInsertSchema(marketingSetting
   id: z.string(),
 });
 
+export const insertLegalPageSchema = createInsertSchema(legalPages).omit({
+  id: true,
+  lastUpdated: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateLegalPageSchema = createInsertSchema(legalPages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -263,3 +288,6 @@ export type InsertBangladeshLocation = z.infer<typeof insertBangladeshLocationSc
 export type MarketingSettings = typeof marketingSettings.$inferSelect;
 export type InsertMarketingSettings = z.infer<typeof insertMarketingSettingsSchema>;
 export type UpdateMarketingSettings = z.infer<typeof updateMarketingSettingsSchema>;
+export type LegalPage = typeof legalPages.$inferSelect;
+export type InsertLegalPage = z.infer<typeof insertLegalPageSchema>;
+export type UpdateLegalPage = z.infer<typeof updateLegalPageSchema>;
