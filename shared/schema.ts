@@ -131,6 +131,46 @@ export const bangladeshLocations = pgTable("bangladesh_locations_complete", {
   locationType: varchar("location_type").default("post_office"),
 });
 
+export const marketingSettings = pgTable("marketing_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Facebook Marketing
+  facebookPixelId: text("facebook_pixel_id"),
+  facebookAccessToken: text("facebook_access_token"),
+  facebookAppId: text("facebook_app_id"),
+  facebookPageId: text("facebook_page_id"),
+  facebookEnabled: boolean("facebook_enabled").default(false),
+  
+  // Google Marketing
+  googleAnalyticsId: text("google_analytics_id"),
+  googleTagManagerId: text("google_tag_manager_id"),
+  googleAdsConversionId: text("google_ads_conversion_id"),
+  googleSearchConsoleId: text("google_search_console_id"),
+  googleEnabled: boolean("google_enabled").default(false),
+  
+  // UTM Campaign Defaults
+  utmSource: text("utm_source").default("officexpress"),
+  utmMedium: text("utm_medium").default("website"),
+  utmCampaign: text("utm_campaign").default("default"),
+  
+  // General Settings
+  cookieConsentEnabled: boolean("cookie_consent_enabled").default(true),
+  gdprCompliance: boolean("gdpr_compliance").default(true),
+  trackingEnabled: boolean("tracking_enabled").default(true),
+  
+  // Conversion Goals
+  conversionGoals: json("conversion_goals").$type<{
+    name: string;
+    type: string;
+    value: number;
+    currency: string;
+  }[]>().default([]),
+  
+  // System fields
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -167,6 +207,12 @@ export const insertBangladeshLocationSchema = createInsertSchema(bangladeshLocat
   id: true,
 });
 
+export const insertMarketingSettingsSchema = createInsertSchema(marketingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -183,6 +229,14 @@ export const updateBlogPostSchema = createInsertSchema(blogPosts).omit({
 export const updatePortfolioClientSchema = createInsertSchema(portfolioClients).omit({
   id: true,
   createdAt: true,
+}).extend({
+  id: z.string(),
+});
+
+export const updateMarketingSettingsSchema = createInsertSchema(marketingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
 }).extend({
   id: z.string(),
 });
@@ -206,3 +260,6 @@ export type UpdateBlogPost = z.infer<typeof updateBlogPostSchema>;
 export type UpdatePortfolioClient = z.infer<typeof updatePortfolioClientSchema>;
 export type BangladeshLocation = typeof bangladeshLocations.$inferSelect;
 export type InsertBangladeshLocation = z.infer<typeof insertBangladeshLocationSchema>;
+export type MarketingSettings = typeof marketingSettings.$inferSelect;
+export type InsertMarketingSettings = z.infer<typeof insertMarketingSettingsSchema>;
+export type UpdateMarketingSettings = z.infer<typeof updateMarketingSettingsSchema>;
