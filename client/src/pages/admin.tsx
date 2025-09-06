@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -52,6 +56,22 @@ function AdminDashboard() {
   const [showPortfolioCreator, setShowPortfolioCreator] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [formTypeFilter, setFormTypeFilter] = useState("all");
+  
+  // Individual search queries for each form type
+  const [corporateSearchQuery, setCorporateSearchQuery] = useState("");
+  const [rentalSearchQuery, setRentalSearchQuery] = useState("");
+  const [vendorSearchQuery, setVendorSearchQuery] = useState("");
+  const [contactSearchQuery, setContactSearchQuery] = useState("");
+  
+  // Individual date ranges for each form type
+  const [corporateDateFrom, setCorporateDateFrom] = useState<Date | undefined>(undefined);
+  const [corporateDateTo, setCorporateDateTo] = useState<Date | undefined>(undefined);
+  const [rentalDateFrom, setRentalDateFrom] = useState<Date | undefined>(undefined);
+  const [rentalDateTo, setRentalDateTo] = useState<Date | undefined>(undefined);
+  const [vendorDateFrom, setVendorDateFrom] = useState<Date | undefined>(undefined);
+  const [vendorDateTo, setVendorDateTo] = useState<Date | undefined>(undefined);
+  const [contactDateFrom, setContactDateFrom] = useState<Date | undefined>(undefined);
+  const [contactDateTo, setContactDateTo] = useState<Date | undefined>(undefined);
 
   // CSV Export functionality
   const exportToCSV = (data: any[], filename: string) => {
@@ -472,61 +492,99 @@ function AdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Form Entries Management */}
+        {/* Form Submissions Management */}
         <Card className="mb-8">
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle className="flex items-center gap-2" data-testid="heading-form-entries">
-                <MessageSquare className="h-5 w-5" />
-                Form Submissions
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Select value={formTypeFilter} onValueChange={setFormTypeFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue placeholder="Filter by type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Forms</SelectItem>
-                    <SelectItem value="corporate">Corporate</SelectItem>
-                    <SelectItem value="rental">Rental</SelectItem>
-                    <SelectItem value="vendor">Vendor</SelectItem>
-                    <SelectItem value="contact">Contact</SelectItem>
-                  </SelectContent>
-                </Select>
-                <div className="relative">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
-                  <Input
-                    placeholder="Search entries..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-8 w-60"
-                    data-testid="input-search-forms"
-                  />
-                </div>
-                <Button
-                  onClick={() => {
-                    const allData = getAllFormData();
-                    exportToCSV(allData, `form_submissions_${formTypeFilter}`);
-                  }}
-                  className="flex items-center gap-2"
-                  data-testid="button-export-csv"
-                >
-                  <Download className="h-4 w-4" />
-                  Export CSV
-                </Button>
-              </div>
-            </div>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-form-submissions">
+              <MessageSquare className="h-5 w-5" />
+              Form Submissions Management
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <FormSubmissionsTable
-              corporateBookings={corporateBookings}
-              rentalBookings={rentalBookings}
-              vendorRegistrations={vendorRegistrations}
-              contactMessages={contactMessages}
-              searchQuery={searchQuery}
-              formTypeFilter={formTypeFilter}
-              loading={loadingCorporate || loadingRental || loadingVendors || loadingMessages}
-            />
+            <Tabs defaultValue="corporate" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="corporate" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Corporate ({corporateBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="rental" className="flex items-center gap-2">
+                  <Car className="h-4 w-4" />
+                  Rental ({rentalBookings.length})
+                </TabsTrigger>
+                <TabsTrigger value="vendor" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Vendor ({vendorRegistrations.length})
+                </TabsTrigger>
+                <TabsTrigger value="contact" className="flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  Contact ({contactMessages.length})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="corporate" className="mt-6">
+                <FormSectionTable
+                  title="Corporate Bookings"
+                  data={corporateBookings}
+                  searchQuery={corporateSearchQuery}
+                  setSearchQuery={setCorporateSearchQuery}
+                  dateFrom={corporateDateFrom}
+                  setDateFrom={setCorporateDateFrom}
+                  dateTo={corporateDateTo}
+                  setDateTo={setCorporateDateTo}
+                  loading={loadingCorporate}
+                  type="corporate"
+                  exportToCSV={exportToCSV}
+                />
+              </TabsContent>
+
+              <TabsContent value="rental" className="mt-6">
+                <FormSectionTable
+                  title="Rental Bookings"
+                  data={rentalBookings}
+                  searchQuery={rentalSearchQuery}
+                  setSearchQuery={setRentalSearchQuery}
+                  dateFrom={rentalDateFrom}
+                  setDateFrom={setRentalDateFrom}
+                  dateTo={rentalDateTo}
+                  setDateTo={setRentalDateTo}
+                  loading={loadingRental}
+                  type="rental"
+                  exportToCSV={exportToCSV}
+                />
+              </TabsContent>
+
+              <TabsContent value="vendor" className="mt-6">
+                <FormSectionTable
+                  title="Vendor Registrations"
+                  data={vendorRegistrations}
+                  searchQuery={vendorSearchQuery}
+                  setSearchQuery={setVendorSearchQuery}
+                  dateFrom={vendorDateFrom}
+                  setDateFrom={setVendorDateFrom}
+                  dateTo={vendorDateTo}
+                  setDateTo={setVendorDateTo}
+                  loading={loadingVendors}
+                  type="vendor"
+                  exportToCSV={exportToCSV}
+                />
+              </TabsContent>
+
+              <TabsContent value="contact" className="mt-6">
+                <FormSectionTable
+                  title="Contact Messages"
+                  data={contactMessages}
+                  searchQuery={contactSearchQuery}
+                  setSearchQuery={setContactSearchQuery}
+                  dateFrom={contactDateFrom}
+                  setDateFrom={setContactDateFrom}
+                  dateTo={contactDateTo}
+                  setDateTo={setContactDateTo}
+                  loading={loadingMessages}
+                  type="contact"
+                  exportToCSV={exportToCSV}
+                />
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
 
@@ -963,16 +1021,307 @@ function PortfolioClientCreateForm({ onSave, onCancel, isLoading }: PortfolioCli
   );
 }
 
-interface FormSubmissionsTableProps {
-  corporateBookings: CorporateBooking[];
-  rentalBookings: RentalBooking[];
-  vendorRegistrations: VendorRegistration[];
-  contactMessages: ContactMessage[];
+interface FormSectionTableProps {
+  title: string;
+  data: any[];
   searchQuery: string;
-  formTypeFilter: string;
+  setSearchQuery: (query: string) => void;
+  dateFrom: Date | undefined;
+  setDateFrom: (date: Date | undefined) => void;
+  dateTo: Date | undefined;
+  setDateTo: (date: Date | undefined) => void;
   loading: boolean;
+  type: 'corporate' | 'rental' | 'vendor' | 'contact';
+  exportToCSV: (data: any[], filename: string) => void;
 }
 
+function FormSectionTable({
+  title,
+  data,
+  searchQuery,
+  setSearchQuery,
+  dateFrom,
+  setDateFrom,
+  dateTo,
+  setDateTo,
+  loading,
+  type,
+  exportToCSV
+}: FormSectionTableProps) {
+  
+  // Helper function to get all fields for each form type
+  const getFormFields = (type: string) => {
+    switch (type) {
+      case 'corporate':
+        return [
+          { key: 'customerName', label: 'Customer Name' },
+          { key: 'companyName', label: 'Company Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'officeAddress', label: 'Office Address' },
+          { key: 'serviceType', label: 'Service Type' },
+          { key: 'contractType', label: 'Contract Type' },
+          { key: 'createdAt', label: 'Submitted' }
+        ];
+      case 'rental':
+        return [
+          { key: 'customerName', label: 'Customer Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'serviceType', label: 'Service Type' },
+          { key: 'vehicleType', label: 'Vehicle Type' },
+          { key: 'capacity', label: 'Capacity' },
+          { key: 'vehicleCapacity', label: 'Vehicle Capacity' },
+          { key: 'fromLocation', label: 'From Location' },
+          { key: 'toLocation', label: 'To Location' },
+          { key: 'startDate', label: 'Start Date' },
+          { key: 'endDate', label: 'End Date' },
+          { key: 'startTime', label: 'Start Time' },
+          { key: 'endTime', label: 'End Time' },
+          { key: 'pickupDate', label: 'Pickup Date' },
+          { key: 'duration', label: 'Duration' },
+          { key: 'isReturnTrip', label: 'Return Trip' },
+          { key: 'createdAt', label: 'Submitted' }
+        ];
+      case 'vendor':
+        return [
+          { key: 'fullName', label: 'Full Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'location', label: 'Location' },
+          { key: 'vehicleTypes', label: 'Vehicle Types' },
+          { key: 'serviceModality', label: 'Service Modality' },
+          { key: 'experience', label: 'Experience' },
+          { key: 'additionalInfo', label: 'Additional Info' },
+          { key: 'createdAt', label: 'Submitted' }
+        ];
+      case 'contact':
+        return [
+          { key: 'name', label: 'Name' },
+          { key: 'email', label: 'Email' },
+          { key: 'phone', label: 'Phone' },
+          { key: 'subject', label: 'Subject' },
+          { key: 'message', label: 'Message' },
+          { key: 'createdAt', label: 'Submitted' }
+        ];
+      default:
+        return [];
+    }
+  };
+  
+  const fields = getFormFields(type);
+  
+  // Filter and process data
+  const getFilteredData = () => {
+    let filtered = [...data];
+    
+    // Filter by search query
+    if (searchQuery) {
+      filtered = filtered.filter(item => 
+        Object.values(item).some(value => 
+          String(value || '').toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      );
+    }
+    
+    // Filter by date range
+    if (dateFrom || dateTo) {
+      filtered = filtered.filter(item => {
+        const itemDate = new Date(item.createdAt);
+        const isAfterFrom = !dateFrom || itemDate >= dateFrom;
+        const isBeforeTo = !dateTo || itemDate <= dateTo;
+        return isAfterFrom && isBeforeTo;
+      });
+    }
+    
+    // Sort by submission date (newest first)
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  };
+  
+  const filteredData = getFilteredData();
+  
+  // Format value for display
+  const formatValue = (value: any, key: string) => {
+    if (value === null || value === undefined) return '-';
+    
+    if (key === 'createdAt') {
+      return new Date(value).toLocaleString();
+    }
+    
+    if (key === 'isReturnTrip') {
+      return value ? 'Yes' : 'No';
+    }
+    
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+    
+    if (key === 'email') {
+      return (
+        <a href={`mailto:${value}`} className="text-blue-600 hover:underline">
+          {value}
+        </a>
+      );
+    }
+    
+    if (key === 'phone') {
+      return (
+        <a href={`tel:${value}`} className="text-blue-600 hover:underline">
+          {value}
+        </a>
+      );
+    }
+    
+    return String(value);
+  };
+  
+  // Export current filtered data
+  const handleExport = () => {
+    const exportData = filteredData.map(item => {
+      const exportItem: any = {};
+      fields.forEach(field => {
+        const value = item[field.key];
+        if (field.key === 'createdAt') {
+          exportItem[field.label] = new Date(value).toLocaleString();
+        } else if (field.key === 'isReturnTrip') {
+          exportItem[field.label] = value ? 'Yes' : 'No';
+        } else if (Array.isArray(value)) {
+          exportItem[field.label] = value.join(', ');
+        } else {
+          exportItem[field.label] = value || '-';
+        }
+      });
+      return exportItem;
+    });
+    exportToCSV(exportData, `${type}_submissions`);
+  };
+  
+  if (loading) {
+    return (
+      <div className="text-center py-8" data-testid={`loading-${type}-submissions`}>
+        Loading {type} submissions...
+      </div>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <Input
+            placeholder={`Search ${type} entries...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8"
+            data-testid={`input-search-${type}`}
+          />
+        </div>
+        
+        {/* Date Range Selector */}
+        <div className="flex items-center gap-2">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`justify-start text-left font-normal ${
+                  !dateFrom && "text-muted-foreground"
+                }`}
+                data-testid={`button-date-from-${type}`}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateFrom ? format(dateFrom, "PPP") : "From date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent
+                mode="single"
+                selected={dateFrom}
+                onSelect={setDateFrom}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={`justify-start text-left font-normal ${
+                  !dateTo && "text-muted-foreground"
+                }`}
+                data-testid={`button-date-to-${type}`}
+              >
+                <Calendar className="mr-2 h-4 w-4" />
+                {dateTo ? format(dateTo, "PPP") : "To date"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <CalendarComponent
+                mode="single"
+                selected={dateTo}
+                onSelect={setDateTo}
+                initialFocus
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+        
+        <Button
+          onClick={handleExport}
+          className="flex items-center gap-2"
+          data-testid={`button-export-${type}`}
+        >
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
+      </div>
+      
+      {/* Table */}
+      <div className="border rounded-lg">
+        <div className="h-96 overflow-auto">
+          {filteredData.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              {searchQuery || dateFrom || dateTo ? `No ${type} submissions match your filters.` : `No ${type} submissions yet.`}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10">
+                <TableRow>
+                  {fields.map((field) => (
+                    <TableHead key={field.key} className="whitespace-nowrap px-4 py-2">
+                      {field.label}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredData.map((item, index) => (
+                  <TableRow key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    {fields.map((field) => (
+                      <TableCell key={field.key} className="whitespace-nowrap px-4 py-2 max-w-[200px] truncate" title={String(item[field.key] || '')}>
+                        {formatValue(item[field.key], field.key)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </div>
+      </div>
+      
+      <div className="text-sm text-gray-500 text-center">
+        Showing {filteredData.length} of {data.length} {type} submission{filteredData.length !== 1 ? 's' : ''}
+        {searchQuery && ` matching "${searchQuery}"`}
+        {(dateFrom || dateTo) && ` within date range`}
+      </div>
+    </div>
+  );
+}
+
+// Legacy function - will be removed
 function FormSubmissionsTable({
   corporateBookings,
   rentalBookings,
