@@ -104,11 +104,27 @@ export default function Rental() {
   const watchedVehicleCapacity = form.watch("vehicleCapacity");
   const watchedStartDate = form.watch("startDate");
   const watchedEndDate = form.watch("endDate");
+  const watchedStartTime = form.watch("startTime");
 
   // Check if it's a single day rental
   const isSingleDayRental = watchedStartDate && watchedEndDate && watchedStartDate === watchedEndDate;
 
-  // Auto-set today as default date on mount
+  // Get filtered end time options (only times after start time for same-day rentals)
+  const getFilteredEndTimeOptions = () => {
+    if (!isSingleDayRental || !watchedStartTime) {
+      return timeOptions;
+    }
+    
+    const startIndex = timeOptions.findIndex(time => time === watchedStartTime);
+    if (startIndex === -1) {
+      return timeOptions;
+    }
+    
+    // Return only times after the selected start time
+    return timeOptions.slice(startIndex + 1);
+  };
+
+  // Auto-set today as default date on mount, but don't pre-select in calendar
   useEffect(() => {
     const today = new Date();
     setSelectedDate(today);
@@ -116,6 +132,19 @@ export default function Rental() {
     form.setValue("startDate", format(today, "yyyy-MM-dd"));
     form.setValue("endDate", format(today, "yyyy-MM-dd"));
   }, [form]);
+
+  // Clear end time when start time changes for same-day rentals to avoid invalid combinations
+  useEffect(() => {
+    if (isSingleDayRental && watchedStartTime) {
+      const currentEndTime = form.getValues("endTime");
+      const filteredOptions = getFilteredEndTimeOptions();
+      
+      // If current end time is not in the filtered options, clear it
+      if (currentEndTime && !filteredOptions.includes(currentEndTime)) {
+        form.setValue("endTime", "");
+      }
+    }
+  }, [watchedStartTime, isSingleDayRental, form]);
 
   // No need to change capacity options based on vehicle type anymore
 
@@ -437,8 +466,9 @@ export default function Rental() {
                             variant="outline"
                             className="w-full justify-start text-left font-normal"
                             onClick={() => {
-                              setTempSelectedDate(undefined);
-                              setTempEndDate(undefined);
+                              // Initialize temp dates to current selection for editing
+                              setTempSelectedDate(selectedDate);
+                              setTempEndDate(endDate);
                               setIsCalendarOpen(true);
                             }}
                             data-testid="button-calendar"
@@ -466,7 +496,11 @@ export default function Rental() {
                                   setTempEndDate(range.to || range.from);
                                 }
                               }}
-                              disabled={(date) => date < new Date()}
+                              disabled={(date) => {
+                                const today = new Date();
+                                today.setHours(0, 0, 0, 0);
+                                return date < today;
+                              }}
                               className="rounded-md"
                               data-testid="calendar-component"
                             />
@@ -540,7 +574,7 @@ export default function Rental() {
                                   </SelectTrigger>
                                 </FormControl>
                                 <SelectContent>
-                                  {timeOptions.map((time) => (
+                                  {getFilteredEndTimeOptions().map((time) => (
                                     <SelectItem key={time} value={time}>
                                       {time}
                                     </SelectItem>
