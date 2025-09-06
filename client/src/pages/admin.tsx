@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
+import LegalPageCreator from "@/components/legal-page-creator";
 import { MarketingSettingsForm, MarketingSettingsDisplay } from "@/components/marketing-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -753,6 +754,116 @@ function AdminDashboard() {
             )}
           </CardContent>
         </Card>
+
+        {/* Legal Pages Management */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-legal-pages">
+                <Scale className="h-5 w-5" />
+                Legal Pages
+              </CardTitle>
+              <Button 
+                onClick={() => setShowLegalPageCreator(true)}
+                className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                data-testid="button-create-legal"
+              >
+                <Plus className="h-4 w-4" />
+                Create Legal Page
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingLegalPages ? (
+              <div className="flex justify-center py-8">
+                <div className="text-gray-500">Loading legal pages...</div>
+              </div>
+            ) : legalPages.length === 0 ? (
+              <div className="text-center py-8">
+                <Scale className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No Legal Pages Found
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Create Terms & Conditions, Privacy Policy, and other legal pages for your website.
+                </p>
+                <Button 
+                  onClick={() => setShowLegalPageCreator(true)}
+                  className="bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Legal Page
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                {legalPages.map((page) => (
+                  <div key={page.id} className="border rounded-lg p-4 bg-white dark:bg-gray-800">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white" data-testid={`text-legal-title-${page.id}`}>
+                          {page.title}
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-2">
+                          Type: <span className="capitalize font-medium">{page.type}</span>
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Last Updated: {new Date(page.lastUpdated).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingLegalPage(page)}
+                          data-testid={`button-edit-legal-${page.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteLegalPageMutation.mutate(page.id)}
+                          className="text-red-600 hover:text-red-700"
+                          data-testid={`button-delete-legal-${page.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Legal Page Creator Modal */}
+        {showLegalPageCreator && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <LegalPageCreator
+                onSave={(data) => createLegalPageMutation.mutate(data)}
+                isLoading={createLegalPageMutation.isPending}
+                onCancel={() => setShowLegalPageCreator(false)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Legal Page Editor Modal */}
+        {editingLegalPage && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white dark:bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+              <LegalPageCreator
+                initialData={legalPages.find(page => page.id === editingLegalPage)}
+                onSave={(data) => updateLegalPageMutation.mutate({ id: editingLegalPage, data })}
+                isLoading={updateLegalPageMutation.isPending}
+                onCancel={() => setEditingLegalPage(null)}
+              />
+            </div>
+          </div>
+        )}
 
       </div>
     </div>
