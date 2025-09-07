@@ -180,7 +180,7 @@ export default function Vendor() {
                       name="vehicleTypes"
                       render={() => (
                         <FormItem>
-                          <FormLabel>Vehicle Ownership (Select all that apply)</FormLabel>
+                          <FormLabel>Vehicle Ownership (Select all that apply) *</FormLabel>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {vehicleTypes.map((vehicle) => (
                               <FormField
@@ -252,7 +252,7 @@ export default function Vendor() {
                       name="experience"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Years of Experience</FormLabel>
+                          <FormLabel>Years of Experience *</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-experience">
