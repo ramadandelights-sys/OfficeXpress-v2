@@ -52,7 +52,7 @@ export const vendorRegistrations = pgTable("vendor_registrations", {
   location: text("location").notNull(),
   vehicleTypes: json("vehicle_types").$type<string[]>().default([]),
   serviceModality: text("service_modality").notNull(),
-  experience: text("experience"),
+  experience: text("experience").notNull(),
   additionalInfo: text("additional_info"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

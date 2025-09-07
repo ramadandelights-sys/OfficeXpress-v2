@@ -148,18 +148,17 @@ export const validateVendorRegistration = [
     .withMessage('Location must be between 2 and 100 characters')
     .customSanitizer(sanitizeInput),
   body('vehicleTypes')
-    .optional()
-    .isArray()
-    .withMessage('Vehicle types must be an array'),
+    .isArray({ min: 1 })
+    .withMessage('Please select at least one vehicle type'),
   body('vehicleTypes.*')
-    .optional()
     .isIn(['sedan', 'suv', 'microbus', 'van', 'bus', 'luxury-car'])
     .withMessage('Please select valid vehicle types'),
   body('serviceModality')
+    .notEmpty()
     .isIn(['driver-vehicle', 'vehicle-only', 'driver-only', 'fleet-services'])
     .withMessage('Please select a valid service modality'),
   body('experience')
-    .optional()
+    .notEmpty()
     .isIn(['less-than-1', '1-3', '3-5', '5-10', 'more-than-10'])
     .withMessage('Please select a valid experience range'),
   body('additionalInfo')

@@ -28,9 +28,7 @@ export default function Vendor() {
   const queryClient = useQueryClient();
   
   const form = useForm<InsertVendorRegistration>({
-    resolver: zodResolver(insertVendorRegistrationSchema.extend({
-      vehicleTypes: insertVendorRegistrationSchema.shape.vehicleTypes.default([]),
-    })),
+    resolver: zodResolver(insertVendorRegistrationSchema),
     defaultValues: {
       fullName: "",
       phone: "",
