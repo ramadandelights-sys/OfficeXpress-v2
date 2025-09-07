@@ -132,13 +132,9 @@ export const validateRentalBooking = [
 
 // Vendor registration validation rules
 export const validateVendorRegistration = [
-  body('companyName')
+  body('fullName')
     .isLength({ min: 2, max: 100 })
-    .withMessage('Company name must be between 2 and 100 characters')
-    .customSanitizer(sanitizeInput),
-  body('contactPerson')
-    .isLength({ min: 2, max: 50 })
-    .withMessage('Contact person name must be between 2 and 50 characters')
+    .withMessage('Full name must be between 2 and 100 characters')
     .customSanitizer(sanitizeInput),
   body('phone')
     .matches(/^(?:\+?88)?01[3-9]\d{8}$/)
@@ -147,21 +143,30 @@ export const validateVendorRegistration = [
     .isEmail()
     .normalizeEmail()
     .withMessage('Please enter a valid email address'),
+  body('location')
+    .isLength({ min: 2, max: 100 })
+    .withMessage('Location must be between 2 and 100 characters')
+    .customSanitizer(sanitizeInput),
   body('vehicleTypes')
-    .isArray({ min: 1 })
-    .withMessage('Please select at least one vehicle type'),
+    .optional()
+    .isArray()
+    .withMessage('Vehicle types must be an array'),
   body('vehicleTypes.*')
-    .isIn(['sedan', 'suv', 'microbus', 'bus', 'truck'])
+    .optional()
+    .isIn(['sedan', 'suv', 'microbus', 'van', 'bus', 'luxury-car'])
     .withMessage('Please select valid vehicle types'),
+  body('serviceModality')
+    .isIn(['driver-vehicle', 'vehicle-only', 'driver-only', 'fleet-services'])
+    .withMessage('Please select a valid service modality'),
   body('experience')
-    .isIn(['1-2', '3-5', '5-10', '10+'])
+    .optional()
+    .isIn(['less-than-1', '1-3', '3-5', '5-10', 'more-than-10'])
     .withMessage('Please select a valid experience range'),
-  body('coverage')
-    .isArray({ min: 1 })
-    .withMessage('Please select at least one coverage area'),
-  body('coverage.*')
-    .isIn(['dhaka', 'chittagong', 'sylhet', 'rajshahi', 'khulna', 'barisal', 'rangpur', 'mymensingh'])
-    .withMessage('Please select valid coverage areas'),
+  body('additionalInfo')
+    .optional()
+    .isLength({ max: 500 })
+    .withMessage('Additional information cannot exceed 500 characters')
+    .customSanitizer(sanitizeInput),
   handleValidationErrors
 ];
 

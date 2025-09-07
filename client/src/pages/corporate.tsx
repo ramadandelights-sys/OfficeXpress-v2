@@ -146,7 +146,8 @@ export default function Corporate() {
                           <FormControl>
                             <Input 
                               placeholder="Enter office address" 
-                              {...field} 
+                              {...field}
+                              value={field.value || ""}
                               data-testid="input-office-address"
                             />
                           </FormControl>

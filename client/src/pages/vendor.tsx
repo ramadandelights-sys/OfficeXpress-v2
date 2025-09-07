@@ -284,7 +284,8 @@ export default function Vendor() {
                             <Textarea 
                               className="h-24" 
                               placeholder="Tell us about your experience, special services, or any additional information..."
-                              {...field} 
+                              {...field}
+                              value={field.value || ""}
                               data-testid="textarea-additional-info"
                             />
                           </FormControl>
