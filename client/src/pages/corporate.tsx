@@ -17,7 +17,18 @@ export default function Corporate() {
   const queryClient = useQueryClient();
   
   const form = useForm<InsertCorporateBooking>({
-    resolver: zodResolver(insertCorporateBookingSchema),
+    resolver: zodResolver(insertCorporateBookingSchema.extend({
+      email: insertCorporateBookingSchema.shape.email.refine((email) => {
+        if (!email) return true; // Allow empty email since it's optional
+        const personalDomains = [
+          'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+          'icloud.com', 'me.com', 'protonmail.com', 'aol.com', 'mail.com',
+          'yandex.com', 'zoho.com', 'rediffmail.com'
+        ];
+        const domain = email.split('@')[1]?.toLowerCase();
+        return !personalDomains.includes(domain);
+      }, "Please enter a company email address, not a personal email")
+    })),
     defaultValues: {
       companyName: "",
       customerName: "",

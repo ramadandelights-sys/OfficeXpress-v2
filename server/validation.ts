@@ -35,7 +35,20 @@ export const validateCorporateBooking = [
   body('email')
     .isEmail()
     .normalizeEmail()
-    .withMessage('Please enter a valid email address'),
+    .withMessage('Please enter a valid email address')
+    .custom((email) => {
+      if (!email) return true; // Allow empty email since it's optional
+      const personalDomains = [
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+        'icloud.com', 'me.com', 'protonmail.com', 'aol.com', 'mail.com',
+        'yandex.com', 'zoho.com', 'rediffmail.com'
+      ];
+      const domain = email.split('@')[1]?.toLowerCase();
+      if (personalDomains.includes(domain)) {
+        throw new Error('Please enter a company email address, not a personal email');
+      }
+      return true;
+    }),
   body('officeAddress')
     .optional()
     .isLength({ max: 200 })
