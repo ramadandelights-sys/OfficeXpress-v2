@@ -168,9 +168,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/blog-posts/:id", async (req, res) => {
+  app.get("/api/blog-posts/:slug", async (req, res) => {
     try {
-      const post = await storage.getBlogPost(req.params.id);
+      const post = await storage.getBlogPostBySlug(req.params.slug);
       if (!post) {
         res.status(404).json({ message: "Blog post not found" });
         return;

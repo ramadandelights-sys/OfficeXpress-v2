@@ -191,6 +191,11 @@ export class DatabaseStorage implements IStorage {
     return post || undefined;
   }
 
+  async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
+    const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
+    return post || undefined;
+  }
+
   async createPortfolioClient(client: InsertPortfolioClient): Promise<PortfolioClient> {
     const [newClient] = await db
       .insert(portfolioClients)
