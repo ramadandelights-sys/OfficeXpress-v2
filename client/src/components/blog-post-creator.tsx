@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Paste, RotateCcw } from "lucide-react";
@@ -75,6 +75,39 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const watchedTitle = form.watch("title");
   const watchedContent = form.watch("content");
   const watchedTags = form.watch("tags");
+
+  // Sync content between rich text editor and form state
+  useEffect(() => {
+    if (contentRef.current && watchedContent && contentRef.current.innerHTML !== watchedContent) {
+      contentRef.current.innerHTML = watchedContent;
+    }
+  }, [watchedContent]);
+
+  // Ensure content is always synced when component unmounts or user navigates
+  useEffect(() => {
+    const syncContent = () => {
+      if (contentRef.current) {
+        const currentContent = contentRef.current.innerHTML;
+        if (currentContent !== form.getValues("content")) {
+          form.setValue("content", currentContent);
+          handleRichTextChange();
+        }
+      }
+    };
+
+    // Sync content when user clicks away or navigates
+    const handleBeforeUnload = () => syncContent();
+    const handleVisibilityChange = () => syncContent();
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      syncContent(); // Sync on cleanup
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // Auto-generate slug from title
   const generateSlug = (title: string) => {
@@ -367,7 +400,18 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
         ) : (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <Tabs defaultValue="content" className="w-full">
+              <Tabs 
+                defaultValue="content" 
+                className="w-full"
+                onValueChange={() => {
+                  // Sync content when switching tabs
+                  if (contentRef.current) {
+                    const currentContent = contentRef.current.innerHTML;
+                    form.setValue("content", currentContent);
+                    handleRichTextChange();
+                  }
+                }}
+              >
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="content">Content</TabsTrigger>
                   <TabsTrigger value="seo">SEO & Meta</TabsTrigger>
