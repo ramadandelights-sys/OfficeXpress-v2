@@ -124,34 +124,42 @@ class EditorContentManager {
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       if (!range.collapsed) {
-        const selectedText = range.toString();
-        const span = document.createElement('span');
-        
-        switch (command) {
-          case 'bold':
-            span.style.fontWeight = 'bold';
-            break;
-          case 'italic':
-            span.style.fontStyle = 'italic';
-            break;
-          case 'underline':
-            span.style.textDecoration = 'underline';
-            break;
-          case 'strikethrough':
-            span.style.textDecoration = 'line-through';
-            break;
+        try {
+          const selectedText = range.toString();
+          if (selectedText) {
+            const span = document.createElement('span');
+            
+            switch (command) {
+              case 'bold':
+                span.style.fontWeight = 'bold';
+                break;
+              case 'italic':
+                span.style.fontStyle = 'italic';
+                break;
+              case 'underline':
+                span.style.textDecoration = 'underline';
+                break;
+              case 'strikethrough':
+                span.style.textDecoration = 'line-through';
+                break;
+            }
+            
+            span.textContent = selectedText;
+            range.deleteContents();
+            range.insertNode(span);
+            
+            // Move cursor after the formatted text
+            range.setStartAfter(span);
+            range.collapse(true);
+            this.restoreSelection(range);
+            
+            this.onContentChange(this.getContent());
+          }
+        } catch (error) {
+          console.error('Error formatting text:', error);
+          // Fallback: just trigger content change without formatting
+          this.onContentChange(this.getContent());
         }
-        
-        span.textContent = selectedText;
-        range.deleteContents();
-        range.insertNode(span);
-        
-        // Move cursor after the formatted text
-        range.setStartAfter(span);
-        range.collapse(true);
-        this.restoreSelection(range);
-        
-        this.onContentChange(this.getContent());
       }
     }
   }
@@ -163,18 +171,25 @@ class EditorContentManager {
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       if (!range.collapsed) {
-        const selectedText = range.toString();
-        const span = document.createElement('span');
-        span.style.fontFamily = fontFamily;
-        span.textContent = selectedText;
-        range.deleteContents();
-        range.insertNode(span);
-        
-        range.setStartAfter(span);
-        range.collapse(true);
-        this.restoreSelection(range);
-        
-        this.onContentChange(this.getContent());
+        try {
+          const selectedText = range.toString();
+          if (selectedText) {
+            const span = document.createElement('span');
+            span.style.fontFamily = fontFamily;
+            span.textContent = selectedText;
+            range.deleteContents();
+            range.insertNode(span);
+            
+            range.setStartAfter(span);
+            range.collapse(true);
+            this.restoreSelection(range);
+            
+            this.onContentChange(this.getContent());
+          }
+        } catch (error) {
+          console.error('Error applying font family:', error);
+          this.onContentChange(this.getContent());
+        }
       }
     }
   }
@@ -186,18 +201,25 @@ class EditorContentManager {
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       if (!range.collapsed) {
-        const selectedText = range.toString();
-        const span = document.createElement('span');
-        span.style.color = color;
-        span.textContent = selectedText;
-        range.deleteContents();
-        range.insertNode(span);
-        
-        range.setStartAfter(span);
-        range.collapse(true);
-        this.restoreSelection(range);
-        
-        this.onContentChange(this.getContent());
+        try {
+          const selectedText = range.toString();
+          if (selectedText) {
+            const span = document.createElement('span');
+            span.style.color = color;
+            span.textContent = selectedText;
+            range.deleteContents();
+            range.insertNode(span);
+            
+            range.setStartAfter(span);
+            range.collapse(true);
+            this.restoreSelection(range);
+            
+            this.onContentChange(this.getContent());
+          }
+        } catch (error) {
+          console.error('Error applying text color:', error);
+          this.onContentChange(this.getContent());
+        }
       }
     }
   }
@@ -209,18 +231,25 @@ class EditorContentManager {
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       if (!range.collapsed) {
-        const selectedText = range.toString();
-        const span = document.createElement('span');
-        span.style.backgroundColor = color;
-        span.textContent = selectedText;
-        range.deleteContents();
-        range.insertNode(span);
-        
-        range.setStartAfter(span);
-        range.collapse(true);
-        this.restoreSelection(range);
-        
-        this.onContentChange(this.getContent());
+        try {
+          const selectedText = range.toString();
+          if (selectedText) {
+            const span = document.createElement('span');
+            span.style.backgroundColor = color;
+            span.textContent = selectedText;
+            range.deleteContents();
+            range.insertNode(span);
+            
+            range.setStartAfter(span);
+            range.collapse(true);
+            this.restoreSelection(range);
+            
+            this.onContentChange(this.getContent());
+          }
+        } catch (error) {
+          console.error('Error applying highlight color:', error);
+          this.onContentChange(this.getContent());
+        }
       }
     }
   }
@@ -326,7 +355,7 @@ class EditorContentManager {
     
     const list = document.createElement(ordered ? 'ol' : 'ul');
     const listItem = document.createElement('li');
-    listItem.innerHTML = '&nbsp;';
+    listItem.textContent = 'List item';
     list.appendChild(listItem);
     
     const selection = window.getSelection();
@@ -335,9 +364,15 @@ class EditorContentManager {
       range.insertNode(list);
       
       // Place cursor inside the list item
-      range.setStart(listItem, 0);
-      range.collapse(true);
-      this.restoreSelection(range);
+      try {
+        if (listItem.firstChild) {
+          range.setStart(listItem.firstChild, 0);
+          range.setEnd(listItem.firstChild, listItem.textContent?.length || 0);
+          this.restoreSelection(range);
+        }
+      } catch (error) {
+        console.error('Error placing cursor in list:', error);
+      }
     } else if (this.editor) {
       this.editor.appendChild(list);
     }
@@ -357,10 +392,12 @@ class EditorContentManager {
       const range = selection.getRangeAt(0);
       range.insertNode(heading);
       
-      // Place cursor inside heading
-      range.setStart(heading, 0);
-      range.setEnd(heading, heading.textContent.length);
-      this.restoreSelection(range);
+      // Place cursor inside heading - select all text
+      if (heading.firstChild) {
+        range.setStart(heading.firstChild, 0);
+        range.setEnd(heading.firstChild, heading.textContent?.length || 0);
+        this.restoreSelection(range);
+      }
     } else if (this.editor) {
       this.editor.appendChild(heading);
     }
