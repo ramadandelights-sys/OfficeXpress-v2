@@ -536,8 +536,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   }, [contentManager, form]);
 
   // Sync content when form content changes (e.g., from other tabs)
+  // Only sync if form content is meaningful (not empty) to prevent overwriting editor content
   useEffect(() => {
-    if (contentRef.current && watchedContent !== contentManager.getContent()) {
+    if (contentRef.current && watchedContent && watchedContent.trim() !== '' && watchedContent !== contentManager.getContent()) {
       contentManager.setContent(watchedContent);
     }
   }, [watchedContent, contentManager]);
@@ -718,6 +719,13 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                     if (currentContent && currentContent !== form.getValues("content")) {
                       form.setValue("content", currentContent);
                     }
+                  }
+                  
+                  // Re-initialize content manager when returning to content tab
+                  if (value === "content" && contentRef.current) {
+                    setTimeout(() => {
+                      contentManager.setEditor(contentRef.current);
+                    }, 50);
                   }
                 }}
               >
