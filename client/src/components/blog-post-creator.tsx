@@ -239,17 +239,65 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
 
   const changeFontFamily = (family: string) => {
     setFontFamily(family);
-    executeCommand('fontName', family);
+    if (contentRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+          const span = document.createElement('span');
+          span.style.fontFamily = family;
+          try {
+            range.surroundContents(span);
+          } catch (e) {
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+          }
+          handleRichTextChange();
+        }
+      }
+    }
   };
 
   const changeTextColor = (color: string) => {
     setTextColor(color);
-    executeCommand('foreColor', color);
+    if (contentRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+          const span = document.createElement('span');
+          span.style.color = color;
+          try {
+            range.surroundContents(span);
+          } catch (e) {
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+          }
+          handleRichTextChange();
+        }
+      }
+    }
   };
 
   const changeHighlightColor = (color: string) => {
     setHighlightColor(color);
-    executeCommand('backColor', color);
+    if (contentRef.current) {
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+          const span = document.createElement('span');
+          span.style.backgroundColor = color;
+          try {
+            range.surroundContents(span);
+          } catch (e) {
+            span.appendChild(range.extractContents());
+            range.insertNode(span);
+          }
+          handleRichTextChange();
+        }
+      }
+    }
   };
 
   const insertSpecialContent = (type: string) => {
