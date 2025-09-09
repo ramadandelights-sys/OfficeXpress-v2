@@ -693,16 +693,38 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                     <Palette className="h-4 w-4" />
                                   </Button>
                                   {showColorPicker && (
-                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-2 shadow-lg">
-                                      <input
-                                        type="color"
-                                        value={textColor}
-                                        onChange={(e) => {
-                                          changeTextColor(e.target.value);
-                                          setShowColorPicker(false);
-                                        }}
-                                        className="w-8 h-8"
-                                      />
+                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-3 shadow-lg min-w-48">
+                                      <div className="space-y-3">
+                                        <div className="text-xs font-medium text-gray-700 mb-2">Text Color</div>
+                                        <div className="grid grid-cols-6 gap-2">
+                                          {['#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
+                                            '#ff0000', '#ff6600', '#ffcc00', '#00ff00', '#0066ff', '#6600ff',
+                                            '#ff0066', '#00ffff', '#ffff00', '#ff00ff', '#00ff66', '#6666ff'].map((color) => (
+                                            <button
+                                              key={color}
+                                              onClick={() => {
+                                                changeTextColor(color);
+                                                setShowColorPicker(false);
+                                              }}
+                                              className="w-6 h-6 rounded border border-gray-300 hover:border-gray-500"
+                                              style={{ backgroundColor: color }}
+                                              title={color}
+                                            />
+                                          ))}
+                                        </div>
+                                        <div className="border-t pt-2">
+                                          <label className="text-xs text-gray-600 mb-1 block">Custom Color:</label>
+                                          <input
+                                            type="color"
+                                            value={textColor}
+                                            onChange={(e) => {
+                                              changeTextColor(e.target.value);
+                                              setShowColorPicker(false);
+                                            }}
+                                            className="w-full h-8 rounded border"
+                                          />
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
@@ -718,16 +740,38 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                     <Highlighter className="h-4 w-4" />
                                   </Button>
                                   {showHighlightPicker && (
-                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-2 shadow-lg">
-                                      <input
-                                        type="color"
-                                        value={highlightColor}
-                                        onChange={(e) => {
-                                          changeHighlightColor(e.target.value);
-                                          setShowHighlightPicker(false);
-                                        }}
-                                        className="w-8 h-8"
-                                      />
+                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-3 shadow-lg min-w-48">
+                                      <div className="space-y-3">
+                                        <div className="text-xs font-medium text-gray-700 mb-2">Highlight Color</div>
+                                        <div className="grid grid-cols-6 gap-2">
+                                          {['#ffff00', '#00ffff', '#ff00ff', '#00ff00', '#ff6600', '#ff0000',
+                                            '#ffffcc', '#ccffff', '#ffccff', '#ccffcc', '#ffddcc', '#ffcccc',
+                                            '#fff2cc', '#cce6ff', '#e6ccff', '#d4f1d4', '#ffe6cc', '#ffd6cc'].map((color) => (
+                                            <button
+                                              key={color}
+                                              onClick={() => {
+                                                changeHighlightColor(color);
+                                                setShowHighlightPicker(false);
+                                              }}
+                                              className="w-6 h-6 rounded border border-gray-300 hover:border-gray-500"
+                                              style={{ backgroundColor: color }}
+                                              title={color}
+                                            />
+                                          ))}
+                                        </div>
+                                        <div className="border-t pt-2">
+                                          <label className="text-xs text-gray-600 mb-1 block">Custom Color:</label>
+                                          <input
+                                            type="color"
+                                            value={highlightColor}
+                                            onChange={(e) => {
+                                              changeHighlightColor(e.target.value);
+                                              setShowHighlightPicker(false);
+                                            }}
+                                            className="w-full h-8 rounded border"
+                                          />
+                                        </div>
+                                      </div>
                                     </div>
                                   )}
                                 </div>
