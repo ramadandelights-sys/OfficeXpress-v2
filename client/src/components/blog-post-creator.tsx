@@ -477,7 +477,17 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => setPreviewMode(!previewMode)}
+              onClick={() => {
+                // Sync content before toggling preview
+                if (!previewMode && contentRef.current) {
+                  const currentContent = contentRef.current.innerHTML;
+                  if (currentContent && currentContent !== form.getValues("content")) {
+                    form.setValue("content", currentContent);
+                    handleRichTextChange();
+                  }
+                }
+                setPreviewMode(!previewMode);
+              }}
               className="flex items-center gap-2"
             >
               <Eye className="h-4 w-4" />
@@ -495,11 +505,11 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       <CardContent className="p-6">
         {previewMode ? (
           <BlogPostPreview 
-            title={watchedTitle}
-            content={watchedContent}
-            tags={watchedTags}
-            readTime={form.watch("readTime")}
-            author={form.watch("author")}
+            title={watchedTitle || "Untitled Post"}
+            content={watchedContent || "No content available"}
+            tags={watchedTags || []}
+            readTime={form.watch("readTime") || 5}
+            author={form.watch("author") || "OfficeXpress Team"}
           />
         ) : (
           <Form {...form}>
@@ -507,12 +517,14 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
               <Tabs 
                 defaultValue="content" 
                 className="w-full"
-                onValueChange={() => {
-                  // Sync content when switching tabs
+                onValueChange={(value) => {
+                  // Always sync content when switching tabs to prevent data loss
                   if (contentRef.current) {
                     const currentContent = contentRef.current.innerHTML;
-                    form.setValue("content", currentContent);
-                    handleRichTextChange();
+                    if (currentContent && currentContent !== form.getValues("content")) {
+                      form.setValue("content", currentContent);
+                      handleRichTextChange();
+                    }
                   }
                 }}
               >
