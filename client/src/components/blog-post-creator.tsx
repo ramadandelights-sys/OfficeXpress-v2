@@ -745,9 +745,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={insertImage}
+                                  onClick={() => setShowContentImageUploader(true)}
                                   className="h-8 w-8 p-0"
-                                  title="Insert Image"
+                                  title="Upload Image"
                                 >
                                   <Image className="h-4 w-4" />
                                 </Button>
@@ -833,6 +833,30 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                       </FormItem>
                     )}
                   />
+
+                  {/* Image Uploader Modal for Content */}
+                  {showContentImageUploader && (
+                    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="font-medium">Upload Image to Content</h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowContentImageUploader(false)}
+                          className="h-8 w-8 p-0"
+                        >
+                          ×
+                        </Button>
+                      </div>
+                      <ImageUploader
+                        onImageUpload={insertImageIntoContent}
+                        currentImage=""
+                        buttonText="Choose Image File"
+                        className="w-full"
+                      />
+                    </div>
+                  )}
 
                   {/* Excerpt */}
                   <FormField
