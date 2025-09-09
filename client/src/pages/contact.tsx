@@ -11,25 +11,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertContactMessageSchema, type InsertContactMessage } from "@shared/schema";
+import { HoneypotFields } from "@/components/HoneypotFields";
+import { RecaptchaField } from "@/components/RecaptchaField";
+import { z } from "zod";
 
 export default function Contact() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const form = useForm<InsertContactMessage>({
-    resolver: zodResolver(insertContactMessageSchema),
+  const contactMessageWithAntiSpam = insertContactMessageSchema.extend({
+    // Honeypot fields
+    email_confirm: z.string().optional(),
+    website: z.string().optional(),
+    company_url: z.string().optional(),
+    phone_secondary: z.string().optional(),
+    // reCAPTCHA field
+    recaptcha: z.string().min(1, "Please complete the security verification")
+  });
+
+  const form = useForm<z.infer<typeof contactMessageWithAntiSpam>>({
+    resolver: zodResolver(contactMessageWithAntiSpam),
     defaultValues: {
       name: "",
       email: "",
       phone: "",
       subject: "",
       message: "",
+      // Honeypot fields
+      email_confirm: "",
+      website: "",
+      company_url: "",
+      phone_secondary: "",
+      recaptcha: ""
     },
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: InsertContactMessage) => {
-      const response = await apiRequest("POST", "/api/contact-messages", data);
+    mutationFn: async (data: z.infer<typeof contactMessageWithAntiSpam>) => {
+      // Extract only the actual message data (remove honeypot and recaptcha fields)
+      const { email_confirm, website, company_url, phone_secondary, recaptcha, ...messageData } = data;
+      const response = await apiRequest("POST", "/api/contact-messages", { ...messageData, recaptcha });
       return response.json();
     },
     onSuccess: () => {
@@ -40,16 +61,26 @@ export default function Contact() {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/contact-messages"] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Message Failed to Send",
-        description: "Please check your information and try again.",
+        description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: InsertContactMessage) => {
+  const onSubmit = (data: z.infer<typeof contactMessageWithAntiSpam>) => {
+    // Client-side honeypot validation
+    const honeypotFields = ['email_confirm', 'website', 'company_url', 'phone_secondary'];
+    const hasHoneypotValue = honeypotFields.some(field => data[field as keyof typeof data] && data[field as keyof typeof data]?.toString().trim() !== '');
+    
+    if (hasHoneypotValue) {
+      // Silently prevent submission - don't show error to avoid alerting bots
+      console.log('Bot detected - honeypot field filled');
+      return;
+    }
+    
     mutation.mutate(data);
   };
 
@@ -259,6 +290,17 @@ export default function Contact() {
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+
+                    {/* Honeypot Fields - Hidden from users, trap for bots */}
+                    <HoneypotFields control={form.control} />
+
+                    {/* reCAPTCHA */}
+                    <RecaptchaField 
+                      control={form.control} 
+                      name="recaptcha" 
+                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      required={true}
                     />
 
                     <Button 

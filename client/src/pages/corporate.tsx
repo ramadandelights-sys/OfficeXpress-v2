@@ -11,24 +11,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertCorporateBookingSchema, type InsertCorporateBooking } from "@shared/schema";
+import { HoneypotFields } from "@/components/HoneypotFields";
+import { RecaptchaField } from "@/components/RecaptchaField";
+import { z } from "zod";
 
 export default function Corporate() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const form = useForm<InsertCorporateBooking>({
-    resolver: zodResolver(insertCorporateBookingSchema.extend({
-      email: insertCorporateBookingSchema.shape.email.refine((email) => {
-        if (!email) return true; // Allow empty email since it's optional
-        const personalDomains = [
-          'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
-          'icloud.com', 'me.com', 'protonmail.com', 'aol.com', 'mail.com',
-          'yandex.com', 'zoho.com', 'rediffmail.com'
-        ];
-        const domain = email.split('@')[1]?.toLowerCase();
-        return !personalDomains.includes(domain);
-      }, "Please enter a company email address, not a personal email")
-    })),
+  const corporateBookingWithAntiSpam = insertCorporateBookingSchema.extend({
+    email: insertCorporateBookingSchema.shape.email.refine((email) => {
+      if (!email) return true; // Allow empty email since it's optional
+      const personalDomains = [
+        'gmail.com', 'yahoo.com', 'hotmail.com', 'outlook.com', 'live.com',
+        'icloud.com', 'me.com', 'protonmail.com', 'aol.com', 'mail.com',
+        'yandex.com', 'zoho.com', 'rediffmail.com'
+      ];
+      const domain = email.split('@')[1]?.toLowerCase();
+      return !personalDomains.includes(domain);
+    }, "Please enter a company email address, not a personal email"),
+    // Honeypot fields
+    email_confirm: z.string().optional(),
+    website: z.string().optional(),
+    company_url: z.string().optional(),
+    phone_secondary: z.string().optional(),
+    // reCAPTCHA field
+    recaptcha: z.string().min(1, "Please complete the security verification")
+  });
+
+  const form = useForm<z.infer<typeof corporateBookingWithAntiSpam>>({
+    resolver: zodResolver(corporateBookingWithAntiSpam),
     defaultValues: {
       companyName: "",
       customerName: "",
@@ -37,12 +49,20 @@ export default function Corporate() {
       officeAddress: "",
       serviceType: "",
       contractType: "",
+      // Honeypot fields
+      email_confirm: "",
+      website: "",
+      company_url: "",
+      phone_secondary: "",
+      recaptcha: ""
     },
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: InsertCorporateBooking) => {
-      const response = await apiRequest("POST", "/api/corporate-bookings", data);
+    mutationFn: async (data: z.infer<typeof corporateBookingWithAntiSpam>) => {
+      // Extract only the actual booking data (remove honeypot and recaptcha fields)
+      const { email_confirm, website, company_url, phone_secondary, recaptcha, ...bookingData } = data;
+      const response = await apiRequest("POST", "/api/corporate-bookings", { ...bookingData, recaptcha });
       return response.json();
     },
     onSuccess: () => {
@@ -53,16 +73,26 @@ export default function Corporate() {
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/corporate-bookings"] });
     },
-    onError: () => {
+    onError: (error) => {
       toast({
         title: "Submission Failed",
-        description: "Please check your information and try again.",
+        description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: InsertCorporateBooking) => {
+  const onSubmit = (data: z.infer<typeof corporateBookingWithAntiSpam>) => {
+    // Client-side honeypot validation
+    const honeypotFields = ['email_confirm', 'website', 'company_url', 'phone_secondary'];
+    const hasHoneypotValue = honeypotFields.some(field => data[field as keyof typeof data] && data[field as keyof typeof data]?.toString().trim() !== '');
+    
+    if (hasHoneypotValue) {
+      // Silently prevent submission - don't show error to avoid alerting bots
+      console.log('Bot detected - honeypot field filled');
+      return;
+    }
+    
     mutation.mutate(data);
   };
 
@@ -272,6 +302,17 @@ export default function Corporate() {
                         )}
                       />
                     </div>
+
+                    {/* Honeypot Fields - Hidden from users, trap for bots */}
+                    <HoneypotFields control={form.control} />
+
+                    {/* reCAPTCHA */}
+                    <RecaptchaField 
+                      control={form.control} 
+                      name="recaptcha" 
+                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      required={true}
+                    />
 
                     <Button 
                       type="submit" 

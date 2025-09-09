@@ -17,6 +17,8 @@ import { z } from "zod";
 import { SimpleLocationDropdown } from "@/components/simple-location-dropdown";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoneypotFields } from "@/components/HoneypotFields";
+import { RecaptchaField } from "@/components/RecaptchaField";
 
 // New rental booking schema matching the new requirements
 const newRentalBookingSchema = z.object({
@@ -33,6 +35,13 @@ const newRentalBookingSchema = z.object({
   fromLocation: z.string().min(3, "From location is required"),
   toLocation: z.string().min(3, "To location is required"),
   isReturnTrip: z.boolean().default(false),
+  // Honeypot fields
+  email_confirm: z.string().optional(),
+  website: z.string().optional(),
+  company_url: z.string().optional(),
+  phone_secondary: z.string().optional(),
+  // reCAPTCHA field
+  recaptcha: z.string().min(1, "Please complete the security verification")
 });
 
 type NewRentalBooking = z.infer<typeof newRentalBookingSchema>;
@@ -97,6 +106,12 @@ export default function Rental() {
       fromLocation: "",
       toLocation: "",
       isReturnTrip: false,
+      // Honeypot fields
+      email_confirm: "",
+      website: "",
+      company_url: "",
+      phone_secondary: "",
+      recaptcha: ""
     },
   });
 
@@ -150,7 +165,15 @@ export default function Rental() {
 
   const mutation = useMutation({
     mutationFn: async (data: NewRentalBooking) => {
-      const response = await apiRequest("POST", "/api/rental-bookings", data);
+      // Extract only the actual booking data (remove honeypot and recaptcha fields)
+      const { email_confirm, website, company_url, phone_secondary, recaptcha, ...bookingData } = data;
+      const response = await apiRequest("POST", "/api/rental-bookings", { 
+        ...bookingData,
+        recaptcha,
+        serviceType: 'rental' as const,
+        capacity: data.vehicleCapacity,
+        vehicleCapacity: data.vehicleCapacity,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -167,25 +190,32 @@ export default function Rental() {
       console.error('Booking submission error:', error);
       toast({
         title: "Booking Failed",
-        description: "Please check your information and try again.",
+        description: error.message || "Please check your information and try again.",
         variant: "destructive",
       });
     },
   });
 
   const onSubmit = (data: NewRentalBooking) => {
-    // Convert empty email to undefined for optional field
+    // Client-side honeypot validation
+    const honeypotFields = ['email_confirm', 'website', 'company_url', 'phone_secondary'];
+    const hasHoneypotValue = honeypotFields.some(field => data[field as keyof typeof data] && data[field as keyof typeof data]?.toString().trim() !== '');
+    
+    if (hasHoneypotValue) {
+      // Silently prevent submission - don't show error to avoid alerting bots
+      console.log('Bot detected - honeypot field filled');
+      return;
+    }
+
+    // Convert empty email to undefined for optional field and prepare data
     const submitData = {
       ...data,
       email: data.email || "",
       startDate: selectedDate?.toISOString().split('T')[0] || '',
       endDate: endDate?.toISOString().split('T')[0] || '',
-      serviceType: 'rental' as const,
-      capacity: data.vehicleCapacity,
-      vehicleCapacity: data.vehicleCapacity,
     };
     
-    mutation.mutate(submitData as any);
+    mutation.mutate(submitData);
   };
 
   const formatDateRange = () => {
@@ -663,6 +693,17 @@ export default function Rental() {
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+
+                    {/* Honeypot Fields - Hidden from users, trap for bots */}
+                    <HoneypotFields control={form.control} />
+
+                    {/* reCAPTCHA */}
+                    <RecaptchaField 
+                      control={form.control} 
+                      name="recaptcha" 
+                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      required={true}
                     />
 
                     <Button 

@@ -13,6 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { insertVendorRegistrationSchema, type InsertVendorRegistration } from "@shared/schema";
+import { HoneypotFields } from "@/components/HoneypotFields";
+import { RecaptchaField } from "@/components/RecaptchaField";
+import { z } from "zod";
 
 const vehicleTypes = [
   { id: "sedan", label: "Sedan" },
@@ -27,8 +30,18 @@ export default function Vendor() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
-  const form = useForm<InsertVendorRegistration>({
-    resolver: zodResolver(insertVendorRegistrationSchema),
+  const vendorRegistrationWithAntiSpam = insertVendorRegistrationSchema.extend({
+    // Honeypot fields
+    email_confirm: z.string().optional(),
+    website: z.string().optional(),
+    company_url: z.string().optional(),
+    phone_secondary: z.string().optional(),
+    // reCAPTCHA field
+    recaptcha: z.string().min(1, "Please complete the security verification")
+  });
+
+  const form = useForm<z.infer<typeof vendorRegistrationWithAntiSpam>>({
+    resolver: zodResolver(vendorRegistrationWithAntiSpam),
     defaultValues: {
       fullName: "",
       phone: "",
@@ -38,12 +51,20 @@ export default function Vendor() {
       serviceModality: "",
       experience: "",
       additionalInfo: "",
+      // Honeypot fields
+      email_confirm: "",
+      website: "",
+      company_url: "",
+      phone_secondary: "",
+      recaptcha: ""
     },
   });
 
   const mutation = useMutation({
-    mutationFn: async (data: InsertVendorRegistration) => {
-      const response = await apiRequest("POST", "/api/vendor-registrations", data);
+    mutationFn: async (data: z.infer<typeof vendorRegistrationWithAntiSpam>) => {
+      // Extract only the actual registration data (remove honeypot and recaptcha fields)
+      const { email_confirm, website, company_url, phone_secondary, recaptcha, ...registrationData } = data;
+      const response = await apiRequest("POST", "/api/vendor-registrations", { ...registrationData, recaptcha });
       return response.json();
     },
     onSuccess: () => {
@@ -63,7 +84,17 @@ export default function Vendor() {
     },
   });
 
-  const onSubmit = (data: InsertVendorRegistration) => {
+  const onSubmit = (data: z.infer<typeof vendorRegistrationWithAntiSpam>) => {
+    // Client-side honeypot validation
+    const honeypotFields = ['email_confirm', 'website', 'company_url', 'phone_secondary'];
+    const hasHoneypotValue = honeypotFields.some(field => data[field as keyof typeof data] && data[field as keyof typeof data]?.toString().trim() !== '');
+    
+    if (hasHoneypotValue) {
+      // Silently prevent submission - don't show error to avoid alerting bots
+      console.log('Bot detected - honeypot field filled');
+      return;
+    }
+    
     mutation.mutate(data);
   };
 
@@ -290,6 +321,17 @@ export default function Vendor() {
                           <FormMessage />
                         </FormItem>
                       )}
+                    />
+
+                    {/* Honeypot Fields - Hidden from users, trap for bots */}
+                    <HoneypotFields control={form.control} />
+
+                    {/* reCAPTCHA */}
+                    <RecaptchaField 
+                      control={form.control} 
+                      name="recaptcha" 
+                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                      required={true}
                     />
 
                     <Button 
