@@ -746,6 +746,23 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                     setTimeout(() => {
                       console.log('Re-initializing content manager');
                       contentManager.setEditor(contentRef.current);
+                      
+                      // Restore visual content if it's missing but exists in form
+                      const currentFormContent = form.getValues("content");
+                      const currentEditorContent = contentRef.current?.innerHTML || '';
+                      
+                      console.log('Content restoration check:', {
+                        formHasContent: !!currentFormContent && currentFormContent.trim() !== '',
+                        editorHasContent: !!currentEditorContent && currentEditorContent.trim() !== '',
+                        formContent: currentFormContent?.substring(0, 50),
+                        editorContent: currentEditorContent?.substring(0, 50)
+                      });
+                      
+                      if (currentFormContent && currentFormContent.trim() !== '' && 
+                          (!currentEditorContent || currentEditorContent.trim() === '')) {
+                        console.log('Restoring visual content from form state');
+                        contentRef.current.innerHTML = currentFormContent;
+                      }
                     }, 50);
                   }
                 }}
