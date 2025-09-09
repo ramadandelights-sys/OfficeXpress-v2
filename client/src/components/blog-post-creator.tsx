@@ -58,7 +58,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     cols: 3,
     headerBg: '#f8f9fa',
     cellBg: '#ffffff',
-    borderColor: '#dee2e6'
+    borderColor: '#dee2e6',
+    headerTextColor: '#000000',
+    cellTextColor: '#000000'
   });
   const [showFontSelector, setShowFontSelector] = useState(false);
   const [showInsertMenu, setShowInsertMenu] = useState(false);
@@ -226,15 +228,15 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   };
 
   const createTableWithConfig = () => {
-    const { rows, cols, headerBg, cellBg, borderColor } = tableConfig;
+    const { rows, cols, headerBg, cellBg, borderColor, headerTextColor, cellTextColor } = tableConfig;
     
     const headerRow = `<tr style="background-color: ${headerBg};">${Array.from({length: cols}, (_, i) => 
-      `<th style="padding: 12px; border: 1px solid ${borderColor}; font-weight: bold; text-align: left;">Header ${i + 1}</th>`
+      `<th style="padding: 12px; border: 1px solid ${borderColor}; font-weight: bold; text-align: left; color: ${headerTextColor};">Header ${i + 1}</th>`
     ).join('')}</tr>`;
     
     const bodyRows = Array.from({length: rows - 1}, () => 
       `<tr>${Array.from({length: cols}, () => 
-        `<td style="padding: 8px; border: 1px solid ${borderColor}; background-color: ${cellBg};">&nbsp;</td>`
+        `<td style="padding: 8px; border: 1px solid ${borderColor}; background-color: ${cellBg}; color: ${cellTextColor};">&nbsp;</td>`
       ).join('')}</tr>`
     ).join('');
     
@@ -1432,6 +1434,32 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   className="w-12 h-8 rounded border"
                 />
                 <span className="text-sm text-gray-600">{tableConfig.borderColor}</span>
+              </div>
+            </div>
+            
+            <div>
+              <Label>Header Text Color</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={tableConfig.headerTextColor}
+                  onChange={(e) => setTableConfig(prev => ({...prev, headerTextColor: e.target.value}))}
+                  className="w-12 h-8 rounded border"
+                />
+                <span className="text-sm text-gray-600">{tableConfig.headerTextColor}</span>
+              </div>
+            </div>
+            
+            <div>
+              <Label>Cell Text Color</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={tableConfig.cellTextColor}
+                  onChange={(e) => setTableConfig(prev => ({...prev, cellTextColor: e.target.value}))}
+                  className="w-12 h-8 rounded border"
+                />
+                <span className="text-sm text-gray-600">{tableConfig.cellTextColor}</span>
               </div>
             </div>
           </div>
