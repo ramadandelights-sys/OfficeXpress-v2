@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Paste, RotateCcw } from "lucide-react";
+import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Clipboard, RotateCcw } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +41,7 @@ class EditorContentManager {
   private editor: HTMLDivElement | null = null;
   private history: string[] = [];
   private historyIndex: number = -1;
-  private onContentChange: (content: string) => void = () => {};
+  public onContentChange: (content: string) => void = () => {};
 
   constructor() {}
 
@@ -484,7 +484,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       readTime: 5,
       author: "OfficeXpress Team",
       published: false,
-      featured: false,
       scheduledFor: "",
       featuredImage: "",
     },
@@ -1178,6 +1177,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             <FormControl>
                               <Input 
                                 {...field} 
+                                value={field.value || ""}
                                 placeholder="https://example.com/featured-image.jpg"
                                 data-testid="input-featured-image"
                               />
@@ -1329,7 +1329,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             </div>
                             <FormControl>
                               <Switch 
-                                checked={field.value} 
+                                checked={field.value || false} 
                                 onCheckedChange={field.onChange}
                                 data-testid="switch-published"
                               />
@@ -1338,29 +1338,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="featured"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                            <div className="space-y-0.5">
-                              <FormLabel className="text-base">
-                                Featured Post
-                              </FormLabel>
-                              <div className="text-sm text-muted-foreground">
-                                Highlight this post on the homepage
-                              </div>
-                            </div>
-                            <FormControl>
-                              <Switch 
-                                checked={field.value} 
-                                onCheckedChange={field.onChange}
-                                data-testid="switch-featured"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
                     </div>
 
                     <div className="space-y-4">
@@ -1372,12 +1349,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                               <span>Status:</span>
                               <span className={form.watch("published") ? "text-green-600" : "text-gray-600"}>
                                 {form.watch("published") ? "Published" : "Draft"}
-                              </span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span>Featured:</span>
-                              <span className={form.watch("featured") ? "text-blue-600" : "text-gray-600"}>
-                                {form.watch("featured") ? "Yes" : "No"}
                               </span>
                             </div>
                             <div className="flex justify-between">
