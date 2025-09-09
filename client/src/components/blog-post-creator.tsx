@@ -536,10 +536,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   }, [contentManager, form]);
 
   // Sync content when form content changes (e.g., from other tabs)
-  // Only sync if form content is meaningful (not empty) to prevent overwriting editor content
+  // Only sync if form content is meaningful and different from current editor content
   useEffect(() => {
-    if (contentRef.current && watchedContent && watchedContent.trim() !== '' && watchedContent !== contentManager.getContent()) {
-      contentManager.setContent(watchedContent);
+    if (contentRef.current) {
+      const currentEditorContent = contentManager.getContent();
+      const hasEditorContent = currentEditorContent && currentEditorContent.trim() !== '';
+      const hasFormContent = watchedContent && watchedContent.trim() !== '';
+      
+      // Only sync from form to editor if:
+      // 1. Form has meaningful content AND
+      // 2. Either editor is empty OR form content is different from editor content
+      if (hasFormContent && (!hasEditorContent || watchedContent !== currentEditorContent)) {
+        console.log('Syncing form to editor:', { watchedContent: watchedContent.substring(0, 50), currentEditorContent: currentEditorContent.substring(0, 50) });
+        contentManager.setContent(watchedContent);
+      }
     }
   }, [watchedContent, contentManager]);
 
@@ -713,10 +723,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                 defaultValue="content" 
                 className="w-full"
                 onValueChange={(value) => {
+                  console.log('Tab switching to:', value);
+                  
                   // Always sync content when switching tabs to prevent data loss
                   if (contentRef.current) {
                     const currentContent = contentRef.current.innerHTML;
-                    if (currentContent && currentContent !== form.getValues("content")) {
+                    const formContent = form.getValues("content");
+                    console.log('Tab switch sync:', { 
+                      currentContent: currentContent.substring(0, 50), 
+                      formContent: formContent.substring(0, 50),
+                      different: currentContent !== formContent
+                    });
+                    
+                    if (currentContent && currentContent.trim() !== '' && currentContent !== formContent) {
+                      console.log('Saving content to form during tab switch');
                       form.setValue("content", currentContent);
                     }
                   }
@@ -724,6 +744,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   // Re-initialize content manager when returning to content tab
                   if (value === "content" && contentRef.current) {
                     setTimeout(() => {
+                      console.log('Re-initializing content manager');
                       contentManager.setEditor(contentRef.current);
                     }, 50);
                   }
