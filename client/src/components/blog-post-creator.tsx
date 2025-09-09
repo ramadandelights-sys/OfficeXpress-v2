@@ -308,33 +308,57 @@ class EditorContentManager {
       table.appendChild(row);
     }
     
-    // Insert table at current position or end of editor
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const range = selection.getRangeAt(0);
-      
-      // Delete any selected content first
-      if (!range.collapsed) {
-        range.deleteContents();
+    // Insert table - use a more reliable approach
+    if (this.editor) {
+      try {
+        // Focus the editor first to ensure it's active
+        this.editor.focus();
+        
+        // Create a div wrapper for better handling
+        const tableWrapper = document.createElement('div');
+        tableWrapper.style.margin = '16px 0';
+        tableWrapper.appendChild(table);
+        
+        // Try to insert at cursor position, fallback to append
+        const selection = window.getSelection();
+        if (selection && selection.rangeCount > 0 && this.editor.contains(selection.anchorNode)) {
+          const range = selection.getRangeAt(0);
+          
+          // Delete any selected content first
+          if (!range.collapsed) {
+            range.deleteContents();
+          }
+          
+          range.insertNode(tableWrapper);
+          
+          // Move cursor after the table
+          range.setStartAfter(tableWrapper);
+          range.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        } else {
+          // No valid selection, append to end with line breaks for better formatting
+          const br = document.createElement('br');
+          this.editor.appendChild(br);
+          this.editor.appendChild(tableWrapper);
+          const br2 = document.createElement('br');
+          this.editor.appendChild(br2);
+          
+          // Set cursor after the table
+          const range = document.createRange();
+          range.setStartAfter(br2);
+          range.collapse(true);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+        }
+      } catch (error) {
+        console.warn('Range manipulation failed, appending table to end:', error);
+        // Fallback: simple append
+        const tableWrapper = document.createElement('div');
+        tableWrapper.style.margin = '16px 0';
+        tableWrapper.appendChild(table);
+        this.editor.appendChild(tableWrapper);
       }
-      
-      // Create a div wrapper for better handling
-      const tableWrapper = document.createElement('div');
-      tableWrapper.style.margin = '16px 0';
-      tableWrapper.appendChild(table);
-      
-      range.insertNode(tableWrapper);
-      
-      // Move cursor after the table
-      range.setStartAfter(tableWrapper);
-      range.collapse(true);
-      this.restoreSelection(range);
-    } else if (this.editor) {
-      // No selection, append to end
-      const tableWrapper = document.createElement('div');
-      tableWrapper.style.margin = '16px 0';
-      tableWrapper.appendChild(table);
-      this.editor.appendChild(tableWrapper);
     }
     
     this.onContentChange(this.getContent());
