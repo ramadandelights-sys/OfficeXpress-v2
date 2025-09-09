@@ -13,13 +13,25 @@ interface RecaptchaFieldProps {
   control: any;
   name: string;
   siteKey?: string;
+  required?: boolean;
 }
 
-export function RecaptchaField({ control, name, siteKey }: RecaptchaFieldProps) {
+export function RecaptchaField({ control, name, siteKey, required = true }: RecaptchaFieldProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [widgetId, setWidgetId] = useState<number | null>(null);
 
-  // If no site key is provided, don't render reCAPTCHA
+  // If no site key is provided and reCAPTCHA is required, show warning
+  if (!siteKey && required) {
+    return (
+      <div className="p-4 border border-orange-200 bg-orange-50 rounded-md">
+        <p className="text-orange-800 text-sm">
+          Security verification is required but not configured. Please add VITE_RECAPTCHA_SITE_KEY to enable reCAPTCHA.
+        </p>
+      </div>
+    );
+  }
+
+  // If no site key and not required, don't render
   if (!siteKey) {
     return null;
   }
