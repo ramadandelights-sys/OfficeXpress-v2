@@ -1215,8 +1215,11 @@ function BlogPostPreview({
           )}
         </header>
         
-        <div className="whitespace-pre-wrap">
-          {content || "Start writing your content..."}
+        <div 
+          className={content ? "" : "text-muted-foreground"}
+          dangerouslySetInnerHTML={content ? { __html: content } : undefined}
+        >
+          {!content && "Start writing your content..."}
         </div>
       </article>
     </div>
