@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Paste, RotateCcw } from "lucide-react";
@@ -36,23 +36,366 @@ interface BlogPostCreatorProps {
   onCancel?: () => void;
 }
 
+// Enhanced Content Manager Class
+class EditorContentManager {
+  private editor: HTMLDivElement | null = null;
+  private history: string[] = [];
+  private historyIndex: number = -1;
+  private onContentChange: (content: string) => void = () => {};
+
+  constructor() {}
+
+  setEditor(editor: HTMLDivElement | null) {
+    this.editor = editor;
+  }
+
+  setOnContentChange(callback: (content: string) => void) {
+    this.onContentChange = callback;
+  }
+
+  getContent(): string {
+    return this.editor?.innerHTML || '';
+  }
+
+  setContent(content: string) {
+    if (this.editor) {
+      this.editor.innerHTML = content;
+      this.onContentChange(content);
+    }
+  }
+
+  saveToHistory() {
+    if (this.editor) {
+      const content = this.editor.innerHTML;
+      // Remove everything after current index
+      this.history = this.history.slice(0, this.historyIndex + 1);
+      this.history.push(content);
+      this.historyIndex = this.history.length - 1;
+      // Limit history size
+      if (this.history.length > 50) {
+        this.history.shift();
+        this.historyIndex--;
+      }
+    }
+  }
+
+  undo(): boolean {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      const content = this.history[this.historyIndex];
+      this.setContent(content);
+      return true;
+    }
+    return false;
+  }
+
+  redo(): boolean {
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      const content = this.history[this.historyIndex];
+      this.setContent(content);
+      return true;
+    }
+    return false;
+  }
+
+  // Get current selection
+  private getSelection(): Range | null {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      return selection.getRangeAt(0);
+    }
+    return null;
+  }
+
+  // Restore selection
+  private restoreSelection(range: Range) {
+    const selection = window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  }
+
+  // Execute formatting command with proper selection handling
+  formatText(command: 'bold' | 'italic' | 'underline' | 'strikethrough') {
+    this.saveToHistory();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!range.collapsed) {
+        const selectedText = range.toString();
+        const span = document.createElement('span');
+        
+        switch (command) {
+          case 'bold':
+            span.style.fontWeight = 'bold';
+            break;
+          case 'italic':
+            span.style.fontStyle = 'italic';
+            break;
+          case 'underline':
+            span.style.textDecoration = 'underline';
+            break;
+          case 'strikethrough':
+            span.style.textDecoration = 'line-through';
+            break;
+        }
+        
+        span.textContent = selectedText;
+        range.deleteContents();
+        range.insertNode(span);
+        
+        // Move cursor after the formatted text
+        range.setStartAfter(span);
+        range.collapse(true);
+        this.restoreSelection(range);
+        
+        this.onContentChange(this.getContent());
+      }
+    }
+  }
+
+  // Apply font family to selected text
+  applyFontFamily(fontFamily: string) {
+    this.saveToHistory();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!range.collapsed) {
+        const selectedText = range.toString();
+        const span = document.createElement('span');
+        span.style.fontFamily = fontFamily;
+        span.textContent = selectedText;
+        range.deleteContents();
+        range.insertNode(span);
+        
+        range.setStartAfter(span);
+        range.collapse(true);
+        this.restoreSelection(range);
+        
+        this.onContentChange(this.getContent());
+      }
+    }
+  }
+
+  // Apply text color to selected text
+  applyTextColor(color: string) {
+    this.saveToHistory();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!range.collapsed) {
+        const selectedText = range.toString();
+        const span = document.createElement('span');
+        span.style.color = color;
+        span.textContent = selectedText;
+        range.deleteContents();
+        range.insertNode(span);
+        
+        range.setStartAfter(span);
+        range.collapse(true);
+        this.restoreSelection(range);
+        
+        this.onContentChange(this.getContent());
+      }
+    }
+  }
+
+  // Apply highlight color to selected text
+  applyHighlightColor(color: string) {
+    this.saveToHistory();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (!range.collapsed) {
+        const selectedText = range.toString();
+        const span = document.createElement('span');
+        span.style.backgroundColor = color;
+        span.textContent = selectedText;
+        range.deleteContents();
+        range.insertNode(span);
+        
+        range.setStartAfter(span);
+        range.collapse(true);
+        this.restoreSelection(range);
+        
+        this.onContentChange(this.getContent());
+      }
+    }
+  }
+
+  // Insert table with proper positioning
+  insertTable(config: {
+    rows: number;
+    cols: number;
+    headerBg: string;
+    cellBg: string;
+    borderColor: string;
+    headerTextColor: string;
+    cellTextColor: string;
+  }) {
+    this.saveToHistory();
+    
+    const { rows, cols, headerBg, cellBg, borderColor, headerTextColor, cellTextColor } = config;
+    
+    const table = document.createElement('table');
+    table.style.borderCollapse = 'collapse';
+    table.style.width = '100%';
+    table.style.margin = '16px 0';
+    
+    // Create header row
+    const headerRow = document.createElement('tr');
+    headerRow.style.backgroundColor = headerBg;
+    
+    for (let i = 0; i < cols; i++) {
+      const th = document.createElement('th');
+      th.style.padding = '12px';
+      th.style.border = `1px solid ${borderColor}`;
+      th.style.fontWeight = 'bold';
+      th.style.textAlign = 'left';
+      th.style.color = headerTextColor;
+      th.textContent = `Header ${i + 1}`;
+      headerRow.appendChild(th);
+    }
+    
+    table.appendChild(headerRow);
+    
+    // Create body rows
+    for (let i = 1; i < rows; i++) {
+      const row = document.createElement('tr');
+      for (let j = 0; j < cols; j++) {
+        const td = document.createElement('td');
+        td.style.padding = '8px';
+        td.style.border = `1px solid ${borderColor}`;
+        td.style.backgroundColor = cellBg;
+        td.style.color = cellTextColor;
+        td.innerHTML = '&nbsp;';
+        row.appendChild(td);
+      }
+      table.appendChild(row);
+    }
+    
+    // Insert table at current position
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(table);
+      
+      // Move cursor after the table
+      range.setStartAfter(table);
+      range.collapse(true);
+      this.restoreSelection(range);
+    } else if (this.editor) {
+      // No selection, append to end
+      this.editor.appendChild(table);
+    }
+    
+    this.onContentChange(this.getContent());
+  }
+
+  // Insert image
+  insertImage(url: string, alt: string = 'Image', width: string = 'auto') {
+    this.saveToHistory();
+    
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = alt;
+    img.style.maxWidth = width;
+    img.style.height = 'auto';
+    img.style.margin = '8px 0';
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(img);
+      
+      range.setStartAfter(img);
+      range.collapse(true);
+      this.restoreSelection(range);
+    } else if (this.editor) {
+      this.editor.appendChild(img);
+    }
+    
+    this.onContentChange(this.getContent());
+  }
+
+  // Create list
+  createList(ordered: boolean = false) {
+    this.saveToHistory();
+    
+    const list = document.createElement(ordered ? 'ol' : 'ul');
+    const listItem = document.createElement('li');
+    listItem.innerHTML = '&nbsp;';
+    list.appendChild(listItem);
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(list);
+      
+      // Place cursor inside the list item
+      range.setStart(listItem, 0);
+      range.collapse(true);
+      this.restoreSelection(range);
+    } else if (this.editor) {
+      this.editor.appendChild(list);
+    }
+    
+    this.onContentChange(this.getContent());
+  }
+
+  // Insert heading
+  insertHeading(level: number) {
+    this.saveToHistory();
+    
+    const heading = document.createElement(`h${level}`);
+    heading.textContent = `Heading ${level}`;
+    
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.insertNode(heading);
+      
+      // Place cursor inside heading
+      range.setStart(heading, 0);
+      range.setEnd(heading, heading.textContent.length);
+      this.restoreSelection(range);
+    } else if (this.editor) {
+      this.editor.appendChild(heading);
+    }
+    
+    this.onContentChange(this.getContent());
+  }
+
+  // Clear all content
+  clear() {
+    this.saveToHistory();
+    if (this.editor) {
+      this.editor.innerHTML = '';
+      this.onContentChange('');
+    }
+  }
+}
+
 export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPostCreatorProps) {
   const { toast } = useToast();
   const [newTag, setNewTag] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
   const [showContentImageUploader, setShowContentImageUploader] = useState(false);
-  const [isRichTextMode, setIsRichTextMode] = useState(true);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [fontSize, setFontSize] = useState(14);
-  const [fontFamily, setFontFamily] = useState('Arial');
-  const [textColor, setTextColor] = useState('#000000');
-  const [highlightColor, setHighlightColor] = useState('#ffff00');
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
+  const [textColor, setTextColor] = useState('#000000');
+  const [highlightColor, setHighlightColor] = useState('#ffff00');
+  const [fontFamily, setFontFamily] = useState('Arial');
+  
+  // Content manager instance
+  const [contentManager] = useState(() => new EditorContentManager());
+  
+  // Table configuration
   const [tableConfig, setTableConfig] = useState({
     rows: 3,
     cols: 3,
@@ -62,8 +405,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     headerTextColor: '#000000',
     cellTextColor: '#000000'
   });
-  const [showFontSelector, setShowFontSelector] = useState(false);
-  const [showInsertMenu, setShowInsertMenu] = useState(false);
 
   const form = useForm<AdvancedBlogPost>({
     resolver: zodResolver(advancedBlogPostSchema),
@@ -74,363 +415,124 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       excerpt: "",
       category: "Transportation",
       tags: [],
-      featuredImage: "",
       metaDescription: "",
       metaKeywords: "",
       readTime: 5,
-      published: false,
       author: "OfficeXpress Team",
+      published: false,
+      featured: false,
       scheduledFor: "",
+      featuredImage: "",
     },
   });
 
+  // Watch form values for preview
   const watchedTitle = form.watch("title");
   const watchedContent = form.watch("content");
   const watchedTags = form.watch("tags");
 
-  // Sync content between rich text editor and form state
+  // Initialize content manager
   useEffect(() => {
-    if (contentRef.current && watchedContent && contentRef.current.innerHTML !== watchedContent) {
-      contentRef.current.innerHTML = watchedContent;
+    if (contentRef.current) {
+      contentManager.setEditor(contentRef.current);
+      contentManager.setOnContentChange((content) => {
+        form.setValue("content", content);
+        // Update word count
+        const textContent = contentRef.current?.textContent || '';
+        const words = textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
+        setWordCount(words);
+      });
+      
+      // Initialize with empty content
+      contentManager.saveToHistory();
     }
-  }, [watchedContent]);
+  }, [contentManager, form]);
 
-  // Ensure content is always synced when component unmounts or user navigates
+  // Sync content when form content changes (e.g., from other tabs)
   useEffect(() => {
-    const syncContent = () => {
-      if (contentRef.current) {
-        const currentContent = contentRef.current.innerHTML;
-        if (currentContent !== form.getValues("content")) {
-          form.setValue("content", currentContent);
-          handleRichTextChange();
-        }
-      }
-    };
+    if (contentRef.current && watchedContent !== contentManager.getContent()) {
+      contentManager.setContent(watchedContent);
+    }
+  }, [watchedContent, contentManager]);
 
-    // Sync content when user clicks away or navigates
-    const handleBeforeUnload = () => syncContent();
-    const handleVisibilityChange = () => syncContent();
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    
-    return () => {
-      syncContent(); // Sync on cleanup
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
-  // Auto-generate slug from title
-  const generateSlug = (title: string) => {
-    return title
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
-  };
-
-  // Update slug when title changes
+  // Handle title change and generate slug
   const handleTitleChange = (title: string) => {
-    form.setValue("title", title);
-    const slug = generateSlug(title);
+    const slug = title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
     form.setValue("slug", slug);
   };
 
-  // Update word count and reading time
-  const handleContentChange = (content: string) => {
-    form.setValue("content", content);
-    const words = content.trim().split(/\s+/).length;
-    setWordCount(words);
-    const readTime = Math.max(1, Math.ceil(words / 200)); // ~200 words per minute
-    form.setValue("readTime", readTime);
-  };
-
-  // Handle image insertion into content
-  const insertImageIntoContent = (imageUrl: string) => {
-    const currentContent = form.getValues("content");
-    const imageMarkdown = `\n\n![Image](${imageUrl})\n\n`;
-    const newContent = currentContent + imageMarkdown;
-    form.setValue("content", newContent);
-    handleContentChange(newContent);
-    setShowContentImageUploader(false);
-    toast({
-      title: "Image inserted",
-      description: "The image has been added to your blog content"
-    });
-  };
-
-  // Enhanced rich text editor functions
-  const saveToUndoStack = () => {
+  // Content change handler
+  const handleContentChange = useCallback(() => {
     if (contentRef.current) {
-      setUndoStack(prev => [...prev.slice(-19), contentRef.current!.innerHTML]);
-      setRedoStack([]);
+      const content = contentRef.current.innerHTML;
+      contentManager.onContentChange(content);
     }
+  }, [contentManager]);
+
+  // Rich text formatting functions
+  const formatText = (command: 'bold' | 'italic' | 'underline' | 'strikethrough') => {
+    contentManager.formatText(command);
   };
 
-  const executeCommand = (command: string, value?: string) => {
-    saveToUndoStack();
-    document.execCommand(command, false, value);
-    handleRichTextChange();
+  const applyFontFamily = (family: string) => {
+    setFontFamily(family);
+    contentManager.applyFontFamily(family);
   };
 
-  const executeUndo = () => {
-    if (undoStack.length > 0) {
-      const lastState = undoStack[undoStack.length - 1];
-      if (contentRef.current) {
-        setRedoStack(prev => [contentRef.current!.innerHTML, ...prev.slice(0, 19)]);
-        contentRef.current.innerHTML = lastState;
-        setUndoStack(prev => prev.slice(0, -1));
-        handleRichTextChange();
-      }
-    }
+  const applyTextColor = (color: string) => {
+    setTextColor(color);
+    contentManager.applyTextColor(color);
+    setShowColorPicker(false);
   };
 
-  const executeRedo = () => {
-    if (redoStack.length > 0) {
-      const nextState = redoStack[0];
-      if (contentRef.current) {
-        setUndoStack(prev => [...prev.slice(-19), contentRef.current!.innerHTML]);
-        contentRef.current.innerHTML = nextState;
-        setRedoStack(prev => prev.slice(1));
-        handleRichTextChange();
-      }
-    }
+  const applyHighlightColor = (color: string) => {
+    setHighlightColor(color);
+    contentManager.applyHighlightColor(color);
+    setShowHighlightPicker(false);
   };
 
-  const insertLink = () => {
-    const url = prompt('Enter URL:');
-    if (url) {
-      executeCommand('createLink', url);
-    }
+  const insertTable = () => {
+    contentManager.insertTable(tableConfig);
+    setShowTableModal(false);
   };
 
   const insertImage = () => {
     const url = prompt('Enter image URL (e.g., https://example.com/image.jpg):');
     if (url) {
-      // Basic URL validation
-      if (!url.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
-        const confirmInvalid = confirm('The URL doesn\'t appear to be a valid image URL. Insert anyway?');
-        if (!confirmInvalid) return;
-      }
-      
       const altText = prompt('Enter alternative text for the image (optional):') || 'Image';
       const width = prompt('Enter image width (optional, e.g., 300px or 50%):') || 'auto';
-      
-      const imageHTML = `<img src="${url}" alt="${altText}" style="max-width: ${width}; height: auto; margin: 8px 0;" />`;
-      executeCommand('insertHTML', imageHTML);
+      contentManager.insertImage(url, altText, width);
     }
   };
 
-  const insertTable = () => {
-    setShowTableModal(true);
-  };
-
-  const createTableWithConfig = () => {
-    const { rows, cols, headerBg, cellBg, borderColor, headerTextColor, cellTextColor } = tableConfig;
-    
-    const headerRow = `<tr style="background-color: ${headerBg};">${Array.from({length: cols}, (_, i) => 
-      `<th style="padding: 12px; border: 1px solid ${borderColor}; font-weight: bold; text-align: left; color: ${headerTextColor};">Header ${i + 1}</th>`
-    ).join('')}</tr>`;
-    
-    const bodyRows = Array.from({length: rows - 1}, () => 
-      `<tr>${Array.from({length: cols}, () => 
-        `<td style="padding: 8px; border: 1px solid ${borderColor}; background-color: ${cellBg}; color: ${cellTextColor};">&nbsp;</td>`
-      ).join('')}</tr>`
-    ).join('');
-    
-    const tableHTML = `
-      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
-        ${headerRow}
-        ${bodyRows}
-      </table>
-    `;
-    executeCommand('insertHTML', tableHTML);
-    setShowTableModal(false);
+  const createList = (ordered: boolean = false) => {
+    contentManager.createList(ordered);
   };
 
   const insertHeading = (level: number) => {
-    executeCommand('formatBlock', `h${level}`);
+    contentManager.insertHeading(level);
   };
 
-  const changeFontSize = (size: number) => {
-    setFontSize(size);
-    executeCommand('fontSize', '7'); // Use size 7 then change with CSS
-    if (contentRef.current) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        const span = document.createElement('span');
-        span.style.fontSize = `${size}px`;
-        try {
-          range.surroundContents(span);
-        } catch (e) {
-          span.appendChild(range.extractContents());
-          range.insertNode(span);
-        }
-      }
+  const insertImageIntoContent = (imageUrl: string) => {
+    contentManager.insertImage(imageUrl);
+    setShowContentImageUploader(false);
+  };
+
+  // Clear content
+  const clearContent = () => {
+    if (confirm('Are you sure you want to clear all content?')) {
+      contentManager.clear();
     }
   };
 
-  const changeFontFamily = (family: string) => {
-    setFontFamily(family);
-    if (contentRef.current) {
-      contentRef.current.focus();
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (!range.collapsed) {
-          // Save the selection
-          const selectedText = range.toString();
-          if (selectedText.trim()) {
-            const span = document.createElement('span');
-            span.style.fontFamily = family;
-            span.textContent = selectedText;
-            range.deleteContents();
-            range.insertNode(span);
-            
-            // Restore selection after the span
-            range.setStartAfter(span);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            
-            handleRichTextChange();
-          }
-        } else {
-          // No text selected, do nothing - font will apply to new text when user types
-          // Remove global styling that affects the entire editor
-        }
-      }
-    }
-  };
+  // Undo/Redo
+  const undo = () => contentManager.undo();
+  const redo = () => contentManager.redo();
 
-  const changeTextColor = (color: string) => {
-    setTextColor(color);
-    if (contentRef.current) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (!range.collapsed) {
-          const span = document.createElement('span');
-          span.style.color = color;
-          try {
-            range.surroundContents(span);
-          } catch (e) {
-            span.appendChild(range.extractContents());
-            range.insertNode(span);
-          }
-          handleRichTextChange();
-        }
-      }
-    }
-  };
-
-  const changeHighlightColor = (color: string) => {
-    setHighlightColor(color);
-    if (contentRef.current) {
-      const selection = window.getSelection();
-      if (selection && selection.rangeCount > 0) {
-        const range = selection.getRangeAt(0);
-        if (!range.collapsed) {
-          const span = document.createElement('span');
-          span.style.backgroundColor = color;
-          try {
-            range.surroundContents(span);
-          } catch (e) {
-            span.appendChild(range.extractContents());
-            range.insertNode(span);
-          }
-          handleRichTextChange();
-        }
-      }
-    }
-  };
-
-  const insertSpecialContent = (type: string) => {
-    switch (type) {
-      case 'hr':
-        executeCommand('insertHTML', '<hr style="border: 1px solid #ccc; margin: 20px 0;">');
-        break;
-      case 'blockquote':
-        executeCommand('formatBlock', 'blockquote');
-        break;
-      case 'code':
-        executeCommand('insertHTML', '<code style="background: #f5f5f5; padding: 2px 4px; border-radius: 3px; font-family: monospace;"></code>');
-        break;
-      case 'checklist':
-        executeCommand('insertHTML', '<p><input type="checkbox" disabled> </p>');
-        break;
-    }
-  };
-
-  const handleRichTextChange = () => {
-    if (contentRef.current) {
-      const content = contentRef.current.innerHTML;
-      const textContent = contentRef.current.textContent || contentRef.current.innerText || '';
-      form.setValue("content", content);
-      const words = textContent.trim().split(/\s+/).filter(word => word.length > 0).length;
-      setWordCount(words);
-      const readTime = Math.max(1, Math.ceil(words / 200));
-      form.setValue("readTime", readTime);
-    }
-  };
-
-  const clearEditor = () => {
-    if (contentRef.current) {
-      saveToUndoStack();
-      contentRef.current.innerHTML = '<p><br></p>';
-      handleRichTextChange();
-    }
-  };
-
-  const convertToMarkdown = (html: string) => {
-    // Simple HTML to Markdown conversion
-    return html
-      .replace(/<h([1-6])>/g, (match, level) => '#'.repeat(parseInt(level)) + ' ')
-      .replace(/<\/h[1-6]>/g, '\n\n')
-      .replace(/<b>|<strong>/g, '**')
-      .replace(/<\/b>|<\/strong>/g, '**')
-      .replace(/<i>|<em>/g, '*')
-      .replace(/<\/i>|<\/em>/g, '*')
-      .replace(/<u>/g, '<u>')
-      .replace(/<\/u>/g, '</u>')
-      .replace(/<a href="([^"]+)">([^<]+)<\/a>/g, '[$2]($1)')
-      .replace(/<ul>/g, '\n')
-      .replace(/<\/ul>/g, '\n')
-      .replace(/<ol>/g, '\n')
-      .replace(/<\/ol>/g, '\n')
-      .replace(/<li>/g, '- ')
-      .replace(/<\/li>/g, '\n')
-      .replace(/<p>/g, '')
-      .replace(/<\/p>/g, '\n\n')
-      .replace(/<br\s*\/?>/g, '\n')
-      .replace(/<[^>]+>/g, '')
-      .trim();
-  };
-
-  const convertFromMarkdown = (markdown: string) => {
-    // Simple Markdown to HTML conversion
-    return markdown
-      .replace(/^(#{1,6})\s(.+)$/gm, (match, hashes, text) => `<h${hashes.length}>${text}</h${hashes.length}>`)
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/<u>([^<]+)<\/u>/g, '<u>$1</u>')
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-      .replace(/^-\s(.+)$/gm, '<li>$1</li>')
-      .replace(/((<li>.*<\/li>\s*)+)/gs, '<ul>$1</ul>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^(.+)$/gm, (match) => {
-        if (match.startsWith('<') || match.trim() === '') return match;
-        return `<p>${match}</p>`;
-      })
-      .replace(/^<p><\/p>$/gm, '')
-      .replace(/^<p>(<[^>]+>)/gm, '$1')
-      .replace(/(<\/[^>]+>)<\/p>$/gm, '$1');
-  };
-
-  // Add tag functionality
+  // Tag management
   const addTag = () => {
     if (newTag.trim() && !watchedTags.includes(newTag.trim())) {
       const updatedTags = [...watchedTags, newTag.trim()];
@@ -466,6 +568,20 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     onSave(data);
   };
 
+  // Preview toggle with content sync
+  const togglePreview = () => {
+    if (!previewMode) {
+      // Switching to preview mode - sync content first
+      if (contentRef.current) {
+        const currentContent = contentRef.current.innerHTML;
+        if (currentContent !== form.getValues("content")) {
+          form.setValue("content", currentContent);
+        }
+      }
+    }
+    setPreviewMode(!previewMode);
+  };
+
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader className="border-b">
@@ -477,18 +593,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              onClick={() => {
-                // Sync content before toggling preview
-                if (!previewMode && contentRef.current) {
-                  const currentContent = contentRef.current.innerHTML;
-                  if (currentContent && currentContent !== form.getValues("content")) {
-                    form.setValue("content", currentContent);
-                    handleRichTextChange();
-                  }
-                }
-                setPreviewMode(!previewMode);
-              }}
+              onClick={togglePreview}
               className="flex items-center gap-2"
+              data-testid="button-preview"
             >
               <Eye className="h-4 w-4" />
               {previewMode ? "Edit" : "Preview"}
@@ -523,7 +630,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                     const currentContent = contentRef.current.innerHTML;
                     if (currentContent && currentContent !== form.getValues("content")) {
                       form.setValue("content", currentContent);
-                      handleRichTextChange();
                     }
                   }
                 }}
@@ -559,7 +665,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                         </FormItem>
                       )}
                     />
-
                     <FormField
                       control={form.control}
                       name="slug"
@@ -579,82 +684,103 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                     />
                   </div>
 
-                  {/* Content Area */}
+                  {/* Rich Text Editor */}
                   <FormField
                     control={form.control}
                     name="content"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="flex items-center justify-between">
-                          Content *
-                          <div className="flex items-center gap-4">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={clearEditor}
-                              className="flex items-center gap-1"
-                            >
-                              <RotateCcw className="h-3 w-3" />
-                              Clear
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                              {wordCount} words • {form.watch("readTime")} min read
-                            </span>
-                          </div>
-                        </FormLabel>
-                        {showContentImageUploader && (
-                          <div className="border rounded-lg p-4 bg-gray-50 mb-2">
-                            <ImageUploader
-                              onImageUpload={insertImageIntoContent}
-                              buttonText="Upload Image for Content"
-                              className="w-full"
-                            />
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Content *</FormLabel>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              onClick={() => setShowContentImageUploader(false)}
-                              className="mt-2"
+                              onClick={clearContent}
+                              className="h-6 px-2 text-xs"
                             >
-                              Cancel
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Clear
                             </Button>
+                            <span>{wordCount} words • {Math.ceil(wordCount / 200)} min read</span>
                           </div>
-                        )}
-                        <div className="space-y-2">
-                          {/* Comprehensive Google Docs-style Toolbar */}
-                          <div className="border rounded-t-lg bg-gray-50 p-3 space-y-2">
-                            {/* First Row: Undo/Redo, Font, Size, Format */}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {/* Undo/Redo */}
-                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={executeUndo}
-                                  disabled={undoStack.length === 0}
-                                  className="h-8 w-8 p-0"
-                                  title="Undo"
-                                >
-                                  <Undo className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={executeRedo}
-                                  disabled={redoStack.length === 0}
-                                  className="h-8 w-8 p-0"
-                                  title="Redo"
-                                >
-                                  <Redo className="h-4 w-4" />
-                                </Button>
-                              </div>
+                        </div>
+                        
+                        <div className="border rounded-lg">
+                          {/* Rich Text Toolbar */}
+                          <div className="border-b p-3 bg-gray-50 space-y-2">
+                            {/* First Row - Basic Formatting */}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={undo}
+                                className="h-8 w-8 p-0"
+                                title="Undo"
+                              >
+                                <Undo className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={redo}
+                                className="h-8 w-8 p-0"
+                                title="Redo"
+                              >
+                                <Redo className="h-4 w-4" />
+                              </Button>
+                              
+                              <Separator orientation="vertical" className="h-6 mx-1" />
+                              
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => formatText('bold')}
+                                className="h-8 w-8 p-0"
+                                title="Bold"
+                              >
+                                <Bold className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => formatText('italic')}
+                                className="h-8 w-8 p-0"
+                                title="Italic"
+                              >
+                                <Italic className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => formatText('underline')}
+                                className="h-8 w-8 p-0"
+                                title="Underline"
+                              >
+                                <Underline className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => formatText('strikethrough')}
+                                className="h-8 w-8 p-0"
+                                title="Strikethrough"
+                              >
+                                <Strikethrough className="h-4 w-4" />
+                              </Button>
+
+                              <Separator orientation="vertical" className="h-6 mx-1" />
 
                               {/* Font Family */}
                               <div className="relative">
-                                <Select value={fontFamily} onValueChange={changeFontFamily}>
+                                <Select value={fontFamily} onValueChange={applyFontFamily}>
                                   <SelectTrigger className="w-32 h-8">
                                     <SelectValue />
                                   </SelectTrigger>
@@ -665,337 +791,184 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                     <SelectItem value="Georgia">Georgia</SelectItem>
                                     <SelectItem value="Verdana">Verdana</SelectItem>
                                     <SelectItem value="Courier New">Courier New</SelectItem>
-                                    <SelectItem value="Calibri">Calibri</SelectItem>
-                                    <SelectItem value="Roboto">Roboto</SelectItem>
                                   </SelectContent>
                                 </Select>
                               </div>
 
-                              {/* Font Size */}
-                              <div className="flex items-center gap-1">
+                              {/* Text Color */}
+                              <div className="relative">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => changeFontSize(Math.max(8, fontSize - 2))}
+                                  onClick={() => setShowColorPicker(!showColorPicker)}
                                   className="h-8 w-8 p-0"
-                                  title="Decrease Font Size"
+                                  title="Text Color"
                                 >
-                                  <Minus className="h-3 w-3" />
+                                  <Type className="h-4 w-4" style={{ color: textColor }} />
                                 </Button>
-                                <Input
-                                  type="number"
-                                  value={fontSize}
-                                  onChange={(e) => changeFontSize(parseInt(e.target.value) || 14)}
-                                  className="w-16 h-8 text-center"
-                                  min="8"
-                                  max="72"
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => changeFontSize(Math.min(72, fontSize + 2))}
-                                  className="h-8 w-8 p-0"
-                                  title="Increase Font Size"
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
+                                {showColorPicker && (
+                                  <div className="absolute top-10 left-0 z-50 p-3 bg-white border rounded-lg shadow-lg">
+                                    <div className="grid grid-cols-6 gap-2 mb-3">
+                                      {[
+                                        '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
+                                        '#ff0000', '#ff8800', '#ffff00', '#88ff00', '#00ff00', '#00ff88',
+                                        '#00ffff', '#0088ff', '#0000ff', '#8800ff', '#ff00ff', '#ff0088'
+                                      ].map(color => (
+                                        <button
+                                          key={color}
+                                          type="button"
+                                          className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                                          style={{ backgroundColor: color }}
+                                          onClick={() => applyTextColor(color)}
+                                        />
+                                      ))}
+                                    </div>
+                                    <input
+                                      type="color"
+                                      value={textColor}
+                                      onChange={(e) => applyTextColor(e.target.value)}
+                                      className="w-full h-8 rounded border"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setShowColorPicker(false)}
+                                      className="w-full mt-2 h-6 text-xs"
+                                    >
+                                      Close
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
 
-                              {/* Text Formatting */}
-                              <div className="flex items-center gap-1 border-l pl-2 ml-2">
+                              {/* Highlight Color */}
+                              <div className="relative">
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() => executeCommand('bold')}
+                                  onClick={() => setShowHighlightPicker(!showHighlightPicker)}
                                   className="h-8 w-8 p-0"
-                                  title="Bold"
+                                  title="Highlight Color"
                                 >
-                                  <Bold className="h-4 w-4" />
+                                  <Highlighter className="h-4 w-4" style={{ color: highlightColor }} />
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('italic')}
-                                  className="h-8 w-8 p-0"
-                                  title="Italic"
-                                >
-                                  <Italic className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('underline')}
-                                  className="h-8 w-8 p-0"
-                                  title="Underline"
-                                >
-                                  <Underline className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('strikeThrough')}
-                                  className="h-8 w-8 p-0"
-                                  title="Strikethrough"
-                                >
-                                  <Strikethrough className="h-4 w-4" />
-                                </Button>
-                              </div>
-
-                              {/* Text Color & Highlight */}
-                              <div className="flex items-center gap-1 border-l pl-2 ml-2">
-                                <div className="relative">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowColorPicker(!showColorPicker)}
-                                    className="h-8 w-8 p-0"
-                                    title="Text Color"
-                                  >
-                                    <Palette className="h-4 w-4" />
-                                  </Button>
-                                  {showColorPicker && (
-                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-3 shadow-lg min-w-48">
-                                      <div className="space-y-3">
-                                        <div className="text-xs font-medium text-gray-700 mb-2">Text Color</div>
-                                        <div className="grid grid-cols-6 gap-2">
-                                          {['#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
-                                            '#ff0000', '#ff6600', '#ffcc00', '#00ff00', '#0066ff', '#6600ff',
-                                            '#ff0066', '#00ffff', '#ffff00', '#ff00ff', '#00ff66', '#6666ff'].map((color) => (
-                                            <button
-                                              key={color}
-                                              onClick={() => {
-                                                changeTextColor(color);
-                                                setShowColorPicker(false);
-                                              }}
-                                              className="w-6 h-6 rounded border border-gray-300 hover:border-gray-500"
-                                              style={{ backgroundColor: color }}
-                                              title={color}
-                                            />
-                                          ))}
-                                        </div>
-                                        <div className="border-t pt-2">
-                                          <label className="text-xs text-gray-600 mb-1 block">Custom Color:</label>
-                                          <input
-                                            type="color"
-                                            value={textColor}
-                                            onChange={(e) => {
-                                              changeTextColor(e.target.value);
-                                              setShowColorPicker(false);
-                                            }}
-                                            className="w-full h-8 rounded border"
-                                          />
-                                        </div>
-                                      </div>
+                                {showHighlightPicker && (
+                                  <div className="absolute top-10 left-0 z-50 p-3 bg-white border rounded-lg shadow-lg">
+                                    <div className="grid grid-cols-6 gap-2 mb-3">
+                                      {[
+                                        '#ffff00', '#ff8800', '#ff0088', '#8800ff', '#0088ff', '#00ff88',
+                                        '#ffcccc', '#ffffcc', '#ccffcc', '#ccffff', '#ccccff', '#ffccff'
+                                      ].map(color => (
+                                        <button
+                                          key={color}
+                                          type="button"
+                                          className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                                          style={{ backgroundColor: color }}
+                                          onClick={() => applyHighlightColor(color)}
+                                        />
+                                      ))}
                                     </div>
-                                  )}
-                                </div>
-                                <div className="relative">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setShowHighlightPicker(!showHighlightPicker)}
-                                    className="h-8 w-8 p-0"
-                                    title="Highlight Color"
-                                  >
-                                    <Highlighter className="h-4 w-4" />
-                                  </Button>
-                                  {showHighlightPicker && (
-                                    <div className="absolute top-10 left-0 z-50 bg-white border rounded-lg p-3 shadow-lg min-w-48">
-                                      <div className="space-y-3">
-                                        <div className="text-xs font-medium text-gray-700 mb-2">Highlight Color</div>
-                                        <div className="grid grid-cols-6 gap-2">
-                                          {['#ffff00', '#00ffff', '#ff00ff', '#00ff00', '#ff6600', '#ff0000',
-                                            '#ffffcc', '#ccffff', '#ffccff', '#ccffcc', '#ffddcc', '#ffcccc',
-                                            '#fff2cc', '#cce6ff', '#e6ccff', '#d4f1d4', '#ffe6cc', '#ffd6cc'].map((color) => (
-                                            <button
-                                              key={color}
-                                              onClick={() => {
-                                                changeHighlightColor(color);
-                                                setShowHighlightPicker(false);
-                                              }}
-                                              className="w-6 h-6 rounded border border-gray-300 hover:border-gray-500"
-                                              style={{ backgroundColor: color }}
-                                              title={color}
-                                            />
-                                          ))}
-                                        </div>
-                                        <div className="border-t pt-2">
-                                          <label className="text-xs text-gray-600 mb-1 block">Custom Color:</label>
-                                          <input
-                                            type="color"
-                                            value={highlightColor}
-                                            onChange={(e) => {
-                                              changeHighlightColor(e.target.value);
-                                              setShowHighlightPicker(false);
-                                            }}
-                                            className="w-full h-8 rounded border"
-                                          />
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
+                                    <input
+                                      type="color"
+                                      value={highlightColor}
+                                      onChange={(e) => applyHighlightColor(e.target.value)}
+                                      className="w-full h-8 rounded border"
+                                    />
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => setShowHighlightPicker(false)}
+                                      className="w-full mt-2 h-6 text-xs"
+                                    >
+                                      Close
+                                    </Button>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            {/* Second Row: Headings, Lists, Alignment */}
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {/* Headings */}
-                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                                <Select onValueChange={(value) => insertHeading(parseInt(value))}>
-                                  <SelectTrigger className="w-20 h-8">
-                                    <SelectValue placeholder="H1" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="1">H1</SelectItem>
-                                    <SelectItem value="2">H2</SelectItem>
-                                    <SelectItem value="3">H3</SelectItem>
-                                    <SelectItem value="4">H4</SelectItem>
-                                    <SelectItem value="5">H5</SelectItem>
-                                    <SelectItem value="6">H6</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                            {/* Second Row - Lists and Insertions */}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => createList(false)}
+                                className="h-8 w-8 p-0"
+                                title="Bullet List"
+                              >
+                                <List className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => createList(true)}
+                                className="h-8 w-8 p-0"
+                                title="Numbered List"
+                              >
+                                <ListOrdered className="h-4 w-4" />
+                              </Button>
 
-                              {/* Lists */}
-                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('insertUnorderedList')}
-                                  className="h-8 w-8 p-0"
-                                  title="Bullet List"
-                                >
-                                  <List className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('insertOrderedList')}
-                                  className="h-8 w-8 p-0"
-                                  title="Numbered List"
-                                >
-                                  <ListOrdered className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertSpecialContent('checklist')}
-                                  className="h-8 w-8 p-0"
-                                  title="Checklist"
-                                >
-                                  <CheckSquare className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Separator orientation="vertical" className="h-6 mx-1" />
 
-                              {/* Alignment */}
-                              <div className="flex items-center gap-1 border-r pr-2 mr-2">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('justifyLeft')}
-                                  className="h-8 w-8 p-0"
-                                  title="Align Left"
-                                >
-                                  <AlignLeft className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('justifyCenter')}
-                                  className="h-8 w-8 p-0"
-                                  title="Align Center"
-                                >
-                                  <AlignCenter className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => executeCommand('justifyRight')}
-                                  className="h-8 w-8 p-0"
-                                  title="Align Right"
-                                >
-                                  <AlignRight className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(1)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 1"
+                              >
+                                H1
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(2)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 2"
+                              >
+                                H2
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(3)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 3"
+                              >
+                                H3
+                              </Button>
 
-                              {/* Insert Options */}
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={insertLink}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Link"
-                                >
-                                  <Link className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setShowContentImageUploader(true)}
-                                  className="h-8 w-8 p-0"
-                                  title="Upload Image"
-                                >
-                                  <Image className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={insertTable}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Table"
-                                >
-                                  <Table className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertSpecialContent('hr')}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Horizontal Rule"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertSpecialContent('blockquote')}
-                                  className="h-8 w-8 p-0"
-                                  title="Quote"
-                                >
-                                  <Quote className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertSpecialContent('code')}
-                                  className="h-8 w-8 p-0"
-                                  title="Code"
-                                >
-                                  <Code className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Separator orientation="vertical" className="h-6 mx-1" />
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowTableModal(true)}
+                                className="h-8 w-8 p-0"
+                                title="Insert Table"
+                              >
+                                <Table className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={insertImage}
+                                className="h-8 w-8 p-0"
+                                title="Insert Image"
+                              >
+                                <Image className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                           
@@ -1004,7 +977,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             <div
                               ref={contentRef}
                               contentEditable
-                              onInput={handleRichTextChange}
+                              onInput={handleContentChange}
                               onBlur={() => {
                                 if (contentRef.current) {
                                   field.onChange(contentRef.current.innerHTML);
@@ -1021,68 +994,47 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                   contentRef.current.focus();
                                 }
                               }}
-                              className="min-h-[400px] border rounded-b-lg p-4 focus:outline-none focus:ring-2 focus:ring-ring bg-white prose max-w-none"
+                              className="min-h-[400px] border-0 rounded-b-lg p-4 focus:outline-none focus:ring-2 focus:ring-ring bg-white prose max-w-none"
                               style={{ 
                                 maxHeight: '600px', 
-                                overflowY: 'auto',
-                                fontSize: `${fontSize}px`,
-                                fontFamily: fontFamily
+                                overflowY: 'auto'
                               }}
                               data-testid="rich-text-editor"
                               suppressContentEditableWarning={true}
                             />
                           </FormControl>
                         </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
 
-                  {/* Image Uploader Modal for Content */}
-                  {showContentImageUploader && (
-                    <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-                      <div className="flex items-center justify-between mb-4">
-                        <h4 className="font-medium">Upload Image to Content</h4>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setShowContentImageUploader(false)}
-                          className="h-8 w-8 p-0"
-                        >
-                          ×
-                        </Button>
-                      </div>
-                      <ImageUploader
-                        onImageUpload={insertImageIntoContent}
-                        currentImage=""
-                        buttonText="Choose Image File"
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-
-                  {/* Excerpt */}
-                  <FormField
-                    control={form.control}
-                    name="excerpt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Excerpt</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field}
-                            rows={3}
-                            placeholder="Brief summary of the post (auto-generated if left empty)..."
-                            data-testid="input-blog-excerpt"
-                          />
-                        </FormControl>
+                        {/* Image Uploader Modal for Content */}
+                        {showContentImageUploader && (
+                          <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-medium">Upload Image to Content</h4>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowContentImageUploader(false)}
+                                className="h-8 w-8 p-0"
+                              >
+                                ×
+                              </Button>
+                            </div>
+                            <ImageUploader
+                              onImageUpload={insertImageIntoContent}
+                              currentImage=""
+                              buttonText="Choose Image File"
+                              className="w-full"
+                            />
+                          </div>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </TabsContent>
 
+                {/* SEO & Meta Tab */}
                 <TabsContent value="seo" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -1094,16 +1046,15 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             <FormLabel>Meta Description</FormLabel>
                             <FormControl>
                               <Textarea 
-                                {...field}
-                                rows={3}
-                                maxLength={160}
-                                placeholder="SEO meta description (150-160 characters)..."
-                                data-testid="input-meta-description"
+                                {...field} 
+                                placeholder="Brief description for search engines (150-160 characters)"
+                                className="h-24"
+                                data-testid="textarea-meta-description"
                               />
                             </FormControl>
-                            <p className="text-xs text-muted-foreground">
+                            <div className="text-sm text-muted-foreground">
                               {field.value?.length || 0}/160 characters
-                            </p>
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1117,11 +1068,14 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             <FormLabel>Meta Keywords</FormLabel>
                             <FormControl>
                               <Input 
-                                {...field}
-                                placeholder="transportation, business, logistics..."
+                                {...field} 
+                                placeholder="keyword1, keyword2, keyword3"
                                 data-testid="input-meta-keywords"
                               />
                             </FormControl>
+                            <div className="text-sm text-muted-foreground">
+                              Comma-separated keywords for SEO
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1131,48 +1085,42 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                     <div className="space-y-4">
                       <FormField
                         control={form.control}
-                        name="featuredImage"
+                        name="excerpt"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Image className="h-4 w-4" />
-                              Featured Image
-                            </FormLabel>
+                            <FormLabel>Excerpt</FormLabel>
                             <FormControl>
-                              <ImageUploader
-                                onImageUpload={field.onChange}
-                                currentImage={field.value || ""}
-                                buttonText="Upload Featured Image"
-                                className="w-full"
+                              <Textarea 
+                                {...field} 
+                                placeholder="Short excerpt for blog listings"
+                                className="h-24"
+                                data-testid="textarea-excerpt"
                               />
                             </FormControl>
+                            <div className="text-sm text-muted-foreground">
+                              Brief summary for blog cards and previews
+                            </div>
                             <FormMessage />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Upload an image for your blog post preview (max 5MB)
-                            </p>
                           </FormItem>
                         )}
                       />
 
                       <FormField
                         control={form.control}
-                        name="readTime"
+                        name="featuredImage"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="h-4 w-4" />
-                              Reading Time (minutes)
-                            </FormLabel>
+                            <FormLabel>Featured Image URL</FormLabel>
                             <FormControl>
                               <Input 
-                                {...field}
-                                type="number"
-                                min="1"
-                                max="60"
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                                data-testid="input-read-time"
+                                {...field} 
+                                placeholder="https://example.com/featured-image.jpg"
+                                data-testid="input-featured-image"
                               />
                             </FormControl>
+                            <div className="text-sm text-muted-foreground">
+                              Image for social media sharing and blog cards
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
@@ -1181,6 +1129,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   </div>
                 </TabsContent>
 
+                {/* Settings Tab */}
                 <TabsContent value="settings" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -1198,9 +1147,10 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                               </FormControl>
                               <SelectContent>
                                 <SelectItem value="Transportation">Transportation</SelectItem>
-                                <SelectItem value="Business Solutions">Business Solutions</SelectItem>
-                                <SelectItem value="Company News">Company News</SelectItem>
-                                <SelectItem value="Industry Insights">Industry Insights</SelectItem>
+                                <SelectItem value="Industry News">Industry News</SelectItem>
+                                <SelectItem value="Safety Tips">Safety Tips</SelectItem>
+                                <SelectItem value="Travel Guide">Travel Guide</SelectItem>
+                                <SelectItem value="Company Updates">Company Updates</SelectItem>
                                 <SelectItem value="Technology">Technology</SelectItem>
                                 <SelectItem value="Sustainability">Sustainability</SelectItem>
                               </SelectContent>
@@ -1218,9 +1168,30 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             <FormLabel>Author</FormLabel>
                             <FormControl>
                               <Input 
-                                {...field}
+                                {...field} 
                                 placeholder="Author name"
                                 data-testid="input-author"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="readTime"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Read Time (minutes)</FormLabel>
+                            <FormControl>
+                              <Input 
+                                {...field} 
+                                type="number"
+                                min="1"
+                                max="60"
+                                onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                data-testid="input-read-time"
                               />
                             </FormControl>
                             <FormMessage />
@@ -1231,32 +1202,42 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
 
                     <div className="space-y-4">
                       <div>
-                        <FormLabel className="flex items-center gap-2 mb-3">
-                          <Tag className="h-4 w-4" />
-                          Tags
-                        </FormLabel>
-                        <div className="flex gap-2 mb-3">
+                        <Label className="text-base font-medium">Tags</Label>
+                        <div className="flex gap-2 mt-2">
                           <Input
                             value={newTag}
                             onChange={(e) => setNewTag(e.target.value)}
-                            placeholder="Add tag..."
-                            onKeyPress={(e) => e.key === "Enter" && (e.preventDefault(), addTag())}
+                            placeholder="Add tag"
+                            className="flex-1"
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                addTag();
+                              }
+                            }}
                             data-testid="input-new-tag"
                           />
-                          <Button type="button" onClick={addTag} variant="outline">
+                          <Button 
+                            type="button" 
+                            variant="outline" 
+                            onClick={addTag}
+                            data-testid="button-add-tag"
+                          >
                             Add
                           </Button>
                         </div>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-2 mt-3">
                           {watchedTags.map((tag, index) => (
-                            <Badge 
-                              key={index} 
-                              variant="secondary" 
-                              className="cursor-pointer"
-                              onClick={() => removeTag(tag)}
-                              data-testid={`tag-${tag}`}
-                            >
-                              {tag} ×
+                            <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                              {tag}
+                              <button
+                                type="button"
+                                onClick={() => removeTag(tag)}
+                                className="ml-1 hover:bg-gray-300 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                                data-testid={`button-remove-tag-${index}`}
+                              >
+                                ×
+                              </button>
                             </Badge>
                           ))}
                         </div>
@@ -1265,6 +1246,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   </div>
                 </TabsContent>
 
+                {/* Publishing Tab */}
                 <TabsContent value="publishing" className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-4">
@@ -1278,12 +1260,12 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                 Publish Immediately
                               </FormLabel>
                               <div className="text-sm text-muted-foreground">
-                                Make this post live on the website
+                                Make this post visible to the public
                               </div>
                             </div>
                             <FormControl>
-                              <Switch
-                                checked={field.value || false}
+                              <Switch 
+                                checked={field.value} 
                                 onCheckedChange={field.onChange}
                                 data-testid="switch-published"
                               />
@@ -1294,24 +1276,24 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
 
                       <FormField
                         control={form.control}
-                        name="scheduledFor"
+                        name="featured"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4" />
-                              Schedule for Later
-                            </FormLabel>
+                          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                            <div className="space-y-0.5">
+                              <FormLabel className="text-base">
+                                Featured Post
+                              </FormLabel>
+                              <div className="text-sm text-muted-foreground">
+                                Highlight this post on the homepage
+                              </div>
+                            </div>
                             <FormControl>
-                              <Input 
-                                {...field}
-                                type="datetime-local"
-                                data-testid="input-scheduled-for"
+                              <Switch 
+                                checked={field.value} 
+                                onCheckedChange={field.onChange}
+                                data-testid="switch-featured"
                               />
                             </FormControl>
-                            <p className="text-xs text-muted-foreground">
-                              Leave empty to publish immediately when published is enabled
-                            </p>
-                            <FormMessage />
                           </FormItem>
                         )}
                       />
@@ -1319,29 +1301,29 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
 
                     <div className="space-y-4">
                       <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm">Publishing Checklist</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${watchedTitle ? 'bg-green-500' : 'bg-gray-300'}`} />
-                            Title completed
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${watchedContent && watchedContent.length > 100 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                            Content added (100+ chars)
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${form.watch("excerpt") ? 'bg-green-500' : 'bg-yellow-500'}`} />
-                            Excerpt {form.watch("excerpt") ? 'added' : 'will be auto-generated'}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${watchedTags.length > 0 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                            Tags added ({watchedTags.length})
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className={`w-2 h-2 rounded-full ${form.watch("featuredImage") ? 'bg-green-500' : 'bg-gray-300'}`} />
-                            Featured image {form.watch("featuredImage") ? 'added' : 'optional'}
+                        <CardContent className="p-4">
+                          <h4 className="font-medium mb-2">Publishing Status</h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Status:</span>
+                              <span className={form.watch("published") ? "text-green-600" : "text-gray-600"}>
+                                {form.watch("published") ? "Published" : "Draft"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Featured:</span>
+                              <span className={form.watch("featured") ? "text-blue-600" : "text-gray-600"}>
+                                {form.watch("featured") ? "Yes" : "No"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Word Count:</span>
+                              <span>{wordCount} words</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Read Time:</span>
+                              <span>{form.watch("readTime")} min</span>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
@@ -1358,11 +1340,11 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   variant="outline"
                   disabled={isLoading}
                   onClick={() => form.setValue("published", false)}
-                  className="flex items-center gap-2 text-gray-700 hover:text-gray-900"
+                  className="flex items-center gap-2"
                   data-testid="button-save-draft"
                 >
                   <Save className="h-4 w-4" />
-                  Save as Draft
+                  {isLoading ? "Saving..." : "Save as Draft"}
                 </Button>
                 <Button 
                   type="submit"
@@ -1477,7 +1459,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTableModal(false)}>Cancel</Button>
-            <Button onClick={createTableWithConfig}>Insert Table</Button>
+            <Button onClick={insertTable}>Insert Table</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
