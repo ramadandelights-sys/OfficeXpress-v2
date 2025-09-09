@@ -122,11 +122,10 @@ export default function BlogPostPage() {
             
             <div className="prose prose-lg max-w-none">
               <div 
-                className="text-muted-foreground leading-relaxed whitespace-pre-wrap"
+                className="text-muted-foreground leading-relaxed"
                 data-testid="blog-post-content"
-              >
-                {post.content}
-              </div>
+                dangerouslySetInnerHTML={{ __html: post.content }}
+              />
             </div>
 
             {/* Author & Share Section */}
