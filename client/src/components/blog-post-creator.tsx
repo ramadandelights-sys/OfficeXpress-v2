@@ -272,6 +272,7 @@ class EditorContentManager {
     table.style.borderCollapse = 'collapse';
     table.style.width = '100%';
     table.style.margin = '16px 0';
+    table.style.border = `1px solid ${borderColor}`;
     
     // Create header row
     const headerRow = document.createElement('tr');
@@ -285,6 +286,7 @@ class EditorContentManager {
       th.style.textAlign = 'left';
       th.style.color = headerTextColor;
       th.textContent = `Header ${i + 1}`;
+      th.contentEditable = 'true';
       headerRow.appendChild(th);
     }
     
@@ -299,25 +301,40 @@ class EditorContentManager {
         td.style.border = `1px solid ${borderColor}`;
         td.style.backgroundColor = cellBg;
         td.style.color = cellTextColor;
-        td.innerHTML = '&nbsp;';
+        td.textContent = `Cell ${i},${j + 1}`;
+        td.contentEditable = 'true';
         row.appendChild(td);
       }
       table.appendChild(row);
     }
     
-    // Insert table at current position
+    // Insert table at current position or end of editor
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      range.insertNode(table);
+      
+      // Delete any selected content first
+      if (!range.collapsed) {
+        range.deleteContents();
+      }
+      
+      // Create a div wrapper for better handling
+      const tableWrapper = document.createElement('div');
+      tableWrapper.style.margin = '16px 0';
+      tableWrapper.appendChild(table);
+      
+      range.insertNode(tableWrapper);
       
       // Move cursor after the table
-      range.setStartAfter(table);
+      range.setStartAfter(tableWrapper);
       range.collapse(true);
       this.restoreSelection(range);
     } else if (this.editor) {
       // No selection, append to end
-      this.editor.appendChild(table);
+      const tableWrapper = document.createElement('div');
+      tableWrapper.style.margin = '16px 0';
+      tableWrapper.appendChild(table);
+      this.editor.appendChild(tableWrapper);
     }
     
     this.onContentChange(this.getContent());
@@ -390,13 +407,23 @@ class EditorContentManager {
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
+      
+      // Delete any selected content first
+      if (!range.collapsed) {
+        range.deleteContents();
+      }
+      
       range.insertNode(heading);
       
       // Place cursor inside heading - select all text
-      if (heading.firstChild) {
-        range.setStart(heading.firstChild, 0);
-        range.setEnd(heading.firstChild, heading.textContent?.length || 0);
-        this.restoreSelection(range);
+      try {
+        if (heading.firstChild) {
+          range.setStart(heading.firstChild, 0);
+          range.setEnd(heading.firstChild, heading.textContent?.length || 0);
+          this.restoreSelection(range);
+        }
+      } catch (error) {
+        console.error('Error setting heading selection:', error);
       }
     } else if (this.editor) {
       this.editor.appendChild(heading);
@@ -1540,12 +1567,16 @@ function BlogPostPreview({
           )}
         </header>
         
-        <div 
-          className={content ? "" : "text-muted-foreground"}
-          dangerouslySetInnerHTML={content ? { __html: content } : undefined}
-        >
-          {!content && "Start writing your content..."}
-        </div>
+        {content ? (
+          <div 
+            className="prose max-w-none"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        ) : (
+          <div className="text-muted-foreground">
+            Start writing your content...
+          </div>
+        )}
       </article>
     </div>
   );
