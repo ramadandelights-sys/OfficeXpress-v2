@@ -299,8 +299,8 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
             handleRichTextChange();
           }
         } else {
-          // No text selected, just set font for future typing
-          document.execCommand('fontName', false, family);
+          // No text selected, do nothing - font will apply to new text when user types
+          // Remove global styling that affects the entire editor
         }
       }
     }
