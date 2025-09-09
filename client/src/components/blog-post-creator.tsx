@@ -195,9 +195,19 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   };
 
   const insertImage = () => {
-    const url = prompt('Enter image URL:');
+    const url = prompt('Enter image URL (e.g., https://example.com/image.jpg):');
     if (url) {
-      executeCommand('insertImage', url);
+      // Basic URL validation
+      if (!url.match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp|svg)(\?.*)?$/i)) {
+        const confirmInvalid = confirm('The URL doesn\'t appear to be a valid image URL. Insert anyway?');
+        if (!confirmInvalid) return;
+      }
+      
+      const altText = prompt('Enter alternative text for the image (optional):') || 'Image';
+      const width = prompt('Enter image width (optional, e.g., 300px or 50%):') || 'auto';
+      
+      const imageHTML = `<img src="${url}" alt="${altText}" style="max-width: ${width}; height: auto; margin: 8px 0;" />`;
+      executeCommand('insertHTML', imageHTML);
     }
   };
 
