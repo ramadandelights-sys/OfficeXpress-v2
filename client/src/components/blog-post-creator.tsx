@@ -442,10 +442,18 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     form.setValue("tags", updatedTags);
   };
 
+  // Function to strip HTML tags and extract clean text
+  const extractTextFromHTML = (html: string): string => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    return tempDiv.textContent || tempDiv.innerText || '';
+  };
+
   const onSubmit = (data: AdvancedBlogPost) => {
     // Auto-generate excerpt if empty
     if (!data.excerpt && data.content) {
-      data.excerpt = data.content.slice(0, 150) + "...";
+      const cleanText = extractTextFromHTML(data.content);
+      data.excerpt = cleanText.slice(0, 150).trim() + (cleanText.length > 150 ? "..." : "");
     }
     
     // Auto-generate meta description if empty
