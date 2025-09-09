@@ -535,19 +535,13 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     }
   }, [contentManager, form]);
 
-  // Sync content when form content changes (e.g., from other tabs)
-  // Only sync if form content is meaningful and different from current editor content
+  // Simplified content sync - only sync from form to editor if editor is empty and form has content
   useEffect(() => {
-    if (contentRef.current) {
+    if (contentRef.current && watchedContent) {
       const currentEditorContent = contentManager.getContent();
-      const hasEditorContent = currentEditorContent && currentEditorContent.trim() !== '';
-      const hasFormContent = watchedContent && watchedContent.trim() !== '';
       
-      // Only sync from form to editor if:
-      // 1. Form has meaningful content AND
-      // 2. Either editor is empty OR form content is different from editor content
-      if (hasFormContent && (!hasEditorContent || watchedContent !== currentEditorContent)) {
-        console.log('Syncing form to editor:', { watchedContent: watchedContent.substring(0, 50), currentEditorContent: currentEditorContent.substring(0, 50) });
+      // Only overwrite editor if it's truly empty but form has content
+      if ((!currentEditorContent || currentEditorContent.trim() === '') && watchedContent.trim() !== '') {
         contentManager.setContent(watchedContent);
       }
     }
@@ -723,48 +717,29 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                 defaultValue="content" 
                 className="w-full"
                 onValueChange={(value) => {
-                  console.log('Tab switching to:', value);
-                  
-                  // Always sync content when switching tabs to prevent data loss
+                  // Save content when switching AWAY from content tab
                   if (contentRef.current) {
                     const currentContent = contentRef.current.innerHTML;
-                    const formContent = form.getValues("content");
-                    console.log('Tab switch sync:', { 
-                      currentContent: currentContent.substring(0, 50), 
-                      formContent: formContent.substring(0, 50),
-                      different: currentContent !== formContent
-                    });
-                    
-                    if (currentContent && currentContent.trim() !== '' && currentContent !== formContent) {
-                      console.log('Saving content to form during tab switch');
+                    if (currentContent && currentContent.trim() !== '') {
                       form.setValue("content", currentContent);
                     }
                   }
                   
-                  // Re-initialize content manager when returning to content tab
-                  if (value === "content" && contentRef.current) {
+                  // Always restore content when switching TO content tab
+                  if (value === "content") {
                     setTimeout(() => {
-                      console.log('Re-initializing content manager');
-                      contentManager.setEditor(contentRef.current);
-                      
-                      // Restore visual content if it's missing but exists in form
-                      const currentFormContent = form.getValues("content");
-                      const currentEditorContent = contentRef.current?.innerHTML || '';
-                      
-                      console.log('Content restoration check:', {
-                        formHasContent: !!currentFormContent && currentFormContent.trim() !== '',
-                        editorHasContent: !!currentEditorContent && currentEditorContent.trim() !== '',
-                        formContent: currentFormContent?.substring(0, 50),
-                        editorContent: currentEditorContent?.substring(0, 50)
-                      });
-                      
-                      if (currentFormContent && currentFormContent.trim() !== '' && 
-                          (!currentEditorContent || currentEditorContent.trim() === '') && 
-                          contentRef.current) {
-                        console.log('Restoring visual content from form state');
-                        contentRef.current.innerHTML = currentFormContent;
+                      if (contentRef.current) {
+                        // Re-initialize content manager
+                        contentManager.setEditor(contentRef.current);
+                        
+                        // Always restore content from form state
+                        const formContent = form.getValues("content");
+                        if (formContent) {
+                          contentRef.current.innerHTML = formContent;
+                          console.log('Auto-restored content from form state');
+                        }
                       }
-                    }, 50);
+                    }, 100);
                   }
                 }}
               >
@@ -775,29 +750,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   <TabsTrigger value="publishing">Publishing</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="content" className="space-y-6" 
-                  onFocus={() => {
-                    // Additional restoration check when content tab gets focus
-                    setTimeout(() => {
-                      if (contentRef.current) {
-                        const formContent = form.getValues("content");
-                        const editorContent = contentRef.current.innerHTML || '';
-                        
-                        console.log('Focus restoration check:', {
-                          formContent: formContent?.substring(0, 50),
-                          editorContent: editorContent?.substring(0, 50),
-                          needsRestore: !!formContent && formContent.trim() !== '' && (!editorContent || editorContent.trim() === '')
-                        });
-                        
-                        if (formContent && formContent.trim() !== '' && (!editorContent || editorContent.trim() === '')) {
-                          console.log('Restoring content on focus');
-                          contentRef.current.innerHTML = formContent;
-                          contentManager.setEditor(contentRef.current);
-                        }
-                      }
-                    }, 100);
-                  }}
-                >
+                <TabsContent value="content" className="space-y-6">
                   {/* Title and Slug */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
