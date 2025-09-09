@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { insertBlogPostSchema } from "@shared/schema";
 import { z } from "zod";
@@ -50,6 +52,14 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [tableConfig, setTableConfig] = useState({
+    rows: 3,
+    cols: 3,
+    headerBg: '#f8f9fa',
+    cellBg: '#ffffff',
+    borderColor: '#dee2e6'
+  });
   const [showFontSelector, setShowFontSelector] = useState(false);
   const [showInsertMenu, setShowInsertMenu] = useState(false);
 
@@ -212,21 +222,18 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   };
 
   const insertTable = () => {
-    const rows = prompt('Number of rows:') || '3';
-    const cols = prompt('Number of columns:') || '3';
-    const headerBg = prompt('Header background color (optional, e.g., #f0f0f0):') || '#f8f9fa';
-    const cellBg = prompt('Cell background color (optional, e.g., #ffffff):') || '#ffffff';
-    const borderColor = prompt('Border color (optional, e.g., #ccc):') || '#dee2e6';
+    setShowTableModal(true);
+  };
+
+  const createTableWithConfig = () => {
+    const { rows, cols, headerBg, cellBg, borderColor } = tableConfig;
     
-    const numRows = parseInt(rows);
-    const numCols = parseInt(cols);
-    
-    const headerRow = `<tr style="background-color: ${headerBg};">${Array.from({length: numCols}, (_, i) => 
+    const headerRow = `<tr style="background-color: ${headerBg};">${Array.from({length: cols}, (_, i) => 
       `<th style="padding: 12px; border: 1px solid ${borderColor}; font-weight: bold; text-align: left;">Header ${i + 1}</th>`
     ).join('')}</tr>`;
     
-    const bodyRows = Array.from({length: numRows - 1}, () => 
-      `<tr>${Array.from({length: numCols}, () => 
+    const bodyRows = Array.from({length: rows - 1}, () => 
+      `<tr>${Array.from({length: cols}, () => 
         `<td style="padding: 8px; border: 1px solid ${borderColor}; background-color: ${cellBg};">&nbsp;</td>`
       ).join('')}</tr>`
     ).join('');
@@ -238,6 +245,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       </table>
     `;
     executeCommand('insertHTML', tableHTML);
+    setShowTableModal(false);
   };
 
   const insertHeading = (level: number) => {
@@ -266,19 +274,31 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const changeFontFamily = (family: string) => {
     setFontFamily(family);
     if (contentRef.current) {
+      contentRef.current.focus();
       const selection = window.getSelection();
       if (selection && selection.rangeCount > 0) {
         const range = selection.getRangeAt(0);
         if (!range.collapsed) {
-          const span = document.createElement('span');
-          span.style.fontFamily = family;
-          try {
-            range.surroundContents(span);
-          } catch (e) {
-            span.appendChild(range.extractContents());
+          // Save the selection
+          const selectedText = range.toString();
+          if (selectedText.trim()) {
+            const span = document.createElement('span');
+            span.style.fontFamily = family;
+            span.textContent = selectedText;
+            range.deleteContents();
             range.insertNode(span);
+            
+            // Restore selection after the span
+            range.setStartAfter(span);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            handleRichTextChange();
           }
-          handleRichTextChange();
+        } else {
+          // No text selected, just set font for future typing
+          document.execCommand('fontName', false, family);
         }
       }
     }
@@ -1337,6 +1357,82 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
           </Form>
         )}
       </CardContent>
+
+      {/* Table Creation Modal */}
+      <Dialog open={showTableModal} onOpenChange={setShowTableModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Insert Table</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Rows</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={tableConfig.rows}
+                  onChange={(e) => setTableConfig(prev => ({...prev, rows: parseInt(e.target.value) || 3}))}
+                />
+              </div>
+              <div>
+                <Label>Columns</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  max="10"
+                  value={tableConfig.cols}
+                  onChange={(e) => setTableConfig(prev => ({...prev, cols: parseInt(e.target.value) || 3}))}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <Label>Header Background Color</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={tableConfig.headerBg}
+                  onChange={(e) => setTableConfig(prev => ({...prev, headerBg: e.target.value}))}
+                  className="w-12 h-8 rounded border"
+                />
+                <span className="text-sm text-gray-600">{tableConfig.headerBg}</span>
+              </div>
+            </div>
+            
+            <div>
+              <Label>Cell Background Color</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={tableConfig.cellBg}
+                  onChange={(e) => setTableConfig(prev => ({...prev, cellBg: e.target.value}))}
+                  className="w-12 h-8 rounded border"
+                />
+                <span className="text-sm text-gray-600">{tableConfig.cellBg}</span>
+              </div>
+            </div>
+            
+            <div>
+              <Label>Border Color</Label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="color"
+                  value={tableConfig.borderColor}
+                  onChange={(e) => setTableConfig(prev => ({...prev, borderColor: e.target.value}))}
+                  className="w-12 h-8 rounded border"
+                />
+                <span className="text-sm text-gray-600">{tableConfig.borderColor}</span>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTableModal(false)}>Cancel</Button>
+            <Button onClick={createTableWithConfig}>Insert Table</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
