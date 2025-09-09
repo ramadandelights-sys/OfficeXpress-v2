@@ -166,10 +166,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
+    // Generate unique slug to avoid duplicates
+    const uniqueSlug = await this.generateUniqueSlug(post.slug);
+    
     const [newPost] = await db
       .insert(blogPosts)
       .values({
         ...post,
+        slug: uniqueSlug,
         tags: post.tags as string[] || []
       })
       .returning();
@@ -194,6 +198,19 @@ export class DatabaseStorage implements IStorage {
   async getBlogPostBySlug(slug: string): Promise<BlogPost | undefined> {
     const [post] = await db.select().from(blogPosts).where(eq(blogPosts.slug, slug));
     return post || undefined;
+  }
+
+  // Generate a unique slug by checking for duplicates and adding numbers
+  async generateUniqueSlug(baseSlug: string): Promise<string> {
+    let uniqueSlug = baseSlug;
+    let counter = 1;
+    
+    while (await this.getBlogPostBySlug(uniqueSlug)) {
+      uniqueSlug = `${baseSlug}-${counter}`;
+      counter++;
+    }
+    
+    return uniqueSlug;
   }
 
   async createPortfolioClient(client: InsertPortfolioClient): Promise<PortfolioClient> {
