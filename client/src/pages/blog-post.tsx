@@ -193,9 +193,9 @@ export default function BlogPostPage() {
                           {relatedPost.title}
                         </h3>
                         <Link 
-                          href={`/blog/${relatedPost.id}`} 
+                          href={`/blog/${relatedPost.slug}`} 
                           className="text-brand-primary text-sm font-medium hover:text-brand-primary/80 transition-colors"
-                          data-testid={`related-read-more-${relatedPost.id}`}
+                          data-testid={`related-read-more-${relatedPost.slug}`}
                         >
                           Read More →
                         </Link>

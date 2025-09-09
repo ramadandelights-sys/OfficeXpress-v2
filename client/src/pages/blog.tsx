@@ -78,9 +78,9 @@ export default function Blog() {
                       {post.excerpt}
                     </p>
                     <Link 
-                      href={`/blog/${post.id}`} 
+                      href={`/blog/${post.slug}`} 
                       className="inline-flex items-center text-[#4c9096] font-semibold hover:text-[#4c9096]/80 transition-colors"
-                      data-testid={`blog-read-more-${post.id}`}
+                      data-testid={`blog-read-more-${post.slug}`}
                     >
                       Read More <ArrowRight className="ml-2 w-4 h-4" />
                     </Link>
