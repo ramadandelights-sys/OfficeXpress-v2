@@ -759,7 +759,8 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                       });
                       
                       if (currentFormContent && currentFormContent.trim() !== '' && 
-                          (!currentEditorContent || currentEditorContent.trim() === '')) {
+                          (!currentEditorContent || currentEditorContent.trim() === '') && 
+                          contentRef.current) {
                         console.log('Restoring visual content from form state');
                         contentRef.current.innerHTML = currentFormContent;
                       }
@@ -774,7 +775,29 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                   <TabsTrigger value="publishing">Publishing</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="content" className="space-y-6">
+                <TabsContent value="content" className="space-y-6" 
+                  onFocus={() => {
+                    // Additional restoration check when content tab gets focus
+                    setTimeout(() => {
+                      if (contentRef.current) {
+                        const formContent = form.getValues("content");
+                        const editorContent = contentRef.current.innerHTML || '';
+                        
+                        console.log('Focus restoration check:', {
+                          formContent: formContent?.substring(0, 50),
+                          editorContent: editorContent?.substring(0, 50),
+                          needsRestore: !!formContent && formContent.trim() !== '' && (!editorContent || editorContent.trim() === '')
+                        });
+                        
+                        if (formContent && formContent.trim() !== '' && (!editorContent || editorContent.trim() === '')) {
+                          console.log('Restoring content on focus');
+                          contentRef.current.innerHTML = formContent;
+                          contentManager.setEditor(contentRef.current);
+                        }
+                      }
+                    }, 100);
+                  }}
+                >
                   {/* Title and Slug */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <FormField
