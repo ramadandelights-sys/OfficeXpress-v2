@@ -8,11 +8,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { BlogPost } from "@shared/schema";
 
 export default function BlogPostPage() {
-  const { id } = useParams();
+  const { slug } = useParams();
   
   const { data: post, isLoading, error } = useQuery<BlogPost>({
-    queryKey: ["/api/blog-posts", id],
-    enabled: !!id,
+    queryKey: ["/api/blog-posts", slug],
+    enabled: !!slug,
   });
 
   const { data: allPosts = [] } = useQuery<BlogPost[]>({

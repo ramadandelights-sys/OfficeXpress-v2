@@ -31,7 +31,7 @@ function Router() {
       <Route path="/vendor" component={Vendor} />
       <Route path="/contact" component={Contact} />
       <Route path="/blog" component={Blog} />
-      <Route path="/blog/:id" component={BlogPost} />
+      <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/admin" component={Admin} />
       <Route path="/terms" component={LegalPageView} />
       <Route path="/privacy" component={LegalPageView} />
