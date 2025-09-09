@@ -204,11 +204,27 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const insertTable = () => {
     const rows = prompt('Number of rows:') || '3';
     const cols = prompt('Number of columns:') || '3';
+    const headerBg = prompt('Header background color (optional, e.g., #f0f0f0):') || '#f8f9fa';
+    const cellBg = prompt('Cell background color (optional, e.g., #ffffff):') || '#ffffff';
+    const borderColor = prompt('Border color (optional, e.g., #ccc):') || '#dee2e6';
+    
+    const numRows = parseInt(rows);
+    const numCols = parseInt(cols);
+    
+    const headerRow = `<tr style="background-color: ${headerBg};">${Array.from({length: numCols}, (_, i) => 
+      `<th style="padding: 12px; border: 1px solid ${borderColor}; font-weight: bold; text-align: left;">Header ${i + 1}</th>`
+    ).join('')}</tr>`;
+    
+    const bodyRows = Array.from({length: numRows - 1}, () => 
+      `<tr>${Array.from({length: numCols}, () => 
+        `<td style="padding: 8px; border: 1px solid ${borderColor}; background-color: ${cellBg};">&nbsp;</td>`
+      ).join('')}</tr>`
+    ).join('');
+    
     const tableHTML = `
-      <table border="1" style="border-collapse: collapse; width: 100%;">
-        ${Array.from({length: parseInt(rows)}, () => 
-          `<tr>${Array.from({length: parseInt(cols)}, () => '<td style="padding: 8px; border: 1px solid #ccc;">&nbsp;</td>').join('')}</tr>`
-        ).join('')}
+      <table style="border-collapse: collapse; width: 100%; margin: 16px 0;">
+        ${headerRow}
+        ${bodyRows}
       </table>
     `;
     executeCommand('insertHTML', tableHTML);
