@@ -1,26 +1,67 @@
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { HoneypotFields } from "@/components/HoneypotFields";
+import { RecaptchaField } from "@/components/RecaptchaField";
+
+const adminLoginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+  // Honeypot fields
+  email_confirm: z.string().optional(),
+  website: z.string().optional(),
+  company_url: z.string().optional(),
+  phone_secondary: z.string().optional(),
+  // reCAPTCHA field
+  recaptcha: z.string().min(1, "Please complete the security verification")
+});
+
+type AdminLoginForm = z.infer<typeof adminLoginSchema>;
 
 interface AdminLoginProps {
   onLogin: () => void;
 }
 
 export default function AdminLogin({ onLogin }: AdminLoginProps) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm<AdminLoginForm>({
+    resolver: zodResolver(adminLoginSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+      // Honeypot fields
+      email_confirm: "",
+      website: "",
+      company_url: "",
+      phone_secondary: "",
+      recaptcha: ""
+    },
+  });
+
+  const handleLogin = async (data: AdminLoginForm) => {
+    // Client-side honeypot validation
+    const honeypotFields = ['email_confirm', 'website', 'company_url', 'phone_secondary'];
+    const hasHoneypotValue = honeypotFields.some(field => data[field as keyof typeof data] && data[field as keyof typeof data]?.toString().trim() !== '');
+    
+    if (hasHoneypotValue) {
+      // Silently prevent submission - don't show error to avoid alerting bots
+      console.log('Bot detected - honeypot field filled');
+      return;
+    }
+
     setIsLoading(true);
 
     // Simple hardcoded authentication
-    if (username === "admin_OxP" && password === "expresspass1234") {
+    if (data.username === "admin_OxP" && data.password === "expresspass1234") {
       // Store login status in session storage
       sessionStorage.setItem("adminAuthenticated", "true");
       onLogin();
@@ -52,40 +93,67 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           <p className="text-muted-foreground">Access the OfficeXpress Admin Panel</p>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="Enter admin username"
-                required
-                data-testid="admin-username"
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleLogin)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="text"
+                        placeholder="Enter admin username"
+                        {...field}
+                        data-testid="admin-username"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter admin password"
-                required
-                data-testid="admin-password"
+
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Enter admin password"
+                        {...field}
+                        data-testid="admin-password"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            <Button 
-              type="submit" 
-              className="w-full bg-[#4c9096] text-white hover:bg-[#4c9096]/90"
-              disabled={isLoading}
-              data-testid="admin-login-btn"
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
-          </form>
+
+              {/* Honeypot Fields - Hidden from users, trap for bots */}
+              <HoneypotFields control={form.control} />
+
+              {/* reCAPTCHA */}
+              <RecaptchaField 
+                control={form.control} 
+                name="recaptcha" 
+                siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                required={true}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full bg-[#4c9096] text-white hover:bg-[#4c9096]/90"
+                disabled={isLoading}
+                data-testid="admin-login-btn"
+              >
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
       </Card>
     </div>
