@@ -1,4 +1,14 @@
+import { useQuery } from "@tanstack/react-query";
+import { Star } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import type { PortfolioClient } from "@shared/schema";
+
 export default function About() {
+  const { data: portfolioClients = [] } = useQuery<PortfolioClient[]>({
+    queryKey: ["/api/portfolio-clients"],
+  });
+
+  const clientsWithTestimonials = portfolioClients.filter(client => client.testimonial);
   return (
     <div className="min-h-screen">
       {/* About Hero Section */}
@@ -125,6 +135,53 @@ export default function About() {
           </div>
         </div>
       </section>
+
+      {/* Client Testimonials */}
+      {clientsWithTestimonials.length > 0 && (
+        <section className="py-16 bg-card">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">What Our Clients Say</h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Real feedback from our satisfied customers who trust us with their transportation needs.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {clientsWithTestimonials.map((client) => (
+                <Card key={client.id} className="bg-white shadow-md border border-border">
+                  <CardContent className="p-6">
+                    <div className="flex items-center mb-4">
+                      <div className="text-yellow-400 flex space-x-1">
+                        {[...Array(client.rating || 5)].map((_, i) => (
+                          <Star key={i} className="w-4 h-4 fill-current" />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mb-4">{client.testimonial}</p>
+                    <div className="flex items-center">
+                      <img 
+                        src={client.logo} 
+                        alt={`${client.name} representative`}
+                        className="w-12 h-12 rounded-full mr-4 object-cover"
+                        data-testid={`testimonial-avatar-${client.id}`}
+                      />
+                      <div>
+                        <div className="font-semibold text-card-foreground">
+                          {client.clientRepresentative || "Client Representative"}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {client.position || client.name}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
