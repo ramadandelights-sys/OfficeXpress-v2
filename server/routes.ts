@@ -40,7 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Logo serving route
   app.get("/logo.jpg", (req, res) => {
-    const logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "OfficeXpress_logo_1756864809144.jpg");
+    const logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "OfficeXpress_logo_cropped_1757541518254.jpg");
     if (fs.existsSync(logoPath)) {
       res.sendFile(logoPath);
     } else {

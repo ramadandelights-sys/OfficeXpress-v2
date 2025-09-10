@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Car, Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@assets/logo_v2_1756987631987.png";
+import logoImage from "@assets/OfficeXpress_logo_cropped_1757541518254.jpg";
 
 export default function Header() {
   const [location] = useLocation();

@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Car, Facebook, Linkedin, Instagram, MapPin, Phone, Mail } from "lucide-react";
-import logoImage from "@assets/logo_v2_1756987631987.png";
+import logoImage from "@assets/OfficeXpress_logo_cropped_1757541518254.jpg";
 
 export default function Footer() {
   return (
