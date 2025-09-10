@@ -9,8 +9,14 @@ import type { LegalPage } from "@shared/schema";
 export default function LegalPageView() {
   const [location] = useLocation();
   
-  // Extract the page type from the URL (e.g., /terms -> terms, /privacy -> privacy)
-  const pageType = location.replace('/', '');
+  // Extract the page type from the URL and map to database types
+  const getPageType = (path: string) => {
+    if (path === '/terms-and-conditions') return 'terms';
+    if (path === '/privacy-policy') return 'privacy';
+    return path.replace('/', ''); // fallback for old URLs
+  };
+  
+  const pageType = getPageType(location);
   
   const { data: legalPages = [], isLoading, error } = useQuery<LegalPage[]>({
     queryKey: ["/api/admin/legal-pages"],
