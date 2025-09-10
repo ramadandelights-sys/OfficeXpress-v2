@@ -11,9 +11,21 @@ export default function LegalPageView() {
   
   // Extract the page type from the URL and map to database types
   const getPageType = (path: string) => {
-    if (path === '/terms-and-conditions') return 'terms';
-    if (path === '/privacy-policy') return 'privacy';
-    return path.replace('/', ''); // fallback for old URLs
+    const normalized = path
+      .split('?')[0]
+      .split('#')[0]
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    switch (normalized) {
+      case '/terms-and-conditions':
+      case '/terms':
+        return 'terms';
+      case '/privacy-policy':
+      case '/privacy':
+        return 'privacy';
+      default:
+        return normalized.replace(/^\//, '');
+    }
   };
   
   const pageType = getPageType(location);
@@ -23,6 +35,7 @@ export default function LegalPageView() {
   });
 
   const page = legalPages.find(p => p.type === pageType);
+  
 
   if (isLoading) {
     return (
