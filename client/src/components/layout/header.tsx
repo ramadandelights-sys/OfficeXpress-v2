@@ -3,7 +3,7 @@ import { Link, useLocation } from "wouter";
 import { Car, Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@assets/OfficeXpress_logo_cropped_1757541518254.jpg";
+import logoImage from "@assets/logo_v3_1757541985694.png";
 
 export default function Header() {
   const [location] = useLocation();
@@ -39,7 +39,7 @@ export default function Header() {
                 <img 
                   src={logoImage} 
                   alt="OfficeXpress Logo" 
-                  className="h-32 w-auto object-contain"
+                  className="h-12 w-auto object-contain"
                 />
               </div>
             </Link>

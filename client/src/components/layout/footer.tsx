@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Car, Facebook, Linkedin, Instagram, MapPin, Phone, Mail } from "lucide-react";
-import logoImage from "@assets/OfficeXpress_logo_cropped_1757541518254.jpg";
+import logoImage from "@assets/logo_v3_1757541985694.png";
 
 export default function Footer() {
   return (
@@ -13,7 +13,7 @@ export default function Footer() {
               <img 
                 src={logoImage} 
                 alt="OfficeXpress Logo" 
-                className="h-32 w-auto object-contain"
+                className="h-16 w-auto object-contain"
               />
             </div>
             <p className="text-gray-300 mb-4">

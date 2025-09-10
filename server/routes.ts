@@ -38,13 +38,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Logo serving route
-  app.get("/logo.jpg", (req, res) => {
-    const logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "OfficeXpress_logo_cropped_1757541518254.jpg");
-    if (fs.existsSync(logoPath)) {
-      res.sendFile(logoPath);
-    } else {
-      res.status(404).send("Logo not found");
+  // Logo settings endpoint for frontend
+  app.get("/api/logo", async (req, res) => {
+    try {
+      const settings = await storage.getMarketingSettings();
+      res.json({ 
+        logoPath: settings?.logoPath || "/logo.jpg",
+        hasCustomLogo: !!(settings?.logoPath)
+      });
+    } catch (error) {
+      console.error('Logo settings error:', error);
+      res.json({ 
+        logoPath: "/logo.jpg",
+        hasCustomLogo: false
+      });
+    }
+  });
+
+  // Logo serving route - dynamically serves from database settings
+  app.get("/logo.jpg", async (req, res) => {
+    try {
+      // Get the logo path from marketing settings
+      const settings = await storage.getMarketingSettings();
+      let logoPath = null;
+      
+      if (settings && settings.logoPath) {
+        // Try to serve the database-stored logo
+        logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", path.basename(settings.logoPath));
+      }
+      
+      // Fallback to default logo if no custom logo is set
+      if (!logoPath || !fs.existsSync(logoPath)) {
+        logoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "logo_v3_1757541985694.png");
+      }
+      
+      if (fs.existsSync(logoPath)) {
+        res.sendFile(logoPath);
+      } else {
+        res.status(404).send("Logo not found");
+      }
+    } catch (error) {
+      console.error('Logo serving error:', error);
+      // Fallback to default logo on error
+      const defaultLogoPath = path.resolve(import.meta.dirname, "..", "attached_assets", "logo_v3_1757541985694.png");
+      if (fs.existsSync(defaultLogoPath)) {
+        res.sendFile(defaultLogoPath);
+      } else {
+        res.status(404).send("Logo not found");
+      }
     }
   });
 

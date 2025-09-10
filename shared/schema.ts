@@ -158,6 +158,9 @@ export const marketingSettings = pgTable("marketing_settings", {
   gdprCompliance: boolean("gdpr_compliance").default(true),
   trackingEnabled: boolean("tracking_enabled").default(true),
   
+  // Logo Settings
+  logoPath: text("logo_path"),
+  
   // Conversion Goals
   conversionGoals: json("conversion_goals").$type<{
     name: string;
