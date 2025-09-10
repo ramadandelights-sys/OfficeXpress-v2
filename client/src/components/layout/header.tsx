@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Car, Search, Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import logoImage from "@assets/logo_v3_1757541985694.png";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Header() {
   const [location] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch dynamic logo
+  const { data: logoData } = useQuery({
+    queryKey: ['/api/logo'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const logoSrc = logoData?.src || "/logo.jpg";
 
   const navigation = [
     { name: "Home", href: "/" },
@@ -37,7 +45,7 @@ export default function Header() {
             <Link href="/" className="flex items-center space-x-3" data-testid="logo-link">
               <div className="flex items-center space-x-2">
                 <img 
-                  src={logoImage} 
+                  src={logoSrc} 
                   alt="OfficeXpress Logo" 
                   className="h-12 w-auto object-contain"
                 />

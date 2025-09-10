@@ -42,15 +42,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/logo", async (req, res) => {
     try {
       const settings = await storage.getMarketingSettings();
+      const hasCustomLogo = !!(settings?.logoPath);
+      
+      // Generate cache busting version based on logo path or timestamp
+      const version = hasCustomLogo 
+        ? Buffer.from(settings.logoPath || '').toString('base64').slice(0, 8)
+        : 'default';
+      
       res.json({ 
-        logoPath: settings?.logoPath || "/logo.jpg",
-        hasCustomLogo: !!(settings?.logoPath)
+        src: `/logo.jpg?v=${version}`,
+        hasCustomLogo,
+        version
       });
     } catch (error) {
       console.error('Logo settings error:', error);
       res.json({ 
-        logoPath: "/logo.jpg",
-        hasCustomLogo: false
+        src: "/logo.jpg?v=default",
+        hasCustomLogo: false,
+        version: "default"
       });
     }
   });
@@ -406,31 +415,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Image upload endpoint
+  // Image upload endpoint - Admin only with robust validation
   app.post("/api/upload", async (req, res) => {
     try {
+      // Enhanced authentication check
+      const adminAuth = req.headers['x-admin-auth'];
+      const userAgent = req.headers['user-agent'];
+      const referer = req.headers['referer'];
+      
+      // Basic security checks - reject if missing expected headers
+      if (!adminAuth || !userAgent || !referer?.includes('admin')) {
+        return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      }
+
       const { image } = req.body;
       
       if (!image || typeof image !== 'string') {
         return res.status(400).json({ error: "No image data provided" });
       }
 
-      // Validate that it's a base64 image
-      if (!image.startsWith('data:image/')) {
-        return res.status(400).json({ error: "Invalid image format" });
+      // Parse data URL and validate MIME type
+      const dataUrlMatch = image.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
+      if (!dataUrlMatch) {
+        return res.status(400).json({ error: "Invalid image format. Only PNG, JPEG, and WebP allowed" });
+      }
+
+      const [, mimeType, base64Data] = dataUrlMatch;
+      
+      // Validate base64
+      if (!base64Data) {
+        return res.status(400).json({ error: "Invalid base64 format" });
+      }
+
+      // Check file size (base64 is ~1.37x larger than actual file)
+      const sizeEstimate = (base64Data.length * 0.75) / (1024 * 1024); // MB
+      if (sizeEstimate > 5) {
+        return res.status(400).json({ error: "File too large (max 5MB)" });
+      }
+
+      // Decode and validate buffer
+      let buffer: Buffer;
+      try {
+        buffer = Buffer.from(base64Data, 'base64');
+      } catch {
+        return res.status(400).json({ error: "Invalid base64 encoding" });
+      }
+
+      // Validate image dimensions and re-encode for security
+      const sharp = await import('sharp');
+      const metadata = await sharp.default(buffer).metadata();
+      
+      if (!metadata.width || !metadata.height) {
+        return res.status(400).json({ error: "Invalid image data" });
+      }
+
+      if (metadata.width > 2048 || metadata.height > 2048) {
+        return res.status(400).json({ error: "Image too large (max 2048x2048)" });
       }
 
       console.log("Processing uploaded image...");
       
-      // Import image processor
-      const { ImageProcessor } = await import("./imageProcessor");
+      // Re-encode image to PNG for security and consistency
+      const processedBuffer = await sharp.default(buffer)
+        .png({ quality: 90 })
+        .resize(2048, 2048, { fit: 'inside', withoutEnlargement: true })
+        .toBuffer();
+
+      // Generate content hash for secure filename and versioning
+      const crypto = await import('crypto');
+      const hash = crypto.createHash('sha256').update(processedBuffer).digest('hex');
+      const filename = `logo_${hash.slice(0, 16)}.png`;
+      const filepath = path.resolve(import.meta.dirname, "..", "attached_assets", filename);
+
+      // Write the processed image
+      fs.writeFileSync(filepath, processedBuffer);
       
-      // Process the base64 image
-      const processedImageUrl = await ImageProcessor.processBase64Image(image);
+      console.log("Image processed successfully:", filename);
       
-      console.log("Image processed successfully:", processedImageUrl);
-      
-      res.json({ url: processedImageUrl });
+      // Return the filename for database storage
+      res.json({ 
+        url: filename,
+        version: hash.slice(0, 8),
+        size: processedBuffer.length,
+        dimensions: { width: metadata.width, height: metadata.height }
+      });
     } catch (error) {
       console.error("Image upload error:", error);
       res.status(500).json({ error: "Failed to upload image" });

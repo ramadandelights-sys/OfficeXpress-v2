@@ -1,8 +1,16 @@
 import { Link } from "wouter";
 import { Car, Facebook, Linkedin, Instagram, MapPin, Phone, Mail } from "lucide-react";
-import logoImage from "@assets/logo_v3_1757541985694.png";
+import { useQuery } from "@tanstack/react-query";
 
 export default function Footer() {
+  // Fetch dynamic logo
+  const { data: logoData } = useQuery({
+    queryKey: ['/api/logo'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const logoSrc = logoData?.src || "/logo.jpg";
+
   return (
     <footer className="bg-slate-800 text-white py-12">
       <div className="container mx-auto px-4">
@@ -11,7 +19,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center space-x-3 mb-6">
               <img 
-                src={logoImage} 
+                src={logoSrc} 
                 alt="OfficeXpress Logo" 
                 className="h-16 w-auto object-contain"
               />

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 import type { 
   MarketingSettings,
   InsertMarketingSettings,
@@ -62,10 +63,22 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
         const base64Data = e.target?.result as string;
         
         try {
+          // Check admin authentication
+          const isAdmin = sessionStorage.getItem('adminAuthenticated') === 'true';
+          if (!isAdmin) {
+            toast({
+              title: "Authentication required",
+              description: "Please log in as admin to upload logos",
+              variant: "destructive"
+            });
+            return;
+          }
+
           const response = await fetch('/api/upload', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'X-Admin-Auth': 'true',
             },
             body: JSON.stringify({ image: base64Data }),
           });
@@ -79,6 +92,10 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
           if (data.url) {
             setLogoPreview(data.url);
             onChange(data.url);
+            
+            // Invalidate logo cache so the new logo appears immediately
+            queryClient.invalidateQueries({ queryKey: ['/api/logo'] });
+            
             toast({
               title: "Logo uploaded successfully",
               description: "Your logo has been updated",
