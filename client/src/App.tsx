@@ -41,8 +41,8 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/admin" component={Admin} />
-      <Route path="/terms" component={LegalPageView} />
-      <Route path="/privacy" component={LegalPageView} />
+      <Route path="/terms-and-conditions" component={LegalPageView} />
+      <Route path="/privacy-policy" component={LegalPageView} />
       <Route component={NotFound} />
     </Switch>
   );
@@ -51,7 +51,7 @@ function Router() {
 function ConditionalFooter() {
   const [location] = useLocation();
   const isAdminPage = location === "/admin";
-  const isLegalPage = location === "/terms" || location === "/privacy";
+  const isLegalPage = location === "/terms-and-conditions" || location === "/privacy-policy";
   
   if (isAdminPage) {
     return (
