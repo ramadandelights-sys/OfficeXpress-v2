@@ -83,7 +83,11 @@ class EditorContentManager {
     if (this.historyIndex > 0) {
       this.historyIndex--;
       const content = this.history[this.historyIndex];
-      this.setContent(content);
+      if (this.editor) {
+        this.editor.innerHTML = content;
+        // Sync with form state and update word count
+        this.onContentChange(content);
+      }
       return true;
     }
     return false;
@@ -93,7 +97,11 @@ class EditorContentManager {
     if (this.historyIndex < this.history.length - 1) {
       this.historyIndex++;
       const content = this.history[this.historyIndex];
-      this.setContent(content);
+      if (this.editor) {
+        this.editor.innerHTML = content;
+        // Sync with form state and update word count
+        this.onContentChange(content);
+      }
       return true;
     }
     return false;
@@ -390,16 +398,49 @@ class EditorContentManager {
     this.onContentChange(this.getContent());
   }
 
-  // Create list
+  // Create list - improved to handle selected text properly
   createList(ordered: boolean = false) {
     this.saveToHistory();
     
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString().trim();
+      
+      if (selectedText) {
+        // Split selected text by lines and create list items
+        const lines = selectedText.split('\n').filter(line => line.trim() !== '');
+        
+        if (lines.length > 0) {
+          const list = document.createElement(ordered ? 'ol' : 'ul');
+          
+          lines.forEach(line => {
+            const listItem = document.createElement('li');
+            listItem.textContent = line.trim();
+            list.appendChild(listItem);
+          });
+          
+          // Replace selected content with the list
+          range.deleteContents();
+          range.insertNode(list);
+          
+          // Place cursor after the list
+          range.setStartAfter(list);
+          range.collapse(true);
+          this.restoreSelection(range);
+          
+          this.onContentChange(this.getContent());
+          return;
+        }
+      }
+    }
+    
+    // Default behavior: create a single list item
     const list = document.createElement(ordered ? 'ol' : 'ul');
     const listItem = document.createElement('li');
     listItem.textContent = 'List item';
     list.appendChild(listItem);
     
-    const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       range.insertNode(list);
@@ -454,6 +495,59 @@ class EditorContentManager {
     }
     
     this.onContentChange(this.getContent());
+  }
+
+  // Insert hyperlink
+  insertLink() {
+    this.saveToHistory();
+    const selection = window.getSelection();
+    
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString();
+      
+      // Get URL from user
+      const url = prompt('Enter the URL:', 'https://');
+      if (!url) return;
+      
+      // Validate URL scheme for security
+      if (!url.match(/^https?:\/\//)) {
+        alert('Please enter a valid HTTP or HTTPS URL');
+        return;
+      }
+      
+      // Get link text (use selected text or prompt for new text)
+      let linkText = selectedText;
+      if (!linkText) {
+        linkText = prompt('Enter link text:', 'Link') || 'Link';
+      }
+      
+      // Create link element
+      const link = document.createElement('a');
+      link.href = url;
+      link.textContent = linkText;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.style.color = '#0066cc';
+      link.style.textDecoration = 'underline';
+      
+      // Insert the link
+      if (selectedText) {
+        // Replace selected text with link
+        range.deleteContents();
+        range.insertNode(link);
+      } else {
+        // Insert link at cursor position
+        range.insertNode(link);
+      }
+      
+      // Move cursor after the link
+      range.setStartAfter(link);
+      range.collapse(true);
+      this.restoreSelection(range);
+      
+      this.onContentChange(this.getContent());
+    }
   }
 
   // Clear all content
@@ -594,10 +688,19 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const insertImage = () => {
     const url = prompt('Enter image URL (e.g., https://example.com/image.jpg):');
     if (url) {
+      // Validate URL scheme for security
+      if (!url.match(/^https?:\/\//)) {
+        alert('Please enter a valid HTTP or HTTPS URL');
+        return;
+      }
       const altText = prompt('Enter alternative text for the image (optional):') || 'Image';
       const width = prompt('Enter image width (optional, e.g., 300px or 50%):') || 'auto';
       contentManager.insertImage(url, altText, width);
     }
+  };
+
+  const insertLink = () => {
+    contentManager.insertLink();
   };
 
   const createList = (ordered: boolean = false) => {
@@ -917,37 +1020,43 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                   <Type className="h-4 w-4" style={{ color: textColor }} />
                                 </Button>
                                 {showColorPicker && (
-                                  <div className="absolute top-10 left-0 z-50 p-3 bg-white border rounded-lg shadow-lg">
-                                    <div className="grid grid-cols-6 gap-2 mb-3">
+                                  <div className="absolute top-10 left-0 z-50 w-64 p-4 bg-white border rounded-lg shadow-lg">
+                                    <h4 className="text-sm font-medium mb-3">Text Color</h4>
+                                    <div className="grid grid-cols-8 gap-2 mb-4">
                                       {[
-                                        '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff',
-                                        '#ff0000', '#ff8800', '#ffff00', '#88ff00', '#00ff00', '#00ff88',
-                                        '#00ffff', '#0088ff', '#0000ff', '#8800ff', '#ff00ff', '#ff0088'
+                                        '#000000', '#333333', '#666666', '#999999', '#cccccc', '#ffffff', '#e74c3c', '#f39c12',
+                                        '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e91e63', '#795548', '#607d8b'
                                       ].map(color => (
                                         <button
                                           key={color}
                                           type="button"
-                                          className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                                          className="w-7 h-7 rounded-sm border border-gray-300 hover:scale-110 transition-transform shadow-sm"
                                           style={{ backgroundColor: color }}
                                           onClick={() => applyTextColor(color)}
+                                          title={color}
                                         />
                                       ))}
                                     </div>
-                                    <input
-                                      type="color"
-                                      value={textColor}
-                                      onChange={(e) => applyTextColor(e.target.value)}
-                                      className="w-full h-8 rounded border"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setShowColorPicker(false)}
-                                      className="w-full mt-2 h-6 text-xs"
-                                    >
-                                      Close
-                                    </Button>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">Custom Color</label>
+                                        <input
+                                          type="color"
+                                          value={textColor}
+                                          onChange={(e) => applyTextColor(e.target.value)}
+                                          className="w-full h-10 rounded border border-gray-300"
+                                        />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowColorPicker(false)}
+                                        className="w-full h-8 text-xs"
+                                      >
+                                        Close
+                                      </Button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
@@ -965,119 +1074,140 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                                   <Highlighter className="h-4 w-4" style={{ color: highlightColor }} />
                                 </Button>
                                 {showHighlightPicker && (
-                                  <div className="absolute top-10 left-0 z-50 p-3 bg-white border rounded-lg shadow-lg">
-                                    <div className="grid grid-cols-6 gap-2 mb-3">
+                                  <div className="absolute top-10 left-0 z-50 w-64 p-4 bg-white border rounded-lg shadow-lg">
+                                    <h4 className="text-sm font-medium mb-3">Highlight Color</h4>
+                                    <div className="grid grid-cols-8 gap-2 mb-4">
                                       {[
-                                        '#ffff00', '#ff8800', '#ff0088', '#8800ff', '#0088ff', '#00ff88',
-                                        '#ffcccc', '#ffffcc', '#ccffcc', '#ccffff', '#ccccff', '#ffccff'
+                                        '#ffff00', '#ffcc00', '#ff9900', '#ff6600', '#ff3300', '#ff0000', '#e74c3c', '#f39c12',
+                                        '#f1c40f', '#2ecc71', '#1abc9c', '#3498db', '#9b59b6', '#e91e63', '#cccccc', '#ffffff'
                                       ].map(color => (
                                         <button
                                           key={color}
                                           type="button"
-                                          className="w-6 h-6 rounded border border-gray-300 hover:scale-110 transition-transform"
+                                          className="w-7 h-7 rounded-sm border border-gray-300 hover:scale-110 transition-transform shadow-sm"
                                           style={{ backgroundColor: color }}
                                           onClick={() => applyHighlightColor(color)}
+                                          title={color}
                                         />
                                       ))}
                                     </div>
-                                    <input
-                                      type="color"
-                                      value={highlightColor}
-                                      onChange={(e) => applyHighlightColor(e.target.value)}
-                                      className="w-full h-8 rounded border"
-                                    />
-                                    <Button
-                                      type="button"
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => setShowHighlightPicker(false)}
-                                      className="w-full mt-2 h-6 text-xs"
-                                    >
-                                      Close
-                                    </Button>
+                                    <div className="space-y-3">
+                                      <div>
+                                        <label className="text-xs font-medium text-gray-700 block mb-1">Custom Color</label>
+                                        <input
+                                          type="color"
+                                          value={highlightColor}
+                                          onChange={(e) => applyHighlightColor(e.target.value)}
+                                          className="w-full h-10 rounded border border-gray-300"
+                                        />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowHighlightPicker(false)}
+                                        className="w-full h-8 text-xs"
+                                      >
+                                        Close
+                                      </Button>
+                                    </div>
                                   </div>
                                 )}
                               </div>
                             </div>
 
                             {/* Second Row - Lists and Insertions */}
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => createList(false)}
-                                className="h-8 w-8 p-0"
-                                title="Bullet List"
-                              >
-                                <List className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => createList(true)}
-                                className="h-8 w-8 p-0"
-                                title="Numbered List"
-                              >
-                                <ListOrdered className="h-4 w-4" />
-                              </Button>
+                            <div className="flex items-center justify-between w-full">
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => createList(false)}
+                                  className="h-8 w-8 p-0"
+                                  title="Bullet List"
+                                >
+                                  <List className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => createList(true)}
+                                  className="h-8 w-8 p-0"
+                                  title="Numbered List"
+                                >
+                                  <ListOrdered className="h-4 w-4" />
+                                </Button>
 
-                              <Separator orientation="vertical" className="h-6 mx-1" />
+                                <Separator orientation="vertical" className="h-6 mx-2" />
 
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => insertHeading(1)}
-                                className="h-8 px-2 text-xs font-semibold"
-                                title="Heading 1"
-                              >
-                                H1
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => insertHeading(2)}
-                                className="h-8 px-2 text-xs font-semibold"
-                                title="Heading 2"
-                              >
-                                H2
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => insertHeading(3)}
-                                className="h-8 px-2 text-xs font-semibold"
-                                title="Heading 3"
-                              >
-                                H3
-                              </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(1)}
+                                  className="h-8 px-2 text-xs font-semibold"
+                                  title="Heading 1"
+                                >
+                                  H1
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(2)}
+                                  className="h-8 px-2 text-xs font-semibold"
+                                  title="Heading 2"
+                                >
+                                  H2
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => insertHeading(3)}
+                                  className="h-8 px-2 text-xs font-semibold"
+                                  title="Heading 3"
+                                >
+                                  H3
+                                </Button>
+                              </div>
 
-                              <Separator orientation="vertical" className="h-6 mx-1" />
-
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setShowTableModal(true)}
-                                className="h-8 w-8 p-0"
-                                title="Insert Table"
-                              >
-                                <Table className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={insertImage}
-                                className="h-8 w-8 p-0"
-                                title="Insert Image"
-                              >
-                                <Image className="h-4 w-4" />
-                              </Button>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={insertLink}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Hyperlink"
+                                  data-testid="button-insert-link"
+                                >
+                                  <Link className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowContentImageUploader(true)}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Image from Upload"
+                                  data-testid="button-insert-image-upload"
+                                >
+                                  <Image className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setShowTableModal(true)}
+                                  className="h-8 w-8 p-0"
+                                  title="Insert Table"
+                                >
+                                  <Table className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                           </div>
                           
@@ -1219,14 +1349,21 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                         name="featuredImage"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Featured Image URL</FormLabel>
+                            <FormLabel>Featured Image</FormLabel>
                             <FormControl>
-                              <Input 
-                                {...field} 
-                                value={field.value || ""}
-                                placeholder="https://example.com/featured-image.jpg"
-                                data-testid="input-featured-image"
-                              />
+                              <div className="space-y-2">
+                                <ImageUploader
+                                  onImageUpload={(imageUrl) => field.onChange(imageUrl)}
+                                  currentImage={field.value || ""}
+                                  buttonText="Upload Featured Image"
+                                  className="w-full"
+                                />
+                                {field.value && (
+                                  <div className="text-sm text-gray-600">
+                                    Current image: {field.value.split('/').pop()}
+                                  </div>
+                                )}
+                              </div>
                             </FormControl>
                             <div className="text-sm text-muted-foreground">
                               Image for social media sharing and blog cards
