@@ -619,9 +619,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [newTag, setNewTag] = useState("");
   const [wordCount, setWordCount] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
-  const [showContentImageUploader, setShowContentImageUploader] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
+  const [imageModalMode, setImageModalMode] = useState<'url' | 'upload'>('url');
   const contentRef = useRef<HTMLDivElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
@@ -754,10 +754,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     contentManager.insertHeading(level);
   };
 
-  const insertImageIntoContent = (imageUrl: string) => {
-    contentManager.insertImage(imageUrl);
-    setShowContentImageUploader(false);
-  };
 
   // Image modal handlers
   const insertImageFromUrl = () => {
@@ -777,9 +773,14 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     }
   };
 
-  const insertImageFromUpload = () => {
+  const switchToUploadMode = () => {
+    setImageModalMode('upload');
+  };
+
+  const insertImageFromUpload = (imageUrl: string) => {
+    contentManager.insertImage(imageUrl, 'Image', 'auto');
     setShowImageModal(false);
-    setShowContentImageUploader(true);
+    setImageModalMode('url'); // Reset to URL mode for next time
   };
 
   // Clear content
@@ -1308,29 +1309,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                           </FormControl>
                         </div>
 
-                        {/* Image Uploader Modal for Content */}
-                        {showContentImageUploader && (
-                          <div className="mt-4 p-4 border rounded-lg bg-gray-50">
-                            <div className="flex items-center justify-between mb-4">
-                              <h4 className="font-medium">Upload Image to Content</h4>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setShowContentImageUploader(false)}
-                                className="h-8 w-8 p-0"
-                              >
-                                ×
-                              </Button>
-                            </div>
-                            <ImageUploader
-                              onImageUpload={insertImageIntoContent}
-                              currentImage=""
-                              buttonText="Choose Image File"
-                              className="w-full"
-                            />
-                          </div>
-                        )}
                         <FormMessage />
                       </FormItem>
                     )}
@@ -1747,55 +1725,88 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
       </Dialog>
 
       {/* Image Insertion Modal */}
-      <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+      <Dialog open={showImageModal} onOpenChange={(open) => {
+        setShowImageModal(open);
+        if (!open) {
+          setImageUrl("");
+          setImageModalMode('url');
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Insert Image</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                placeholder="https://example.com/image.jpg"
-                value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    insertImageFromUrl();
-                  }
-                }}
-                data-testid="input-image-url"
-              />
+          
+          {imageModalMode === 'url' ? (
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="imageUrl">Image URL</Label>
+                <Input
+                  id="imageUrl"
+                  placeholder="https://example.com/image.jpg"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      insertImageFromUrl();
+                    }
+                  }}
+                  data-testid="input-image-url"
+                />
+              </div>
+              <div className="text-center text-gray-500">or</div>
+              <Button 
+                variant="outline" 
+                onClick={switchToUploadMode}
+                className="w-full"
+                data-testid="button-switch-upload"
+              >
+                Upload Image File
+              </Button>
             </div>
-            <div className="text-center text-gray-500">or</div>
-            <Button 
-              variant="outline" 
-              onClick={insertImageFromUpload}
-              className="w-full"
-              data-testid="button-upload-image"
-            >
-              Upload Image File
-            </Button>
-          </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="text-sm text-gray-600">
+                Choose an image file to upload:
+              </div>
+              <ImageUploader
+                onImageUpload={insertImageFromUpload}
+                currentImage=""
+                buttonText="Choose Image File"
+                className="w-full"
+              />
+              <Button 
+                variant="outline" 
+                onClick={() => setImageModalMode('url')}
+                className="w-full"
+                data-testid="button-back-to-url"
+              >
+                ← Back to URL Input
+              </Button>
+            </div>
+          )}
+          
           <DialogFooter>
             <Button 
               variant="outline" 
               onClick={() => {
                 setShowImageModal(false);
                 setImageUrl("");
+                setImageModalMode('url');
               }}
               data-testid="button-cancel-image"
             >
               Cancel
             </Button>
-            <Button 
-              onClick={insertImageFromUrl}
-              disabled={!imageUrl.trim()}
-              data-testid="button-insert-url"
-            >
-              Insert URL
-            </Button>
+            {imageModalMode === 'url' && (
+              <Button 
+                onClick={insertImageFromUrl}
+                disabled={!imageUrl.trim()}
+                data-testid="button-insert-url"
+              >
+                Insert URL
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
