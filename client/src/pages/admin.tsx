@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
@@ -1134,17 +1134,29 @@ function PortfolioClientEditForm({ client, onSave, onCancel, isLoading }: Portfo
           name="rating"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Rating (1-5)</FormLabel>
+              <FormLabel>Rating</FormLabel>
               <FormControl>
-                <Input 
-                  {...field} 
-                  type="number" 
-                  min="1" 
-                  max="5" 
-                  value={field.value || 5}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
-                  data-testid="input-edit-client-rating" 
-                />
+                <div className="flex gap-1" data-testid="star-rating-edit">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => field.onChange(star)}
+                      className="p-1 hover:scale-110 transition-transform"
+                    >
+                      <Star 
+                        className={`w-6 h-6 ${
+                          star <= (field.value || 5) 
+                            ? 'text-yellow-400 fill-current' 
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {field.value || 5} star{(field.value || 5) !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -1264,17 +1276,29 @@ function PortfolioClientCreateForm({ onSave, onCancel, isLoading }: PortfolioCli
           name="rating"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Rating (1-5)</FormLabel>
+              <FormLabel>Rating</FormLabel>
               <FormControl>
-                <Input 
-                  {...field} 
-                  type="number" 
-                  min="1" 
-                  max="5" 
-                  value={field.value || 5}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
-                  data-testid="input-create-client-rating" 
-                />
+                <div className="flex gap-1" data-testid="star-rating-create">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => field.onChange(star)}
+                      className="p-1 hover:scale-110 transition-transform"
+                    >
+                      <Star 
+                        className={`w-6 h-6 ${
+                          star <= (field.value || 5) 
+                            ? 'text-yellow-400 fill-current' 
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    </button>
+                  ))}
+                  <span className="ml-2 text-sm text-muted-foreground">
+                    {field.value || 5} star{(field.value || 5) !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </FormControl>
               <FormMessage />
             </FormItem>
