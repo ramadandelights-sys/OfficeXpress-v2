@@ -807,33 +807,60 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     setUploadingImage(true);
     
     try {
-      const formData = new FormData();
-      formData.append('image', file);
+      // Convert file to base64
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64Data = e.target?.result as string;
+        
+        try {
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ image: base64Data }),
+          });
 
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
 
-      if (!response.ok) {
-        throw new Error('Upload failed');
-      }
+          const data = await response.json();
+          
+          if (data.url) {
+            insertImageFromUpload(data.url);
+          } else {
+            throw new Error('No URL returned from upload');
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          setUploadingImage(false);
+          toast({
+            title: "Upload failed", 
+            description: "Failed to upload image. Please try again.",
+            variant: "destructive",
+          });
+        }
+      };
 
-      const data = await response.json();
-      
-      if (data.url) {
-        insertImageFromUpload(data.url);
-      } else {
-        throw new Error('No URL returned from upload');
-      }
+      reader.onerror = () => {
+        setUploadingImage(false);
+        toast({
+          title: "Upload failed",
+          description: "Failed to read image file.",
+          variant: "destructive"
+        });
+      };
+
+      reader.readAsDataURL(file);
     } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload failed", 
-        description: "Failed to upload image. Please try again.",
-        variant: "destructive",
-      });
+      console.error('File processing error:', error);
       setUploadingImage(false);
+      toast({
+        title: "Upload failed",
+        description: "Failed to process image file.",
+        variant: "destructive"
+      });
     }
 
     // Reset file input

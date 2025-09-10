@@ -365,6 +365,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Image upload endpoint
+  app.post("/api/upload", async (req, res) => {
+    try {
+      const { image } = req.body;
+      
+      if (!image || typeof image !== 'string') {
+        return res.status(400).json({ error: "No image data provided" });
+      }
+
+      // Validate that it's a base64 image
+      if (!image.startsWith('data:image/')) {
+        return res.status(400).json({ error: "Invalid image format" });
+      }
+
+      console.log("Processing uploaded image...");
+      
+      // Import image processor
+      const { ImageProcessor } = await import("./imageProcessor");
+      
+      // Process the base64 image
+      const processedImageUrl = await ImageProcessor.processBase64Image(image);
+      
+      console.log("Image processed successfully:", processedImageUrl);
+      
+      res.json({ url: processedImageUrl });
+    } catch (error) {
+      console.error("Image upload error:", error);
+      res.status(500).json({ error: "Failed to upload image" });
+    }
+  });
+
   app.post("/api/admin/portfolio-clients", async (req, res) => {
     try {
       const clientData = insertPortfolioClientSchema.parse(req.body);
