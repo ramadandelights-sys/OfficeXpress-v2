@@ -12,12 +12,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://connect.facebook.net", "https://www.googletagmanager.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://www.google.com", "https://www.gstatic.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "https://www.facebook.com"],
       connectSrc: ["'self'", "https://www.facebook.com", "https://graph.facebook.com"],
-      frameSrc: ["'self'"],
+      frameSrc: ["'self'", "https://www.google.com", "https://www.gstatic.com"],
     },
   },
   crossOriginEmbedderPolicy: false
