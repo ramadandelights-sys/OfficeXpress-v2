@@ -398,23 +398,77 @@ class EditorContentManager {
     this.onContentChange(this.getContent());
   }
 
-  // Create list - improved to handle selected text properly
+  // Create list - improved to handle HTML structure properly
   createList(ordered: boolean = false) {
     this.saveToHistory();
     
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      const selectedText = range.toString().trim();
       
-      if (selectedText) {
-        // Split selected text by lines and create list items
-        const lines = selectedText.split('\n').filter(line => line.trim() !== '');
+      if (!range.collapsed) {
+        // Extract HTML content from selection to preserve structure
+        const selectedFragment = range.cloneContents();
+        const tempDiv = document.createElement('div');
+        tempDiv.appendChild(selectedFragment);
         
-        if (lines.length > 0) {
+        // Get all text nodes and block elements to determine lines
+        const lines: string[] = [];
+        
+        // Helper function to extract text from nodes respecting line breaks
+        const extractLines = (node: Node): string[] => {
+          const result: string[] = [];
+          
+          if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent?.trim();
+            if (text) {
+              result.push(text);
+            }
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as Element;
+            const tagName = element.tagName.toLowerCase();
+            
+            // Block elements represent separate lines
+            if (['div', 'p', 'br'].includes(tagName)) {
+              if (tagName === 'br') {
+                // BR represents a line break
+                result.push('');
+              } else {
+                // Extract text content from the block
+                const text = element.textContent?.trim();
+                if (text) {
+                  result.push(text);
+                }
+              }
+            } else {
+              // For inline elements, recursively process children
+              for (const child of Array.from(element.childNodes)) {
+                result.push(...extractLines(child));
+              }
+            }
+          }
+          
+          return result;
+        };
+        
+        // If the selection contains HTML structure, extract lines from it
+        if (tempDiv.innerHTML.includes('<') || tempDiv.innerHTML.includes('&')) {
+          for (const child of Array.from(tempDiv.childNodes)) {
+            lines.push(...extractLines(child));
+          }
+        } else {
+          // Fallback: split by newlines and filter empty lines
+          const textContent = tempDiv.textContent || '';
+          lines.push(...textContent.split('\n').filter(line => line.trim() !== ''));
+        }
+        
+        // Remove empty lines and ensure we have content
+        const validLines = lines.filter(line => line.trim() !== '');
+        
+        if (validLines.length > 0) {
           const list = document.createElement(ordered ? 'ol' : 'ul');
           
-          lines.forEach(line => {
+          validLines.forEach(line => {
             const listItem = document.createElement('li');
             listItem.textContent = line.trim();
             list.appendChild(listItem);
