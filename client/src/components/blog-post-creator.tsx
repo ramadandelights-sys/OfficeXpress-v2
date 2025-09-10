@@ -621,8 +621,9 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [previewMode, setPreviewMode] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [imageModalMode, setImageModalMode] = useState<'url' | 'upload'>('url');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
   const [showTableModal, setShowTableModal] = useState(false);
@@ -773,14 +774,72 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     }
   };
 
-  const switchToUploadMode = () => {
-    setImageModalMode('upload');
-  };
-
   const insertImageFromUpload = (imageUrl: string) => {
     contentManager.insertImage(imageUrl, 'Image', 'auto');
     setShowImageModal(false);
-    setImageModalMode('url'); // Reset to URL mode for next time
+    setUploadingImage(false);
+    toast({
+      title: "Image uploaded successfully",
+      description: "Your image has been added to the blog post",
+    });
+  };
+
+  // Direct file selection - bypasses the upload mode popup
+  const openFileSelector = () => {
+    setShowImageModal(false);
+    fileInputRef.current?.click();
+  };
+
+  // Handle file selection from direct input
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setUploadingImage(true);
+    
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+
+      const data = await response.json();
+      
+      if (data.url) {
+        insertImageFromUpload(data.url);
+      } else {
+        throw new Error('No URL returned from upload');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed", 
+        description: "Failed to upload image. Please try again.",
+        variant: "destructive",
+      });
+      setUploadingImage(false);
+    }
+
+    // Reset file input
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
   // Clear content
@@ -1729,7 +1788,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
         setShowImageModal(open);
         if (!open) {
           setImageUrl("");
-          setImageModalMode('url');
         }
       }}>
         <DialogContent className="max-w-md">
@@ -1737,54 +1795,33 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
             <DialogTitle>Insert Image</DialogTitle>
           </DialogHeader>
           
-          {imageModalMode === 'url' ? (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="imageUrl">Image URL</Label>
-                <Input
-                  id="imageUrl"
-                  placeholder="https://example.com/image.jpg"
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      insertImageFromUrl();
-                    }
-                  }}
-                  data-testid="input-image-url"
-                />
-              </div>
-              <div className="text-center text-gray-500">or</div>
-              <Button 
-                variant="outline" 
-                onClick={switchToUploadMode}
-                className="w-full"
-                data-testid="button-switch-upload"
-              >
-                Upload Image File
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="text-sm text-gray-600">
-                Choose an image file to upload:
-              </div>
-              <ImageUploader
-                onImageUpload={insertImageFromUpload}
-                currentImage=""
-                buttonText="Choose Image File"
-                className="w-full"
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input
+                id="imageUrl"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    insertImageFromUrl();
+                  }
+                }}
+                data-testid="input-image-url"
               />
-              <Button 
-                variant="outline" 
-                onClick={() => setImageModalMode('url')}
-                className="w-full"
-                data-testid="button-back-to-url"
-              >
-                ← Back to URL Input
-              </Button>
             </div>
-          )}
+            <div className="text-center text-gray-500">or</div>
+            <Button 
+              variant="outline" 
+              onClick={openFileSelector}
+              disabled={uploadingImage}
+              className="w-full"
+              data-testid="button-upload-image"
+            >
+              {uploadingImage ? "Uploading..." : "Upload Image File"}
+            </Button>
+          </div>
           
           <DialogFooter>
             <Button 
@@ -1792,24 +1829,30 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
               onClick={() => {
                 setShowImageModal(false);
                 setImageUrl("");
-                setImageModalMode('url');
               }}
               data-testid="button-cancel-image"
             >
               Cancel
             </Button>
-            {imageModalMode === 'url' && (
-              <Button 
-                onClick={insertImageFromUrl}
-                disabled={!imageUrl.trim()}
-                data-testid="button-insert-url"
-              >
-                Insert URL
-              </Button>
-            )}
+            <Button 
+              onClick={insertImageFromUrl}
+              disabled={!imageUrl.trim() || uploadingImage}
+              data-testid="button-insert-url"
+            >
+              Insert URL
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden file input for direct image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileSelect}
+        className="hidden"
+      />
     </Card>
   );
 }
