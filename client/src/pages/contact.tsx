@@ -236,12 +236,17 @@ export default function Contact() {
                         <FormItem>
                           <FormLabel>Phone *</FormLabel>
                           <FormControl>
-                            <Input 
-                              type="tel" 
-                              placeholder="+880 1XXXXXXXXX" 
-                              {...field} 
-                              data-testid="input-phone"
-                            />
+                            <div className="flex gap-1">
+                              <div className="bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground flex items-center">
+                                (+88)
+                              </div>
+                              <Input 
+                                placeholder="01XXXXXXXXX"
+                                className="flex-1"
+                                {...field}
+                                data-testid="input-phone"
+                              />
+                            </div>
                           </FormControl>
                           <FormMessage />
                         </FormItem>
