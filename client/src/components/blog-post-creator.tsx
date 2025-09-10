@@ -620,6 +620,8 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const [wordCount, setWordCount] = useState(0);
   const [previewMode, setPreviewMode] = useState(false);
   const [showContentImageUploader, setShowContentImageUploader] = useState(false);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
   const contentRef = useRef<HTMLDivElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [showHighlightPicker, setShowHighlightPicker] = useState(false);
@@ -739,19 +741,6 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
     setShowTableModal(false);
   };
 
-  const insertImage = () => {
-    const url = prompt('Enter image URL (e.g., https://example.com/image.jpg):');
-    if (url) {
-      // Validate URL scheme for security
-      if (!url.match(/^https?:\/\//)) {
-        alert('Please enter a valid HTTP or HTTPS URL');
-        return;
-      }
-      const altText = prompt('Enter alternative text for the image (optional):') || 'Image';
-      const width = prompt('Enter image width (optional, e.g., 300px or 50%):') || 'auto';
-      contentManager.insertImage(url, altText, width);
-    }
-  };
 
   const insertLink = () => {
     contentManager.insertLink();
@@ -768,6 +757,29 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const insertImageIntoContent = (imageUrl: string) => {
     contentManager.insertImage(imageUrl);
     setShowContentImageUploader(false);
+  };
+
+  // Image modal handlers
+  const insertImageFromUrl = () => {
+    if (imageUrl.trim()) {
+      // Validate URL scheme for security
+      if (!imageUrl.match(/^https?:\/\//)) {
+        toast({
+          title: "Invalid URL",
+          description: "Please enter a valid HTTP or HTTPS URL",
+          variant: "destructive",
+        });
+        return;
+      }
+      contentManager.insertImage(imageUrl.trim(), 'Image', 'auto');
+      setImageUrl("");
+      setShowImageModal(false);
+    }
+  };
+
+  const insertImageFromUpload = () => {
+    setShowImageModal(false);
+    setShowContentImageUploader(true);
   };
 
   // Clear content
@@ -1171,97 +1183,95 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
                             </div>
 
                             {/* Second Row - Lists and Insertions */}
-                            <div className="flex items-center justify-between w-full">
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => createList(false)}
-                                  className="h-8 w-8 p-0"
-                                  title="Bullet List"
-                                >
-                                  <List className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => createList(true)}
-                                  className="h-8 w-8 p-0"
-                                  title="Numbered List"
-                                >
-                                  <ListOrdered className="h-4 w-4" />
-                                </Button>
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => createList(false)}
+                                className="h-8 w-8 p-0"
+                                title="Bullet List"
+                              >
+                                <List className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => createList(true)}
+                                className="h-8 w-8 p-0"
+                                title="Numbered List"
+                              >
+                                <ListOrdered className="h-4 w-4" />
+                              </Button>
 
-                                <Separator orientation="vertical" className="h-6 mx-2" />
+                              <Separator orientation="vertical" className="h-6 mx-1" />
 
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(1)}
-                                  className="h-8 px-2 text-xs font-semibold"
-                                  title="Heading 1"
-                                >
-                                  H1
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(2)}
-                                  className="h-8 px-2 text-xs font-semibold"
-                                  title="Heading 2"
-                                >
-                                  H2
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => insertHeading(3)}
-                                  className="h-8 px-2 text-xs font-semibold"
-                                  title="Heading 3"
-                                >
-                                  H3
-                                </Button>
-                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(1)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 1"
+                              >
+                                H1
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(2)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 2"
+                              >
+                                H2
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => insertHeading(3)}
+                                className="h-8 px-2 text-xs font-semibold"
+                                title="Heading 3"
+                              >
+                                H3
+                              </Button>
 
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={insertLink}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Hyperlink"
-                                  data-testid="button-insert-link"
-                                >
-                                  <Link className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setShowContentImageUploader(true)}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Image from Upload"
-                                  data-testid="button-insert-image-upload"
-                                >
-                                  <Image className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setShowTableModal(true)}
-                                  className="h-8 w-8 p-0"
-                                  title="Insert Table"
-                                >
-                                  <Table className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              <Separator orientation="vertical" className="h-6 mx-1" />
+
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={insertLink}
+                                className="h-8 w-8 p-0"
+                                title="Insert Hyperlink"
+                                data-testid="button-insert-link"
+                              >
+                                <Link className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowImageModal(true)}
+                                className="h-8 w-8 p-0"
+                                title="Insert Image"
+                                data-testid="button-insert-image"
+                              >
+                                <Image className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setShowTableModal(true)}
+                                className="h-8 w-8 p-0"
+                                title="Insert Table"
+                              >
+                                <Table className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                           
@@ -1732,6 +1742,60 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowTableModal(false)}>Cancel</Button>
             <Button onClick={insertTable}>Insert Table</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Insertion Modal */}
+      <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Insert Image</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="imageUrl">Image URL</Label>
+              <Input
+                id="imageUrl"
+                placeholder="https://example.com/image.jpg"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    insertImageFromUrl();
+                  }
+                }}
+                data-testid="input-image-url"
+              />
+            </div>
+            <div className="text-center text-gray-500">or</div>
+            <Button 
+              variant="outline" 
+              onClick={insertImageFromUpload}
+              className="w-full"
+              data-testid="button-upload-image"
+            >
+              Upload Image File
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowImageModal(false);
+                setImageUrl("");
+              }}
+              data-testid="button-cancel-image"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={insertImageFromUrl}
+              disabled={!imageUrl.trim()}
+              data-testid="button-insert-url"
+            >
+              Insert URL
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
