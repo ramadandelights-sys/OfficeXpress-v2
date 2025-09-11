@@ -145,49 +145,49 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
     resolver: zodResolver(settings ? updateWebsiteSettingsSchema.omit({ id: true }) : insertWebsiteSettingsSchema),
     defaultValues: {
       // Logo Settings
-      logoPath: settings?.logoPath || "",
-      faviconPath: settings?.faviconPath || "",
+      logoPath: settings?.logoPath ?? "",
+      faviconPath: settings?.faviconPath ?? "",
       
       // Color Settings
-      headerBackgroundColor: settings?.headerBackgroundColor || "#1e293b",
-      headerTextColor: settings?.headerTextColor || "#ffffff",
-      footerBackgroundColor: settings?.footerBackgroundColor || "#1e293b",
-      footerTextColor: settings?.footerTextColor || "#ffffff",
+      headerBackgroundColor: settings?.headerBackgroundColor ?? "#1e293b",
+      headerTextColor: settings?.headerTextColor ?? "#ffffff",
+      footerBackgroundColor: settings?.footerBackgroundColor ?? "#1e293b",
+      footerTextColor: settings?.footerTextColor ?? "#ffffff",
       
       // Text Colors
-      primaryTextColor: settings?.primaryTextColor || "#1f2937",
-      secondaryTextColor: settings?.secondaryTextColor || "#6b7280",
-      accentColor: settings?.accentColor || "#4c9096",
-      linkColor: settings?.linkColor || "#3b82f6",
-      linkHoverColor: settings?.linkHoverColor || "#2563eb",
+      primaryTextColor: settings?.primaryTextColor ?? "#1f2937",
+      secondaryTextColor: settings?.secondaryTextColor ?? "#6b7280",
+      accentColor: settings?.accentColor ?? "#4c9096",
+      linkColor: settings?.linkColor ?? "#3b82f6",
+      linkHoverColor: settings?.linkHoverColor ?? "#2563eb",
       
       // Button Colors
-      primaryButtonColor: settings?.primaryButtonColor || "#4c9096",
-      primaryButtonTextColor: settings?.primaryButtonTextColor || "#ffffff",
-      secondaryButtonColor: settings?.secondaryButtonColor || "#f3f4f6",
-      secondaryButtonTextColor: settings?.secondaryButtonTextColor || "#1f2937",
+      primaryButtonColor: settings?.primaryButtonColor ?? "#4c9096",
+      primaryButtonTextColor: settings?.primaryButtonTextColor ?? "#ffffff",
+      secondaryButtonColor: settings?.secondaryButtonColor ?? "#f3f4f6",
+      secondaryButtonTextColor: settings?.secondaryButtonTextColor ?? "#1f2937",
       
       // Background Colors
-      pageBackgroundColor: settings?.pageBackgroundColor || "#ffffff",
-      sectionBackgroundColor: settings?.sectionBackgroundColor || "#f9fafb",
-      cardBackgroundColor: settings?.cardBackgroundColor || "#ffffff",
+      pageBackgroundColor: settings?.pageBackgroundColor ?? "#ffffff",
+      sectionBackgroundColor: settings?.sectionBackgroundColor ?? "#f9fafb",
+      cardBackgroundColor: settings?.cardBackgroundColor ?? "#ffffff",
       
       // Typography Settings
-      fontFamily: settings?.fontFamily || "Inter, sans-serif",
-      headingFontFamily: settings?.headingFontFamily || "Inter, sans-serif",
+      fontFamily: settings?.fontFamily ?? "Inter, sans-serif",
+      headingFontFamily: settings?.headingFontFamily ?? "Inter, sans-serif",
       
       // Site Information
-      siteTitle: settings?.siteTitle || "OfficeXpress",
-      siteTagline: settings?.siteTagline || "Professional Transportation Services",
-      contactPhone: settings?.contactPhone || "",
-      contactEmail: settings?.contactEmail || "",
-      contactAddress: settings?.contactAddress || "",
+      siteTitle: settings?.siteTitle ?? "OfficeXpress",
+      siteTagline: settings?.siteTagline ?? "Professional Transportation Services",
+      contactPhone: settings?.contactPhone ?? "",
+      contactEmail: settings?.contactEmail ?? "",
+      contactAddress: settings?.contactAddress ?? "",
       
       // Social Media Links
-      facebookUrl: settings?.facebookUrl || "",
-      twitterUrl: settings?.twitterUrl || "",
-      linkedinUrl: settings?.linkedinUrl || "",
-      instagramUrl: settings?.instagramUrl || "",
+      facebookUrl: settings?.facebookUrl ?? "",
+      twitterUrl: settings?.twitterUrl ?? "",
+      linkedinUrl: settings?.linkedinUrl ?? "",
+      instagramUrl: settings?.instagramUrl ?? "",
     }
   });
 

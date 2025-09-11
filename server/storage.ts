@@ -9,6 +9,7 @@ import {
   bangladeshLocations,
   marketingSettings,
   legalPages,
+  websiteSettings,
   type User, 
   type InsertUser,
   type CorporateBooking,
@@ -32,7 +33,10 @@ import {
   type UpdateMarketingSettings,
   type LegalPage,
   type InsertLegalPage,
-  type UpdateLegalPage
+  type UpdateLegalPage,
+  type WebsiteSettings,
+  type InsertWebsiteSettings,
+  type UpdateWebsiteSettings
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike } from "drizzle-orm";
@@ -93,6 +97,12 @@ export interface IStorage {
   createLegalPage(page: InsertLegalPage): Promise<LegalPage>;
   updateLegalPage(page: UpdateLegalPage): Promise<LegalPage | null>;
   deleteLegalPage(id: string): Promise<boolean>;
+  
+  // Website settings
+  getWebsiteSettings(): Promise<WebsiteSettings | null>;
+  createWebsiteSettings(settings: InsertWebsiteSettings): Promise<WebsiteSettings>;
+  updateWebsiteSettings(settings: UpdateWebsiteSettings): Promise<WebsiteSettings | null>;
+  deleteWebsiteSettings(id: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -461,6 +471,32 @@ export class DatabaseStorage implements IStorage {
 
   async deleteLegalPage(id: string): Promise<boolean> {
     const result = await db.delete(legalPages).where(eq(legalPages.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Website settings implementation
+  async getWebsiteSettings(): Promise<WebsiteSettings | null> {
+    const [settings] = await db.select().from(websiteSettings).limit(1);
+    return settings || null;
+  }
+
+  async createWebsiteSettings(settingsData: InsertWebsiteSettings): Promise<WebsiteSettings> {
+    const [settings] = await db.insert(websiteSettings).values([settingsData]).returning();
+    return settings;
+  }
+
+  async updateWebsiteSettings(settingsData: UpdateWebsiteSettings): Promise<WebsiteSettings | null> {
+    const { id, ...updateData } = settingsData;
+    const [settings] = await db
+      .update(websiteSettings)
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(websiteSettings.id, id))
+      .returning();
+    return settings || null;
+  }
+
+  async deleteWebsiteSettings(id: string): Promise<boolean> {
+    const result = await db.delete(websiteSettings).where(eq(websiteSettings.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

@@ -20,6 +20,8 @@ import {
   updatePortfolioClientSchema,
   insertMarketingSettingsSchema,
   updateMarketingSettingsSchema,
+  insertWebsiteSettingsSchema,
+  updateWebsiteSettingsSchema,
   insertLegalPageSchema,
   updateLegalPageSchema
 } from "@shared/schema";
@@ -701,6 +703,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to delete marketing settings:', error);
       res.status(500).json({ message: "Failed to delete marketing settings" });
+    }
+  });
+
+  // Website Settings API endpoints
+  app.get("/api/admin/website-settings", async (req, res) => {
+    try {
+      const settings = await storage.getWebsiteSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Failed to fetch website settings:', error);
+      res.status(500).json({ message: "Failed to fetch website settings" });
+    }
+  });
+
+  app.post("/api/admin/website-settings", async (req, res) => {
+    try {
+      const settingsData = insertWebsiteSettingsSchema.parse(req.body);
+      const settings = await storage.createWebsiteSettings(settingsData);
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid website settings data", errors: error.errors });
+      } else {
+        console.error('Failed to create website settings:', error);
+        res.status(500).json({ message: "Failed to create website settings" });
+      }
+    }
+  });
+
+  app.put("/api/admin/website-settings/:id", async (req, res) => {
+    try {
+      const settingsData = updateWebsiteSettingsSchema.parse({
+        id: req.params.id,
+        ...req.body
+      });
+      const settings = await storage.updateWebsiteSettings(settingsData);
+      if (!settings) {
+        return res.status(404).json({ message: "Website settings not found" });
+      }
+      res.json(settings);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid website settings data", errors: error.errors });
+      } else {
+        console.error('Failed to update website settings:', error);
+        res.status(500).json({ message: "Failed to update website settings" });
+      }
+    }
+  });
+
+  app.delete("/api/admin/website-settings/:id", async (req, res) => {
+    try {
+      const deleted = await storage.deleteWebsiteSettings(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Website settings not found" });
+      }
+      res.json({ message: "Website settings deleted successfully" });
+    } catch (error) {
+      console.error('Failed to delete website settings:', error);
+      res.status(500).json({ message: "Failed to delete website settings" });
     }
   });
 
