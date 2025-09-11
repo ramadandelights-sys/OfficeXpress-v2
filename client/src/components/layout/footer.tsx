@@ -27,6 +27,17 @@ export default function Footer() {
   // Calculate muted colors for secondary text (make them lighter/darker based on background)
   const mutedTextColor = footerTextColor === "#ffffff" ? "#9ca3af" : "#6b7280";
   const borderColor = footerTextColor === "#ffffff" ? "#374151" : "#d1d5db";
+  
+  // CSS styles to ensure link colors override defaults
+  const linkStyle = {
+    color: linkColor + ' !important',
+    textDecoration: 'none'
+  };
+  
+  const linkHoverStyle = {
+    color: linkHoverColor + ' !important',
+    textDecoration: 'none'
+  };
 
   return (
     <footer 
@@ -106,9 +117,9 @@ export default function Footer() {
                 <Link 
                   href="/corporate" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Corporate Transportation
                 </Link>
@@ -117,9 +128,9 @@ export default function Footer() {
                 <Link 
                   href="/rental" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Vehicle Rental
                 </Link>
@@ -128,9 +139,9 @@ export default function Footer() {
                 <Link 
                   href="/contact" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Airport Transfers
                 </Link>
@@ -139,9 +150,9 @@ export default function Footer() {
                 <Link 
                   href="/contact" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   City Tours
                 </Link>
@@ -157,9 +168,9 @@ export default function Footer() {
                 <Link 
                   href="/about" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   About Us
                 </Link>
@@ -168,9 +179,9 @@ export default function Footer() {
                 <Link 
                   href="/portfolio" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Our Clients
                 </Link>
@@ -179,9 +190,9 @@ export default function Footer() {
                 <Link 
                   href="/vendor" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Partner With Us
                 </Link>
@@ -190,9 +201,9 @@ export default function Footer() {
                 <Link 
                   href="/blog" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Blog
                 </Link>
@@ -208,9 +219,9 @@ export default function Footer() {
                 <Link 
                   href="/terms-and-conditions" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                   data-testid="footer-terms"
                 >
                   Terms & Conditions
@@ -220,9 +231,9 @@ export default function Footer() {
                 <Link 
                   href="/privacy-policy" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                   data-testid="footer-privacy"
                 >
                   Privacy Policy
@@ -232,9 +243,9 @@ export default function Footer() {
                 <Link 
                   href="/contact" 
                   className="transition-colors"
-                  style={{ color: linkColor }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = linkHoverColor}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = linkColor}
+                  style={linkStyle}
+                  onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
+                  onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
                   Contact Us
                 </Link>
