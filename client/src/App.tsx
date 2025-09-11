@@ -4,8 +4,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { FacebookPixelProvider } from "@/contexts/FacebookPixelContext";
-import { GoogleAnalyticsProvider } from "@/contexts/GoogleAnalyticsContext";
+import { MarketingProvider } from "@/contexts/MarketingContext";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
 import Home from "@/pages/home";
@@ -77,22 +76,10 @@ function ConditionalFooter() {
 }
 
 function App() {
-  // Facebook Pixel configuration
-  const facebookPixelConfig = {
-    pixelId: import.meta.env.VITE_FACEBOOK_PIXEL_ID || '',
-    accessToken: import.meta.env.VITE_FACEBOOK_ACCESS_TOKEN,
-  };
-
-  // Google Analytics configuration
-  const googleAnalyticsConfig = {
-    measurementId: import.meta.env.VITE_GOOGLE_ANALYTICS_ID || 'GA_MEASUREMENT_ID',
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
-      <FacebookPixelProvider config={facebookPixelConfig}>
-        <GoogleAnalyticsProvider config={googleAnalyticsConfig}>
-          <TooltipProvider>
+      <MarketingProvider>
+        <TooltipProvider>
             <div className="min-h-screen bg-background">
               <Header />
               <main>
@@ -101,9 +88,8 @@ function App() {
               <ConditionalFooter />
               <Toaster />
             </div>
-          </TooltipProvider>
-        </GoogleAnalyticsProvider>
-      </FacebookPixelProvider>
+        </TooltipProvider>
+      </MarketingProvider>
     </QueryClientProvider>
   );
 }
