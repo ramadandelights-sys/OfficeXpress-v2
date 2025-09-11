@@ -85,7 +85,16 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
           });
 
           if (!response.ok) {
-            throw new Error('Upload failed');
+            // Try to get the specific error message from the server
+            let errorMessage = 'Upload failed';
+            try {
+              const errorData = await response.json();
+              errorMessage = errorData.error || errorData.message || errorMessage;
+            } catch {
+              // If we can't parse the error response, use the status
+              errorMessage = `Upload failed with status ${response.status}`;
+            }
+            throw new Error(errorMessage);
           }
 
           const data = await response.json();
@@ -94,8 +103,9 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
             setLogoPreview(data.url);
             onChange(data.url);
             
-            // Invalidate website settings cache so the new logo appears immediately
+            // Invalidate both website settings and logo cache so the new logo appears immediately
             queryClient.invalidateQueries({ queryKey: ['/api/admin/website-settings'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/logo'] });
             
             toast({
               title: "Logo uploaded successfully",
@@ -106,9 +116,10 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
           }
         } catch (error) {
           console.error('Upload error:', error);
+          const errorMessage = error instanceof Error ? error.message : "Failed to upload logo. Please try again.";
           toast({
             title: "Upload failed",
-            description: "Failed to upload logo. Please try again.",
+            description: errorMessage,
             variant: "destructive"
           });
         } finally {
