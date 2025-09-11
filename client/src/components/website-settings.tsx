@@ -93,8 +93,8 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
             setLogoPreview(data.url);
             onChange(data.url);
             
-            // Invalidate logo cache so the new logo appears immediately
-            queryClient.invalidateQueries({ queryKey: ['/api/logo'] });
+            // Invalidate website settings cache so the new logo appears immediately
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/website-settings'] });
             
             toast({
               title: "Logo uploaded successfully",
