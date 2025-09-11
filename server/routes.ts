@@ -425,9 +425,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userAgent = req.headers['user-agent'];
       const referer = req.headers['referer'];
       
+      console.log('Upload request headers:', {
+        adminAuth,
+        userAgent: userAgent ? 'present' : 'missing',
+        referer
+      });
+      
       // Basic security checks - reject if missing expected headers
-      if (!adminAuth || !userAgent || !referer?.includes('admin')) {
-        return res.status(401).json({ error: "Unauthorized: Admin access required" });
+      if (!adminAuth || !userAgent) {
+        console.log('Missing required headers');
+        return res.status(401).json({ error: "Unauthorized: Admin access required - missing headers" });
+      }
+      
+      // Check if request comes from admin area (more flexible referer check)
+      if (referer && !referer.includes('admin') && !referer.includes('localhost')) {
+        console.log('Invalid referer:', referer);
+        return res.status(401).json({ error: "Unauthorized: Admin access required - invalid referer" });
       }
 
       const { image } = req.body;
