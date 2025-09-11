@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ColorPicker } from "@/components/ui/color-picker";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import type { 
@@ -145,49 +146,49 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
     resolver: zodResolver(settings ? updateWebsiteSettingsSchema.omit({ id: true }) : insertWebsiteSettingsSchema),
     defaultValues: {
       // Logo Settings
-      logoPath: settings?.logoPath ?? "",
-      faviconPath: settings?.faviconPath ?? "",
+      logoPath: settings?.logoPath || "",
+      faviconPath: settings?.faviconPath || "",
       
       // Color Settings
-      headerBackgroundColor: settings?.headerBackgroundColor ?? "#1e293b",
-      headerTextColor: settings?.headerTextColor ?? "#ffffff",
-      footerBackgroundColor: settings?.footerBackgroundColor ?? "#1e293b",
-      footerTextColor: settings?.footerTextColor ?? "#ffffff",
+      headerBackgroundColor: settings?.headerBackgroundColor || "#1e293b",
+      headerTextColor: settings?.headerTextColor || "#ffffff",
+      footerBackgroundColor: settings?.footerBackgroundColor || "#1e293b",
+      footerTextColor: settings?.footerTextColor || "#ffffff",
       
       // Text Colors
-      primaryTextColor: settings?.primaryTextColor ?? "#1f2937",
-      secondaryTextColor: settings?.secondaryTextColor ?? "#6b7280",
-      accentColor: settings?.accentColor ?? "#4c9096",
-      linkColor: settings?.linkColor ?? "#3b82f6",
-      linkHoverColor: settings?.linkHoverColor ?? "#2563eb",
+      primaryTextColor: settings?.primaryTextColor || "#1f2937",
+      secondaryTextColor: settings?.secondaryTextColor || "#6b7280",
+      accentColor: settings?.accentColor || "#4c9096",
+      linkColor: settings?.linkColor || "#3b82f6",
+      linkHoverColor: settings?.linkHoverColor || "#2563eb",
       
       // Button Colors
-      primaryButtonColor: settings?.primaryButtonColor ?? "#4c9096",
-      primaryButtonTextColor: settings?.primaryButtonTextColor ?? "#ffffff",
-      secondaryButtonColor: settings?.secondaryButtonColor ?? "#f3f4f6",
-      secondaryButtonTextColor: settings?.secondaryButtonTextColor ?? "#1f2937",
+      primaryButtonColor: settings?.primaryButtonColor || "#4c9096",
+      primaryButtonTextColor: settings?.primaryButtonTextColor || "#ffffff",
+      secondaryButtonColor: settings?.secondaryButtonColor || "#f3f4f6",
+      secondaryButtonTextColor: settings?.secondaryButtonTextColor || "#1f2937",
       
       // Background Colors
-      pageBackgroundColor: settings?.pageBackgroundColor ?? "#ffffff",
-      sectionBackgroundColor: settings?.sectionBackgroundColor ?? "#f9fafb",
-      cardBackgroundColor: settings?.cardBackgroundColor ?? "#ffffff",
+      pageBackgroundColor: settings?.pageBackgroundColor || "#ffffff",
+      sectionBackgroundColor: settings?.sectionBackgroundColor || "#f9fafb",
+      cardBackgroundColor: settings?.cardBackgroundColor || "#ffffff",
       
       // Typography Settings
-      fontFamily: settings?.fontFamily ?? "Inter, sans-serif",
-      headingFontFamily: settings?.headingFontFamily ?? "Inter, sans-serif",
+      fontFamily: settings?.fontFamily || "Inter, sans-serif",
+      headingFontFamily: settings?.headingFontFamily || "Inter, sans-serif",
       
       // Site Information
-      siteTitle: settings?.siteTitle ?? "OfficeXpress",
-      siteTagline: settings?.siteTagline ?? "Professional Transportation Services",
-      contactPhone: settings?.contactPhone ?? "",
-      contactEmail: settings?.contactEmail ?? "",
-      contactAddress: settings?.contactAddress ?? "",
+      siteTitle: settings?.siteTitle || "OfficeXpress",
+      siteTagline: settings?.siteTagline || "Professional Transportation Services",
+      contactPhone: settings?.contactPhone || "",
+      contactEmail: settings?.contactEmail || "",
+      contactAddress: settings?.contactAddress || "",
       
       // Social Media Links
-      facebookUrl: settings?.facebookUrl ?? "",
-      twitterUrl: settings?.twitterUrl ?? "",
-      linkedinUrl: settings?.linkedinUrl ?? "",
-      instagramUrl: settings?.instagramUrl ?? "",
+      facebookUrl: settings?.facebookUrl || "",
+      twitterUrl: settings?.twitterUrl || "",
+      linkedinUrl: settings?.linkedinUrl || "",
+      instagramUrl: settings?.instagramUrl || "",
     }
   });
 
@@ -291,7 +292,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                     <FormItem>
                       <FormLabel>Site Title</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="OfficeXpress" data-testid="input-site-title" />
+                        <Input {...field} value={field.value || ""} placeholder="OfficeXpress" data-testid="input-site-title" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -305,7 +306,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                     <FormItem>
                       <FormLabel>Site Tagline</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Professional Transportation Services" data-testid="input-site-tagline" />
+                        <Input {...field} value={field.value || ""} placeholder="Professional Transportation Services" data-testid="input-site-tagline" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -330,20 +331,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Header Background</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-header-bg-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#1e293b"
-                              className="flex-1"
-                              data-testid="input-header-bg-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#1e293b"}
+                            onChange={field.onChange}
+                            placeholder="#1e293b"
+                            data-testid="input-header-bg-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -357,20 +350,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Header Text</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-header-text-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#ffffff"
-                              className="flex-1"
-                              data-testid="input-header-text-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#ffffff"}
+                            onChange={field.onChange}
+                            placeholder="#ffffff"
+                            data-testid="input-header-text-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -392,20 +377,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Footer Background</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-footer-bg-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#1e293b"
-                              className="flex-1"
-                              data-testid="input-footer-bg-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#1e293b"}
+                            onChange={field.onChange}
+                            placeholder="#1e293b"
+                            data-testid="input-footer-bg-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -419,20 +396,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Footer Text</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-footer-text-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#ffffff"
-                              className="flex-1"
-                              data-testid="input-footer-text-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#ffffff"}
+                            onChange={field.onChange}
+                            placeholder="#ffffff"
+                            data-testid="input-footer-text-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -454,20 +423,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Primary Text</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-primary-text-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#1f2937"
-                              className="flex-1"
-                              data-testid="input-primary-text-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#1f2937"}
+                            onChange={field.onChange}
+                            placeholder="#1f2937"
+                            data-testid="input-primary-text-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -481,20 +442,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Secondary Text</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-secondary-text-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#6b7280"
-                              className="flex-1"
-                              data-testid="input-secondary-text-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#6b7280"}
+                            onChange={field.onChange}
+                            placeholder="#6b7280"
+                            data-testid="input-secondary-text-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -508,20 +461,12 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Accent Color</FormLabel>
                         <FormControl>
-                          <div className="flex gap-2">
-                            <Input 
-                              {...field} 
-                              type="color"
-                              className="w-16 h-10 p-1 rounded border"
-                              data-testid="input-accent-color"
-                            />
-                            <Input 
-                              {...field} 
-                              placeholder="#4c9096"
-                              className="flex-1"
-                              data-testid="input-accent-color-text"
-                            />
-                          </div>
+                          <ColorPicker
+                            value={field.value || "#4c9096"}
+                            onChange={field.onChange}
+                            placeholder="#4c9096"
+                            data-testid="input-accent-color"
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -541,7 +486,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                   <FormItem>
                     <FormLabel>Body Font Family</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Inter, sans-serif" data-testid="input-font-family" />
+                      <Input {...field} value={field.value || ""} placeholder="Inter, sans-serif" data-testid="input-font-family" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -555,7 +500,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                   <FormItem>
                     <FormLabel>Heading Font Family</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Inter, sans-serif" data-testid="input-heading-font-family" />
+                      <Input {...field} value={field.value || ""} placeholder="Inter, sans-serif" data-testid="input-heading-font-family" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -580,7 +525,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                         <FormItem>
                           <FormLabel>Contact Phone</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="+880 1234 567890" data-testid="input-contact-phone" />
+                            <Input {...field} value={field.value || ""} placeholder="+880 1234 567890" data-testid="input-contact-phone" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -594,7 +539,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                         <FormItem>
                           <FormLabel>Contact Email</FormLabel>
                           <FormControl>
-                            <Input {...field} placeholder="info@officexpress.com" data-testid="input-contact-email" />
+                            <Input {...field} value={field.value || ""} placeholder="info@officexpress.com" data-testid="input-contact-email" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -609,7 +554,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Contact Address</FormLabel>
                         <FormControl>
-                          <Textarea {...field} placeholder="Enter your business address" data-testid="input-contact-address" />
+                          <Textarea {...field} value={field.value || ""} placeholder="Enter your business address" data-testid="input-contact-address" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -631,7 +576,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Facebook URL</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="https://facebook.com/..." data-testid="input-facebook-url" />
+                          <Input {...field} value={field.value || ""} placeholder="https://facebook.com/..." data-testid="input-facebook-url" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -645,7 +590,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Twitter URL</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="https://twitter.com/..." data-testid="input-twitter-url" />
+                          <Input {...field} value={field.value || ""} placeholder="https://twitter.com/..." data-testid="input-twitter-url" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -659,7 +604,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>LinkedIn URL</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="https://linkedin.com/..." data-testid="input-linkedin-url" />
+                          <Input {...field} value={field.value || ""} placeholder="https://linkedin.com/..." data-testid="input-linkedin-url" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -673,7 +618,7 @@ export function WebsiteSettingsForm({ settings, onSave, onCancel, isLoading }: W
                       <FormItem>
                         <FormLabel>Instagram URL</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder="https://instagram.com/..." data-testid="input-instagram-url" />
+                          <Input {...field} value={field.value || ""} placeholder="https://instagram.com/..." data-testid="input-instagram-url" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
