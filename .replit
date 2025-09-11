@@ -18,10 +18,6 @@ to = "/index.html"
 localPort = 5000
 externalPort = 80
 
-[[ports]]
-localPort = 38647
-externalPort = 3000
-
 [env]
 PORT = "5000"
 
