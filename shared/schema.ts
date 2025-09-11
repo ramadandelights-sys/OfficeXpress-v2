@@ -184,6 +184,59 @@ export const legalPages = pgTable("legal_pages", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const websiteSettings = pgTable("website_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Logo Settings
+  logoPath: text("logo_path"),
+  faviconPath: text("favicon_path"),
+  
+  // Color Settings
+  headerBackgroundColor: text("header_background_color").default("#1e293b"), // slate-800
+  headerTextColor: text("header_text_color").default("#ffffff"), // white
+  footerBackgroundColor: text("footer_background_color").default("#1e293b"), // slate-800
+  footerTextColor: text("footer_text_color").default("#ffffff"), // white
+  
+  // Text Colors
+  primaryTextColor: text("primary_text_color").default("#1f2937"), // gray-800
+  secondaryTextColor: text("secondary_text_color").default("#6b7280"), // gray-500
+  accentColor: text("accent_color").default("#4c9096"), // brand color
+  linkColor: text("link_color").default("#3b82f6"), // blue-500
+  linkHoverColor: text("link_hover_color").default("#2563eb"), // blue-600
+  
+  // Button Colors
+  primaryButtonColor: text("primary_button_color").default("#4c9096"), // brand color
+  primaryButtonTextColor: text("primary_button_text_color").default("#ffffff"), // white
+  secondaryButtonColor: text("secondary_button_color").default("#f3f4f6"), // gray-100
+  secondaryButtonTextColor: text("secondary_button_text_color").default("#1f2937"), // gray-800
+  
+  // Background Colors
+  pageBackgroundColor: text("page_background_color").default("#ffffff"), // white
+  sectionBackgroundColor: text("section_background_color").default("#f9fafb"), // gray-50
+  cardBackgroundColor: text("card_background_color").default("#ffffff"), // white
+  
+  // Typography Settings
+  fontFamily: text("font_family").default("Inter, sans-serif"),
+  headingFontFamily: text("heading_font_family").default("Inter, sans-serif"),
+  
+  // Site Information
+  siteTitle: text("site_title").default("OfficeXpress"),
+  siteTagline: text("site_tagline").default("Professional Transportation Services"),
+  contactPhone: text("contact_phone"),
+  contactEmail: text("contact_email"),
+  contactAddress: text("contact_address"),
+  
+  // Social Media Links
+  facebookUrl: text("facebook_url"),
+  twitterUrl: text("twitter_url"),
+  linkedinUrl: text("linkedin_url"),
+  instagramUrl: text("instagram_url"),
+  
+  // System fields
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -269,6 +322,20 @@ export const updateLegalPageSchema = createInsertSchema(legalPages).omit({
   id: z.string(),
 });
 
+export const insertWebsiteSettingsSchema = createInsertSchema(websiteSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateWebsiteSettingsSchema = createInsertSchema(websiteSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -294,3 +361,6 @@ export type UpdateMarketingSettings = z.infer<typeof updateMarketingSettingsSche
 export type LegalPage = typeof legalPages.$inferSelect;
 export type InsertLegalPage = z.infer<typeof insertLegalPageSchema>;
 export type UpdateLegalPage = z.infer<typeof updateLegalPageSchema>;
+export type WebsiteSettings = typeof websiteSettings.$inferSelect;
+export type InsertWebsiteSettings = z.infer<typeof insertWebsiteSettingsSchema>;
+export type UpdateWebsiteSettings = z.infer<typeof updateWebsiteSettingsSchema>;
