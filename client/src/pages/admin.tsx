@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette } from "lucide-react";
 import AdminLogin from "@/components/admin-login";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
 import { MarketingSettingsForm, MarketingSettingsDisplay } from "@/components/marketing-settings";
+import { WebsiteSettingsForm, WebsiteSettingsDisplay } from "@/components/website-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -35,11 +36,14 @@ import type {
   MarketingSettings,
   InsertMarketingSettings,
   UpdateMarketingSettings,
+  WebsiteSettings,
+  InsertWebsiteSettings,
+  UpdateWebsiteSettings,
   LegalPage,
   InsertLegalPage,
   UpdateLegalPage
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertLegalPageSchema, updateLegalPageSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema } from "@shared/schema";
 
 export default function Admin() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -83,6 +87,9 @@ function AdminDashboard() {
   
   // Marketing settings state
   const [editingMarketingSettings, setEditingMarketingSettings] = useState(false);
+  
+  // Website settings state
+  const [editingWebsiteSettings, setEditingWebsiteSettings] = useState(false);
   
   // Legal pages state
   const [editingLegalPage, setEditingLegalPage] = useState<string | null>(null);
@@ -236,6 +243,10 @@ function AdminDashboard() {
     queryKey: ["/api/admin/marketing-settings"],
   });
 
+  const { data: websiteSettings = null, isLoading: loadingWebsiteSettings } = useQuery<WebsiteSettings | null>({
+    queryKey: ["/api/admin/website-settings"],
+  });
+
   const { data: legalPages = [], isLoading: loadingLegalPages } = useQuery<LegalPage[]>({
     queryKey: ["/api/admin/legal-pages"],
   });
@@ -351,6 +362,35 @@ function AdminDashboard() {
     },
     onError: () => {
       toast({ title: "Failed to update marketing settings", variant: "destructive" });
+    },
+  });
+
+  // Website Settings Mutations
+  const createWebsiteSettingsMutation = useMutation({
+    mutationFn: async (data: InsertWebsiteSettings) => {
+      return await apiRequest("POST", "/api/admin/website-settings", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Website settings created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/website-settings"] });
+      setEditingWebsiteSettings(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to create website settings", variant: "destructive" });
+    },
+  });
+
+  const updateWebsiteSettingsMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: UpdateWebsiteSettings }) => {
+      return await apiRequest("PUT", `/api/admin/website-settings/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Website settings updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/website-settings"] });
+      setEditingWebsiteSettings(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to update website settings", variant: "destructive" });
     },
   });
 
@@ -749,6 +789,78 @@ function AdminDashboard() {
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Setup Marketing Settings
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Website Settings Management */}
+        <Card className="mb-8">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2" data-testid="heading-website-settings">
+                <Palette className="h-5 w-5" />
+                Website Settings
+              </CardTitle>
+              {!websiteSettings && !editingWebsiteSettings && (
+                <Button 
+                  onClick={() => setEditingWebsiteSettings(true)}
+                  className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                  data-testid="button-create-website"
+                >
+                  <Plus className="h-4 w-4" />
+                  Setup Website Customization
+                </Button>
+              )}
+              {websiteSettings && !editingWebsiteSettings && (
+                <Button 
+                  onClick={() => setEditingWebsiteSettings(true)}
+                  className="flex items-center gap-2"
+                  variant="outline"
+                  data-testid="button-edit-website"
+                >
+                  <Settings className="h-4 w-4" />
+                  Edit Settings
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loadingWebsiteSettings ? (
+              <div className="flex justify-center py-8">
+                <div className="text-gray-500">Loading website settings...</div>
+              </div>
+            ) : editingWebsiteSettings ? (
+              <WebsiteSettingsForm
+                settings={websiteSettings}
+                onSave={(data) => {
+                  if (websiteSettings) {
+                    updateWebsiteSettingsMutation.mutate({ id: websiteSettings.id, data });
+                  } else {
+                    createWebsiteSettingsMutation.mutate(data);
+                  }
+                }}
+                onCancel={() => setEditingWebsiteSettings(false)}
+                isLoading={createWebsiteSettingsMutation.isPending || updateWebsiteSettingsMutation.isPending}
+              />
+            ) : websiteSettings ? (
+              <WebsiteSettingsDisplay settings={websiteSettings} />
+            ) : (
+              <div className="text-center py-8">
+                <Palette className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No Website Settings Configured
+                </h3>
+                <p className="text-gray-500 mb-4">
+                  Customize your website's appearance with colors, fonts, logo, and branding elements.
+                </p>
+                <Button 
+                  onClick={() => setEditingWebsiteSettings(true)}
+                  className="bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Setup Website Settings
                 </Button>
               </div>
             )}

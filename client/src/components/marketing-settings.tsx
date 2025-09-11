@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Globe, Target, Settings, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Globe, Target, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -25,121 +25,8 @@ interface MarketingSettingsFormProps {
 }
 
 export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }: MarketingSettingsFormProps) {
-  const [logoPreview, setLogoPreview] = useState<string>(settings?.logoPath || "");
-  const [uploadingLogo, setUploadingLogo] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>, onChange: (value: string) => void) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: "Invalid file type",
-        description: "Please select an image file (PNG, JPG, GIF, etc.)",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large", 
-        description: "Please select an image smaller than 5MB",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setUploadingLogo(true);
-
-    try {
-      // Convert file to base64
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Data = e.target?.result as string;
-        
-        try {
-          // Check admin authentication
-          const isAdmin = sessionStorage.getItem('adminAuthenticated') === 'true';
-          if (!isAdmin) {
-            toast({
-              title: "Authentication required",
-              description: "Please log in as admin to upload logos",
-              variant: "destructive"
-            });
-            return;
-          }
-
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Admin-Auth': 'true',
-            },
-            body: JSON.stringify({ image: base64Data }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Upload failed');
-          }
-
-          const data = await response.json();
-          
-          if (data.url) {
-            setLogoPreview(data.url);
-            onChange(data.url);
-            
-            // Invalidate logo cache so the new logo appears immediately
-            queryClient.invalidateQueries({ queryKey: ['/api/logo'] });
-            
-            toast({
-              title: "Logo uploaded successfully",
-              description: "Your logo has been updated",
-            });
-          } else {
-            throw new Error('No URL returned from upload');
-          }
-        } catch (error) {
-          console.error('Upload error:', error);
-          toast({
-            title: "Upload failed",
-            description: "Failed to upload logo. Please try again.",
-            variant: "destructive"
-          });
-        } finally {
-          setUploadingLogo(false);
-        }
-      };
-
-      reader.onerror = () => {
-        setUploadingLogo(false);
-        toast({
-          title: "Upload failed",
-          description: "Failed to read image file.",
-          variant: "destructive"
-        });
-      };
-
-      reader.readAsDataURL(file);
-    } catch (error) {
-      console.error('File processing error:', error);
-      setUploadingLogo(false);
-      toast({
-        title: "Upload failed",
-        description: "Failed to process image file.",
-        variant: "destructive"
-      });
-    }
-
-    // Reset file input
-    if (event.target) {
-      event.target.value = '';
-    }
-  };
 
   const form = useForm<InsertMarketingSettings>({
     resolver: zodResolver(settings ? updateMarketingSettingsSchema.omit({ id: true }) : insertMarketingSettingsSchema),
@@ -160,7 +47,6 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
       cookieConsentEnabled: settings?.cookieConsentEnabled || true,
       gdprCompliance: settings?.gdprCompliance || true,
       trackingEnabled: settings?.trackingEnabled || true,
-      logoPath: settings?.logoPath || "",
       conversionGoals: settings?.conversionGoals || []
     }
   });
@@ -490,69 +376,6 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                 )}
               />
 
-              {/* Logo Upload Section */}
-              <div className="border-t pt-4">
-                <FormField
-                  control={form.control}
-                  name="logoPath"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="flex items-center gap-2">
-                        <ImageIcon className="h-4 w-4" />
-                        Website Logo
-                      </FormLabel>
-                      <FormControl>
-                        <div className="space-y-4">
-                          {logoPreview && (
-                            <div className="relative w-32 h-16 border border-border rounded-lg overflow-hidden bg-muted">
-                              <img 
-                                src={logoPreview} 
-                                alt="Logo preview" 
-                                className="w-full h-full object-contain"
-                              />
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="absolute top-1 right-1 h-6 w-6 p-0"
-                                onClick={() => {
-                                  setLogoPreview("");
-                                  field.onChange("");
-                                }}
-                                data-testid="button-remove-logo"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          )}
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => fileInputRef.current?.click()}
-                              disabled={uploadingLogo}
-                              className="flex items-center gap-2"
-                              data-testid="button-upload-logo"
-                            >
-                              <Upload className="h-4 w-4" />
-                              {uploadingLogo ? "Uploading..." : "Upload Logo"}
-                            </Button>
-                          </div>
-                          <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleLogoUpload(e, field.onChange)}
-                            className="hidden"
-                            data-testid="input-logo-file"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
             </div>
           </TabsContent>
         </Tabs>
