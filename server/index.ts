@@ -20,7 +20,8 @@ app.use(helmet({
         "https://www.google.com", 
         "https://www.gstatic.com",
         "https://www.google-analytics.com",
-        "https://ssl.google-analytics.com"
+        "https://ssl.google-analytics.com",
+        "https://replit.com"
       ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
