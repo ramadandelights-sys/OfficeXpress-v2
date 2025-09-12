@@ -8,7 +8,6 @@ declare global {
 
 export interface FacebookPixelConfig {
   pixelId: string;
-  accessToken?: string;
 }
 
 export interface ConversionEvent {
@@ -35,12 +34,10 @@ export interface ConversionEvent {
 
 class FacebookPixel {
   private pixelId: string;
-  private accessToken?: string;
   private isInitialized = false;
 
   constructor(config: FacebookPixelConfig) {
     this.pixelId = config.pixelId;
-    this.accessToken = config.accessToken;
   }
 
   // Initialize Facebook Pixel

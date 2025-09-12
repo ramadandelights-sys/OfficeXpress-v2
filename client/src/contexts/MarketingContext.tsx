@@ -44,7 +44,6 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
       if (marketingSettings.facebookEnabled && marketingSettings.facebookPixelId) {
         initializeFacebookPixel({
           pixelId: marketingSettings.facebookPixelId,
-          accessToken: marketingSettings.facebookAccessToken || undefined,
         });
       }
 
