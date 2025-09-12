@@ -420,7 +420,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMarketingSettings(settingsData: InsertMarketingSettings): Promise<MarketingSettings> {
-    const [settings] = await db.insert(marketingSettings).values([settingsData]).returning();
+    const [settings] = await db.insert(marketingSettings).values([{
+      ...settingsData,
+      conversionGoals: settingsData.conversionGoals || []
+    }]).returning();
     return settings;
   }
 
@@ -428,7 +431,11 @@ export class DatabaseStorage implements IStorage {
     const { id, ...updateData } = settingsData;
     const [settings] = await db
       .update(marketingSettings)
-      .set({ ...updateData, updatedAt: new Date() })
+      .set({ 
+        ...updateData, 
+        conversionGoals: updateData.conversionGoals || [],
+        updatedAt: new Date() 
+      })
       .where(eq(marketingSettings.id, id))
       .returning();
     return settings || null;

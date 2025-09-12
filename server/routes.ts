@@ -680,14 +680,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/marketing-settings", async (req, res) => {
     try {
       const settingsData = insertMarketingSettingsSchema.parse(req.body);
-      const settings = await storage.createMarketingSettings(settingsData);
+      
+      // Check if marketing settings already exist (upsert pattern)
+      const existingSettings = await storage.getMarketingSettings();
+      
+      let settings;
+      if (existingSettings) {
+        // Update existing settings
+        settings = await storage.updateMarketingSettings({ 
+          id: existingSettings.id, 
+          ...settingsData 
+        });
+      } else {
+        // Create new settings
+        settings = await storage.createMarketingSettings(settingsData);
+      }
+      
       res.json(settings);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error('Marketing settings validation error:', error.errors);
         res.status(400).json({ message: "Invalid marketing settings data", errors: error.errors });
       } else {
-        console.error('Failed to create marketing settings:', error);
-        res.status(500).json({ message: "Failed to create marketing settings" });
+        console.error('Failed to save marketing settings:', error);
+        res.status(500).json({ message: "Failed to save marketing settings" });
       }
     }
   });
