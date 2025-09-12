@@ -39,15 +39,15 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
   const marketingSettings = Array.isArray(settings) ? settings[0] as MarketingSettings : settings as MarketingSettings | undefined;
 
   useEffect(() => {
-    if (marketingSettings && !initialized && marketingSettings.trackingEnabled) {
-      // Initialize Facebook Pixel if enabled
+    if (marketingSettings && marketingSettings.trackingEnabled) {
+      // Always initialize Facebook Pixel if enabled (handles hot reloads)
       if (marketingSettings.facebookEnabled && marketingSettings.facebookPixelId) {
         initializeFacebookPixel({
           pixelId: marketingSettings.facebookPixelId,
         });
       }
 
-      // Initialize Google Analytics if enabled
+      // Always initialize Google Analytics if enabled (handles hot reloads)
       if (marketingSettings.googleEnabled && marketingSettings.googleAnalyticsId) {
         initializeGoogleAnalytics({
           measurementId: marketingSettings.googleAnalyticsId,
@@ -56,7 +56,7 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
 
       setInitialized(true);
     }
-  }, [marketingSettings, initialized]);
+  }, [marketingSettings]);
 
   // Facebook Pixel tracking functions
   const trackCorporateBooking = async (data: any) => {
