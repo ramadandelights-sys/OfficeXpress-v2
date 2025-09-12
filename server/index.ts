@@ -12,12 +12,43 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://www.google.com", "https://www.gstatic.com"],
+      scriptSrc: [
+        "'self'", 
+        "'unsafe-inline'", 
+        "https://connect.facebook.net", 
+        "https://www.googletagmanager.com", 
+        "https://www.google.com", 
+        "https://www.gstatic.com",
+        "https://www.google-analytics.com",
+        "https://ssl.google-analytics.com"
+      ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:", "https://www.facebook.com"],
-      connectSrc: ["'self'", "https://www.facebook.com", "https://graph.facebook.com"],
-      frameSrc: ["'self'", "https://www.google.com", "https://www.gstatic.com"],
+      imgSrc: [
+        "'self'", 
+        "data:", 
+        "https:", 
+        "https://www.facebook.com",
+        "https://www.google-analytics.com",
+        "https://ssl.google-analytics.com"
+      ],
+      connectSrc: [
+        "'self'", 
+        "https://www.facebook.com", 
+        "https://graph.facebook.com",
+        "https://connect.facebook.net",
+        "https://www.google.com",
+        "https://www.gstatic.com",
+        "https://www.google-analytics.com",
+        "https://ssl.google-analytics.com",
+        "https://analytics.google.com"
+      ],
+      frameSrc: [
+        "'self'", 
+        "https://www.google.com", 
+        "https://www.gstatic.com",
+        "https://www.facebook.com"
+      ],
     },
   },
   crossOriginEmbedderPolicy: false
