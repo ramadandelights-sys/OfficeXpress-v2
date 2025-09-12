@@ -6,10 +6,10 @@ import type { MarketingSettings } from '@shared/schema';
 
 interface MarketingContextType {
   // Facebook Pixel tracking functions
-  trackCorporateBooking: (data: any) => void;
-  trackRentalBooking: (data: any) => void;
-  trackVendorRegistration: (data: any) => void;
-  trackContact: (data: any) => void;
+  trackCorporateBooking: (data: any) => Promise<void>;
+  trackRentalBooking: (data: any) => Promise<void>;
+  trackVendorRegistration: (data: any) => Promise<void>;
+  trackContact: (data: any) => Promise<void>;
   
   // Google Analytics tracking functions
   trackPageView: (pagePath: string, pageTitle?: string) => void;
@@ -60,12 +60,12 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
   }, [marketingSettings, initialized]);
 
   // Facebook Pixel tracking functions
-  const trackCorporateBooking = (data: any) => {
+  const trackCorporateBooking = async (data: any) => {
     if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
     
     const pixel = getFacebookPixel();
     if (pixel) {
-      pixel.trackCorporateBooking({
+      await pixel.trackCorporateBooking({
         ...data,
         utm_source: marketingSettings.utmSource,
         utm_medium: marketingSettings.utmMedium,
@@ -74,12 +74,12 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
     }
   };
 
-  const trackRentalBooking = (data: any) => {
+  const trackRentalBooking = async (data: any) => {
     if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
     
     const pixel = getFacebookPixel();
     if (pixel) {
-      pixel.trackRentalBooking({
+      await pixel.trackRentalBooking({
         ...data,
         utm_source: marketingSettings.utmSource,
         utm_medium: marketingSettings.utmMedium,
@@ -88,12 +88,12 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
     }
   };
 
-  const trackVendorRegistration = (data: any) => {
+  const trackVendorRegistration = async (data: any) => {
     if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
     
     const pixel = getFacebookPixel();
     if (pixel) {
-      pixel.trackVendorRegistration({
+      await pixel.trackVendorRegistration({
         ...data,
         utm_source: marketingSettings.utmSource,
         utm_medium: marketingSettings.utmMedium,
@@ -102,14 +102,14 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
     }
   };
 
-  const trackContact = (data: any) => {
+  const trackContact = async (data: any) => {
     if (!marketingSettings?.trackingEnabled) return;
     
     // Track with Facebook Pixel
     if (marketingSettings.facebookEnabled) {
       const pixel = getFacebookPixel();
       if (pixel) {
-        pixel.trackContact({
+        await pixel.trackContact({
           ...data,
           utm_source: marketingSettings.utmSource,
           utm_medium: marketingSettings.utmMedium,
@@ -195,10 +195,10 @@ export function useMarketing() {
   if (!context) {
     // Return no-op functions if marketing is not configured
     return {
-      trackCorporateBooking: () => {},
-      trackRentalBooking: () => {},
-      trackVendorRegistration: () => {},
-      trackContact: () => {},
+      trackCorporateBooking: async () => {},
+      trackRentalBooking: async () => {},
+      trackVendorRegistration: async () => {},
+      trackContact: async () => {},
       trackPageView: () => {},
       trackFormSubmission: () => {},
       settings: null,

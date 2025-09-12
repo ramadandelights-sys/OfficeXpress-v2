@@ -620,9 +620,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { pixelId, event, customData, userData, timestamp, actionSource, eventSourceUrl } = req.body;
       
-      const accessToken = process.env.FACEBOOK_ACCESS_TOKEN;
+      // Get access token from database settings instead of environment variables
+      const marketingSettings = await storage.getMarketingSettings();
+      const accessToken = marketingSettings?.facebookAccessToken;
+      
       if (!accessToken) {
-        return res.status(500).json({ error: "Facebook access token not configured" });
+        return res.status(500).json({ error: "Facebook access token not configured in marketing settings" });
+      }
+      
+      if (!marketingSettings?.facebookEnabled) {
+        return res.status(400).json({ error: "Facebook tracking is disabled" });
       }
 
       const conversionData = {

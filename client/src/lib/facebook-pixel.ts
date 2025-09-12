@@ -129,31 +129,31 @@ class FacebookPixel {
   }
 
   // Track contact form submissions
-  trackContact(formData: { name: string; email: string; phone?: string }): void {
+  async trackContact(formData: { name: string; email: string; phone?: string }): Promise<void> {
     const customData = {
       content_type: 'contact_form',
       content_name: 'Contact Form Submission',
     };
 
     const userData = {
-      em: this.hashEmail(formData.email),
-      fn: this.hashData(formData.name.split(' ')[0]),
-      ln: this.hashData(formData.name.split(' ').slice(1).join(' ')),
-      ph: formData.phone ? this.hashData(this.normalizePhone(formData.phone)) : undefined,
+      em: await this.hashEmail(formData.email),
+      fn: await this.hashData(formData.name.split(' ')[0]),
+      ln: await this.hashData(formData.name.split(' ').slice(1).join(' ')),
+      ph: formData.phone ? await this.hashData(this.normalizePhone(formData.phone)) : undefined,
     };
 
     this.trackLead(customData, userData);
   }
 
   // Track corporate booking submissions
-  trackCorporateBooking(formData: { 
+  async trackCorporateBooking(formData: { 
     companyName: string; 
     customerName: string; 
     email: string; 
     phone: string;
     serviceType: string;
     contractType: string;
-  }): void {
+  }): Promise<void> {
     const customData = {
       content_type: 'corporate_booking',
       content_name: 'Corporate Service Booking',
@@ -162,23 +162,23 @@ class FacebookPixel {
     };
 
     const userData = {
-      em: this.hashEmail(formData.email),
-      fn: this.hashData(formData.customerName.split(' ')[0]),
-      ln: this.hashData(formData.customerName.split(' ').slice(1).join(' ')),
-      ph: this.hashData(this.normalizePhone(formData.phone)),
+      em: await this.hashEmail(formData.email),
+      fn: await this.hashData(formData.customerName.split(' ')[0]),
+      ln: await this.hashData(formData.customerName.split(' ').slice(1).join(' ')),
+      ph: await this.hashData(this.normalizePhone(formData.phone)),
     };
 
     this.trackLead(customData, userData);
   }
 
   // Track rental booking submissions
-  trackRentalBooking(formData: {
+  async trackRentalBooking(formData: {
     customerName: string;
     email: string;
     phone: string;
     vehicleType: string;
     pickupDate: string;
-  }): void {
+  }): Promise<void> {
     const customData = {
       content_type: 'rental_booking',
       content_name: 'Vehicle Rental Booking',
@@ -187,23 +187,23 @@ class FacebookPixel {
     };
 
     const userData = {
-      em: this.hashEmail(formData.email),
-      fn: this.hashData(formData.customerName.split(' ')[0]),
-      ln: this.hashData(formData.customerName.split(' ').slice(1).join(' ')),
-      ph: this.hashData(this.normalizePhone(formData.phone)),
+      em: await this.hashEmail(formData.email),
+      fn: await this.hashData(formData.customerName.split(' ')[0]),
+      ln: await this.hashData(formData.customerName.split(' ').slice(1).join(' ')),
+      ph: await this.hashData(this.normalizePhone(formData.phone)),
     };
 
     this.trackLead(customData, userData);
   }
 
   // Track vendor registrations
-  trackVendorRegistration(formData: {
+  async trackVendorRegistration(formData: {
     companyName: string;
     contactPerson: string;
     email: string;
     phone: string;
     vehicleTypes: string[];
-  }): void {
+  }): Promise<void> {
     const customData = {
       content_type: 'vendor_registration',
       content_name: 'Vendor Registration',
@@ -211,10 +211,10 @@ class FacebookPixel {
     };
 
     const userData = {
-      em: this.hashEmail(formData.email),
-      fn: this.hashData(formData.contactPerson.split(' ')[0]),
-      ln: this.hashData(formData.contactPerson.split(' ').slice(1).join(' ')),
-      ph: this.hashData(this.normalizePhone(formData.phone)),
+      em: await this.hashEmail(formData.email),
+      fn: await this.hashData(formData.contactPerson.split(' ')[0]),
+      ln: await this.hashData(formData.contactPerson.split(' ').slice(1).join(' ')),
+      ph: await this.hashData(this.normalizePhone(formData.phone)),
     };
 
     this.trackLead(customData, userData);
