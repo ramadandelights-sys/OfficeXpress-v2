@@ -36,7 +36,7 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
     retry: false,
   });
 
-  const marketingSettings = settings?.[0] as MarketingSettings | undefined;
+  const marketingSettings = Array.isArray(settings) ? settings[0] as MarketingSettings : settings as MarketingSettings | undefined;
 
   useEffect(() => {
     if (marketingSettings && !initialized && marketingSettings.trackingEnabled) {
@@ -45,8 +45,6 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
         initializeFacebookPixel({
           pixelId: marketingSettings.facebookPixelId,
           accessToken: marketingSettings.facebookAccessToken || undefined,
-          enabled: true,
-          testMode: false,
         });
       }
 
@@ -54,8 +52,6 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
       if (marketingSettings.googleEnabled && marketingSettings.googleAnalyticsId) {
         initializeGoogleAnalytics({
           measurementId: marketingSettings.googleAnalyticsId,
-          enabled: true,
-          debugMode: false,
         });
       }
 
@@ -160,7 +156,7 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
     if (marketingSettings.facebookEnabled) {
       const pixel = getFacebookPixel();
       if (pixel) {
-        pixel.trackCustomEvent('FormSubmission', {
+        pixel.trackCustom('FormSubmission', {
           form_name: formName,
           ...dataWithUTM,
         });

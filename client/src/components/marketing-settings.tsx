@@ -31,23 +31,23 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
   const form = useForm<InsertMarketingSettings>({
     resolver: zodResolver(settings ? updateMarketingSettingsSchema.omit({ id: true }) : insertMarketingSettingsSchema),
     defaultValues: {
-      facebookPixelId: settings?.facebookPixelId || "",
-      facebookAccessToken: settings?.facebookAccessToken || "",
-      facebookAppId: settings?.facebookAppId || "",
-      facebookPageId: settings?.facebookPageId || "",
-      facebookEnabled: settings?.facebookEnabled || false,
-      googleAnalyticsId: settings?.googleAnalyticsId || "",
-      googleTagManagerId: settings?.googleTagManagerId || "",
-      googleAdsConversionId: settings?.googleAdsConversionId || "",
-      googleSearchConsoleId: settings?.googleSearchConsoleId || "",
-      googleEnabled: settings?.googleEnabled || false,
-      utmSource: settings?.utmSource || "officexpress",
-      utmMedium: settings?.utmMedium || "website",
-      utmCampaign: settings?.utmCampaign || "default",
-      cookieConsentEnabled: settings?.cookieConsentEnabled || true,
-      gdprCompliance: settings?.gdprCompliance || true,
-      trackingEnabled: settings?.trackingEnabled || true,
-      conversionGoals: settings?.conversionGoals || []
+      facebookPixelId: settings?.facebookPixelId ?? "",
+      facebookAccessToken: settings?.facebookAccessToken ?? "",
+      facebookAppId: settings?.facebookAppId ?? "",
+      facebookPageId: settings?.facebookPageId ?? "",
+      facebookEnabled: settings?.facebookEnabled ?? false,
+      googleAnalyticsId: settings?.googleAnalyticsId ?? "",
+      googleTagManagerId: settings?.googleTagManagerId ?? "",
+      googleAdsConversionId: settings?.googleAdsConversionId ?? "",
+      googleSearchConsoleId: settings?.googleSearchConsoleId ?? "",
+      googleEnabled: settings?.googleEnabled ?? false,
+      utmSource: settings?.utmSource ?? "officexpress",
+      utmMedium: settings?.utmMedium ?? "website",
+      utmCampaign: settings?.utmCampaign ?? "default",
+      cookieConsentEnabled: settings?.cookieConsentEnabled ?? true,
+      gdprCompliance: settings?.gdprCompliance ?? true,
+      trackingEnabled: settings?.trackingEnabled ?? true,
+      conversionGoals: settings?.conversionGoals ?? []
     }
   });
 
@@ -87,7 +87,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                   <FormItem className="col-span-full">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={field.value}
+                        checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                         data-testid="switch-facebook-enabled"
                       />
@@ -106,6 +106,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="123456789012345"
                         data-testid="input-facebook-pixel-id"
                       />
@@ -124,6 +125,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         type="password"
                         placeholder="EAAxxxxxxxxxxxxxxx"
                         data-testid="input-facebook-access-token"
@@ -143,6 +145,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="123456789012345"
                         data-testid="input-facebook-app-id"
                       />
@@ -161,6 +164,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="123456789012345"
                         data-testid="input-facebook-page-id"
                       />
@@ -181,7 +185,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                   <FormItem className="col-span-full">
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={field.value}
+                        checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                         data-testid="switch-google-enabled"
                       />
@@ -200,6 +204,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="G-XXXXXXXXXX"
                         data-testid="input-google-analytics-id"
                       />
@@ -218,6 +223,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="GTM-XXXXXXX"
                         data-testid="input-google-tag-manager-id"
                       />
@@ -236,6 +242,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="AW-123456789"
                         data-testid="input-google-ads-conversion-id"
                       />
@@ -254,6 +261,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="sc-domain:example.com"
                         data-testid="input-google-search-console-id"
                       />
@@ -276,6 +284,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="officexpress"
                         data-testid="input-utm-source"
                       />
@@ -294,6 +303,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="website"
                         data-testid="input-utm-medium"
                       />
@@ -312,6 +322,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                     <FormControl>
                       <Input 
                         {...field} 
+                        value={field.value ?? ""}
                         placeholder="default"
                         data-testid="input-utm-campaign"
                       />
@@ -332,7 +343,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                   <FormItem>
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={field.value}
+                        checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                         data-testid="switch-tracking-enabled"
                       />
@@ -349,7 +360,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                   <FormItem>
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={field.value}
+                        checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                         data-testid="switch-cookie-consent-enabled"
                       />
@@ -366,7 +377,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                   <FormItem>
                     <div className="flex items-center space-x-2">
                       <Switch
-                        checked={field.value}
+                        checked={field.value ?? false}
                         onCheckedChange={field.onChange}
                         data-testid="switch-gdpr-compliance"
                       />
