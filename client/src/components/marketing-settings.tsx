@@ -62,7 +62,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="facebook" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              Facebook
+              Conversions API
             </TabsTrigger>
             <TabsTrigger value="google" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
@@ -79,6 +79,11 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
           </TabsList>
 
           <TabsContent value="facebook" className="mt-6 space-y-4">
+            <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg mb-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Note:</strong> Facebook Pixel is hardcoded for reliability. This section configures the Conversions API for server-side tracking only.
+              </p>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -91,7 +96,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                         onCheckedChange={field.onChange}
                         data-testid="switch-facebook-enabled"
                       />
-                      <FormLabel>Enable Facebook Tracking</FormLabel>
+                      <FormLabel>Enable Conversions API</FormLabel>
                     </div>
                   </FormItem>
                 )}
@@ -102,13 +107,15 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                 name="facebookPixelId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Facebook Pixel ID</FormLabel>
+                    <FormLabel>Facebook Pixel ID (Reference Only)</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value ?? ""}
-                        placeholder="123456789012345"
+                        placeholder="Current: 1298214847902257 (Hardcoded)"
                         data-testid="input-facebook-pixel-id"
+                        className="bg-gray-50 dark:bg-gray-900"
+                        readOnly
                       />
                     </FormControl>
                     <FormMessage />
@@ -121,7 +128,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                 name="facebookAccessToken"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Facebook Access Token</FormLabel>
+                    <FormLabel>Facebook Access Token (Required for Conversions API)</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
@@ -423,17 +430,22 @@ export function MarketingSettingsDisplay({ settings }: MarketingSettingsDisplayP
   return (
     <div className="space-y-6" data-testid="marketing-settings-display">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Facebook Settings */}
+        {/* Facebook Conversions API Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <Globe className="h-5 w-5" />
-              Facebook Tracking
+              Facebook Conversions API
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg mb-3">
+              <p className="text-xs text-blue-800 dark:text-blue-200">
+                <strong>Pixel Status:</strong> Active (Hardcoded: 1298214847902257)
+              </p>
+            </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Status</span>
+              <span className="text-sm font-medium">Conversions API</span>
               <span className={`px-2 py-1 rounded-full text-xs ${
                 settings.facebookEnabled 
                   ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
