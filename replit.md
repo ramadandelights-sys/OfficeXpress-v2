@@ -10,7 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
-### Security Enhancements (Latest)
+### Facebook Pixel Integration Complete (Latest)
+- **Database Persistence**: Fixed upsert logic for marketing settings - settings now save properly
+- **Content Security Policy**: Updated CSP to allow Facebook domains and scripts
+- **Pixel Initialization**: Facebook Pixel now loads correctly with proper error handling
+- **Form Tracking**: Complete integration for tracking corporate bookings, rentals, vendor registrations, and contact forms
+- **Conversions API**: Server-side tracking implemented for improved accuracy and iOS 14.5+ compatibility
+
+### Security Enhancements
 - **Rate Limiting**: All form endpoints protected with 15 requests per 15-minute window
 - **Helmet Security**: HTTP security headers implemented (HSTS, XSS protection, etc.)
 - **Input Validation**: Server-side validation middleware for all form submissions  
