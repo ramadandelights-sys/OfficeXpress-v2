@@ -40,13 +40,7 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
 
   useEffect(() => {
     if (marketingSettings && marketingSettings.trackingEnabled) {
-      // Always initialize Facebook Pixel if enabled (handles hot reloads)
-      if (marketingSettings.facebookEnabled && marketingSettings.facebookPixelId) {
-        initializeFacebookPixel({
-          pixelId: marketingSettings.facebookPixelId,
-        });
-      }
-
+      // Skip Facebook Pixel initialization since we're using hardcoded version
       // Always initialize Google Analytics if enabled (handles hot reloads)
       if (marketingSettings.googleEnabled && marketingSettings.googleAnalyticsId) {
         initializeGoogleAnalytics({
