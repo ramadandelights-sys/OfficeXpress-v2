@@ -139,7 +139,15 @@ class FacebookPixel {
       ph: formData.phone ? await this.hashData(this.normalizePhone(formData.phone)) : undefined,
     };
 
-    this.trackLead(customData, userData);
+    // Use Contact standard event for contact form
+    this.track('Contact', customData);
+    
+    // Also send to Conversions API
+    this.trackConversion({
+      event: 'Contact',
+      customData,
+      userData,
+    });
   }
 
   // Track corporate booking submissions
@@ -151,11 +159,16 @@ class FacebookPixel {
     serviceType: string;
     contractType: string;
   }): Promise<void> {
+    // Assign higher value to monthly contracts
+    const leadValue = formData.contractType === 'monthly' ? 100 : 50;
+    
     const customData = {
       content_type: 'corporate_booking',
       content_name: 'Corporate Service Booking',
       service_type: formData.serviceType,
       contract_type: formData.contractType,
+      currency: 'USD',
+      value: leadValue,
     };
 
     const userData = {
@@ -176,11 +189,23 @@ class FacebookPixel {
     vehicleType: string;
     pickupDate: string;
   }): Promise<void> {
+    // Assign value based on vehicle type (premium vehicles = higher value)
+    const vehicleValues: Record<string, number> = {
+      'ultra-luxury': 75,
+      'luxury': 60,
+      'premium': 50,
+      'standard': 35,
+      'economy': 25,
+      'super-economy': 20,
+    };
+    
     const customData = {
       content_type: 'rental_booking',
       content_name: 'Vehicle Rental Booking',
       vehicle_type: formData.vehicleType,
       pickup_date: formData.pickupDate,
+      currency: 'USD',
+      value: vehicleValues[formData.vehicleType] || 40,
     };
 
     const userData = {
@@ -205,6 +230,7 @@ class FacebookPixel {
       content_type: 'vendor_registration',
       content_name: 'Vendor Registration',
       vehicle_types: formData.vehicleTypes.join(','),
+      status: 'completed',
     };
 
     const userData = {
@@ -214,7 +240,15 @@ class FacebookPixel {
       ph: await this.hashData(this.normalizePhone(formData.phone)),
     };
 
-    this.trackLead(customData, userData);
+    // Use CompleteRegistration standard event for vendor sign-ups
+    this.track('CompleteRegistration', customData);
+    
+    // Also send to Conversions API
+    this.trackConversion({
+      event: 'CompleteRegistration',
+      customData,
+      userData,
+    });
   }
 
   // Utility functions for data hashing (required by Facebook)
