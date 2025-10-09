@@ -14,7 +14,8 @@ Preferred communication style: Simple, everyday language.
 - **Hardcoded Implementation**: Facebook Pixel now directly embedded in HTML head for maximum reliability
 - **Content Security Policy**: Updated CSP to allow Facebook domains and scripts
 - **Proper HTML5 Structure**: Pixel script in head, noscript fallback in body section
-- **Form Tracking**: Complete integration for tracking corporate bookings, rentals, vendor registrations, and contact forms
+- **Standard Events**: Using Facebook Standard Events (Contact, Lead, CompleteRegistration) for Events Manager visibility
+- **Value-Based Tracking**: Conversion values assigned based on contract type and vehicle tier for optimization
 - **Conversions API**: Server-side tracking implemented for improved accuracy and iOS 14.5+ compatibility
 
 ### Security Enhancements
@@ -24,10 +25,14 @@ Preferred communication style: Simple, everyday language.
 - **Sanitization**: Client and server-side content sanitization with DOMPurify
 - **CSRF Protection**: Form validation tokens and secure request handling
 
-### Facebook Pixel Integration
-- **Client-side Tracking**: Facebook Pixel script initialization and event tracking
+### Facebook Pixel Standard Events
+- **Contact Event**: Contact form submissions → Contact standard event
+- **Lead Event**: Corporate and rental bookings → Lead standard event with value tracking
+  - Corporate: $100 (monthly contracts), $50 (other contracts)
+  - Rental: $20-$75 based on vehicle tier (economy to ultra-luxury)
+- **CompleteRegistration Event**: Vendor registrations → CompleteRegistration standard event
 - **Conversions API**: Server-side conversion tracking for improved accuracy
-- **Context Provider**: React context for centralized pixel management
+- **User Data Hashing**: SHA-256 hashing for email, phone, and name (Facebook requirement)
 - **Environment Configuration**: VITE_FACEBOOK_PIXEL_ID and FACEBOOK_ACCESS_TOKEN support
 
 ### Deployment & Production Configuration (Latest)
