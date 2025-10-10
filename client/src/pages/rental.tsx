@@ -157,6 +157,7 @@ export default function Rental() {
   
   const form = useForm<NewRentalBooking>({
     resolver: zodResolver(newRentalBookingSchema),
+    shouldUnregister: false, // Keep form values when fields are hidden
     defaultValues: {
       customerName: "",
       phone: "",
