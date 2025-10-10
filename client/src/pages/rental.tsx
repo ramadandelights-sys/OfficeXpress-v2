@@ -95,52 +95,40 @@ function ProgressIndicator({ currentStep, completedSteps, onStepClick }: {
 
   return (
     <div className="mb-8">
-      <div className="flex items-center justify-between">
-        {steps.map((step, index) => (
-          <div key={step.number} className="flex items-center flex-1">
-            <button
-              type="button"
-              onClick={() => {
-                // Allow clicking on completed steps or current step
-                if (completedSteps.has(step.number) || step.number === currentStep) {
-                  onStepClick(step.number);
-                }
-              }}
-              disabled={!completedSteps.has(step.number) && step.number !== currentStep}
-              className={`flex flex-col items-center flex-1 ${
-                completedSteps.has(step.number) || step.number === currentStep 
-                  ? 'cursor-pointer' 
-                  : 'cursor-not-allowed opacity-50'
-              }`}
-            >
-              <div className="flex items-center w-full">
-                <div className={`
-                  flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold
-                  transition-all duration-200
-                  ${step.number === currentStep 
-                    ? 'bg-primary text-primary-foreground scale-110' 
-                    : completedSteps.has(step.number)
-                    ? 'bg-primary/70 text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                  }
-                `}>
-                  {step.number}
-                </div>
-                {index < steps.length - 1 && (
-                  <div className={`flex-1 h-1 mx-2 rounded ${
-                    completedSteps.has(step.number) ? 'bg-primary' : 'bg-muted'
-                  }`} />
-                )}
-              </div>
-              <span className={`text-xs mt-2 text-center ${
-                step.number === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'
-              }`}>
-                {step.label}
-              </span>
-            </button>
-          </div>
+      {/* Progress Bars */}
+      <div className="flex items-center gap-3 mb-6">
+        {steps.map((step) => (
+          <button
+            key={step.number}
+            type="button"
+            onClick={() => {
+              // Allow clicking on completed steps or current step
+              if (completedSteps.has(step.number) || step.number === currentStep) {
+                onStepClick(step.number);
+              }
+            }}
+            disabled={!completedSteps.has(step.number) && step.number !== currentStep}
+            className={`
+              flex-1 h-2 rounded-full transition-all duration-200
+              ${step.number === currentStep 
+                ? 'bg-primary' 
+                : completedSteps.has(step.number)
+                ? 'bg-primary/60'
+                : 'bg-muted'
+              }
+              ${completedSteps.has(step.number) || step.number === currentStep 
+                ? 'cursor-pointer hover:opacity-80' 
+                : 'cursor-not-allowed opacity-50'
+              }
+            `}
+          />
         ))}
       </div>
+      
+      {/* Step Title - Centered */}
+      <h3 className="text-xl font-semibold text-center mb-6">
+        {steps.find(s => s.number === currentStep)?.label}
+      </h3>
     </div>
   );
 }
