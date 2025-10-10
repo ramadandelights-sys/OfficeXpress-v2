@@ -139,14 +139,7 @@ export default function Rental() {
     return timeOptions.slice(startIndex + 1);
   };
 
-  // Auto-set today as default date on mount, but don't pre-select in calendar
-  useEffect(() => {
-    const today = new Date();
-    setSelectedDate(today);
-    setEndDate(today);
-    form.setValue("startDate", format(today, "yyyy-MM-dd"));
-    form.setValue("endDate", format(today, "yyyy-MM-dd"));
-  }, [form]);
+  // Don't auto-select dates - let users pick their own dates
 
   // Clear end time when start time changes for same-day rentals to avoid invalid combinations
   useEffect(() => {
@@ -498,9 +491,9 @@ export default function Rental() {
                             variant="outline"
                             className="w-full justify-start text-left font-normal"
                             onClick={() => {
-                              // Initialize temp dates to current selection for editing
-                              setTempSelectedDate(selectedDate);
-                              setTempEndDate(endDate);
+                              // Initialize temp dates to current selection (or undefined for first selection)
+                              setTempSelectedDate(selectedDate || undefined);
+                              setTempEndDate(endDate || undefined);
                               setIsCalendarOpen(true);
                             }}
                             data-testid="button-calendar"
