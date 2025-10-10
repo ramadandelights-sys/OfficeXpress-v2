@@ -10,7 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
-### Rental Form Multi-Day Booking Fix (Latest)
+### Rental Form Calendar Selection Fix (Latest)
+- **Date Pre-selection Removed**: Eliminated auto-selection of today's date on page load
+- **Clean Calendar UX**: Calendar now opens with no dates highlighted for first-time users
+- **Single-Click Selection**: Users can select a single date with one click (sets both start and end)
+- **Two-Click Range Selection**: Users can select a date range by clicking start and end dates
+- **No Forced Ranges**: Users no longer forced into unwanted ranges starting from today
+
+### Rental Form Multi-Day Booking Fix
 - **End Time Field Logic**: Fixed validation error when customers select multiple days
 - **Frontend**: End time field hidden for multi-day rentals, only shown for single-day bookings
 - **Backend Default**: Automatically sets end time to 11:59 PM for multi-day rentals
