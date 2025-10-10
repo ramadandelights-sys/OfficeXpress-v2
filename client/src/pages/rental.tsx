@@ -116,7 +116,7 @@ function ProgressIndicator({ currentStep, onStepClick }: {
               ${isCurrent(step.number)
                 ? 'bg-primary' 
                 : isCompleted(step.number)
-                ? 'bg-primary/40'
+                ? 'bg-primary/50'
                 : 'border-2 border-muted-foreground/40 bg-transparent'
               }
               ${canNavigate(step.number)
