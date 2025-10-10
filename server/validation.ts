@@ -253,7 +253,7 @@ export const validateRentalBooking = [
     .matches(/^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(AM|PM)$/)
     .withMessage('Please select a valid start time (e.g., 1:00 PM, 1:30 PM)'),
   body('endTime')
-    .optional()
+    .optional({ values: 'falsy' })
     .matches(/^(1[0-2]|0?[1-9]):[0-5][0-9]\s?(AM|PM)$/)
     .withMessage('Please select a valid end time (e.g., 2:00 PM, 2:30 PM)'),
   body('serviceType')

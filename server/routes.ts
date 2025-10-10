@@ -127,6 +127,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Rental booking routes
   app.post("/api/rental-bookings", validateRentalBooking, async (req: any, res: any) => {
     try {
+      // Set default endTime to 11:59 PM if not provided (for multi-day rentals)
+      if (!req.body.endTime) {
+        req.body.endTime = "11:59 PM";
+      }
+      
       const bookingData = insertRentalBookingSchema.parse(req.body);
       const booking = await storage.createRentalBooking(bookingData);
       res.json(booking);

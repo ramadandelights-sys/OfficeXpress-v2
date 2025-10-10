@@ -213,6 +213,8 @@ export default function Rental() {
       email: data.email || "",
       startDate: selectedDate?.toISOString().split('T')[0] || '',
       endDate: endDate?.toISOString().split('T')[0] || '',
+      // For multi-day rentals, don't send endTime (backend will set default)
+      endTime: isSingleDayRental ? data.endTime : undefined,
     };
     
     mutation.mutate(submitData);
