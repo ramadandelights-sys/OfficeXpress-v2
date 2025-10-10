@@ -81,9 +81,74 @@ const vehicleImages = {
   "40": toyotaCoasterImg
 };
 
+// Progress Indicator Component
+function ProgressIndicator({ currentStep, completedSteps, onStepClick }: { 
+  currentStep: number; 
+  completedSteps: Set<number>; 
+  onStepClick: (step: number) => void;
+}) {
+  const steps = [
+    { number: 1, label: "User Information" },
+    { number: 2, label: "Service Information" },
+    { number: 3, label: "Trip Information" }
+  ];
+
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => (
+          <div key={step.number} className="flex items-center flex-1">
+            <button
+              type="button"
+              onClick={() => {
+                // Allow clicking on completed steps or current step
+                if (completedSteps.has(step.number) || step.number === currentStep) {
+                  onStepClick(step.number);
+                }
+              }}
+              disabled={!completedSteps.has(step.number) && step.number !== currentStep}
+              className={`flex flex-col items-center flex-1 ${
+                completedSteps.has(step.number) || step.number === currentStep 
+                  ? 'cursor-pointer' 
+                  : 'cursor-not-allowed opacity-50'
+              }`}
+            >
+              <div className="flex items-center w-full">
+                <div className={`
+                  flex items-center justify-center w-10 h-10 rounded-full text-sm font-semibold
+                  transition-all duration-200
+                  ${step.number === currentStep 
+                    ? 'bg-primary text-primary-foreground scale-110' 
+                    : completedSteps.has(step.number)
+                    ? 'bg-primary/70 text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                  }
+                `}>
+                  {step.number}
+                </div>
+                {index < steps.length - 1 && (
+                  <div className={`flex-1 h-1 mx-2 rounded ${
+                    completedSteps.has(step.number) ? 'bg-primary' : 'bg-muted'
+                  }`} />
+                )}
+              </div>
+              <span className={`text-xs mt-2 text-center ${
+                step.number === currentStep ? 'font-semibold text-foreground' : 'text-muted-foreground'
+              }`}>
+                {step.label}
+              </span>
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function Rental() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [tempSelectedDate, setTempSelectedDate] = useState<Date | undefined>();
@@ -93,6 +158,12 @@ export default function Rental() {
   
   // Track search string for reactive query param handling
   const [searchString, setSearchString] = useState(window.location.search);
+  
+  // Multi-step form state
+  const [currentStep, setCurrentStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [submittedData, setSubmittedData] = useState<NewRentalBooking | null>(null);
   
   const form = useForm<NewRentalBooking>({
     resolver: zodResolver(newRentalBookingSchema),
@@ -119,10 +190,30 @@ export default function Rental() {
     },
   });
   
+  // Sync step with URL on mount and handle navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const stepParam = urlParams.get('step');
+    const stepNumber = parseInt(stepParam || '1');
+    
+    if (stepNumber >= 1 && stepNumber <= 3) {
+      setCurrentStep(stepNumber);
+    }
+  }, []);
+
   // Listen for navigation changes to update search string
   useEffect(() => {
     const handleLocationChange = () => {
       setSearchString(window.location.search);
+      
+      // Also update step from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const stepParam = urlParams.get('step');
+      const stepNumber = parseInt(stepParam || '1');
+      
+      if (stepNumber >= 1 && stepNumber <= 3) {
+        setCurrentStep(stepNumber);
+      }
     };
     
     // Listen for popstate (back/forward navigation)
@@ -137,19 +228,21 @@ export default function Rental() {
     };
   }, []);
   
-  // Pre-select service type from URL query parameter (updates when search string changes)
+  // Pre-select service type from URL query parameter (updates when on step 2)
   useEffect(() => {
-    const urlParams = new URLSearchParams(searchString);
-    const serviceParam = urlParams.get('service');
-    const validServices = ["personal", "business", "airport", "wedding", "event", "tourism"];
-    
-    if (serviceParam && validServices.includes(serviceParam)) {
-      form.setValue('serviceType', serviceParam as any);
-    } else {
-      // Reset to default when no valid service parameter
-      form.setValue('serviceType', 'business');
+    if (currentStep === 2) {
+      const urlParams = new URLSearchParams(searchString);
+      const serviceParam = urlParams.get('service');
+      const validServices = ["personal", "business", "airport", "wedding", "event", "tourism"];
+      
+      if (serviceParam && validServices.includes(serviceParam)) {
+        form.setValue('serviceType', serviceParam as any);
+      } else if (!form.getValues('serviceType')) {
+        // Only reset to default if no service type is set
+        form.setValue('serviceType', 'business');
+      }
     }
-  }, [searchString, form]);
+  }, [currentStep, searchString, form]);
 
   const watchedVehicleType = form.watch("vehicleType");
   const watchedVehicleCapacity = form.watch("vehicleCapacity");
@@ -159,6 +252,67 @@ export default function Rental() {
 
   // Check if it's a single day rental
   const isSingleDayRental = watchedStartDate && watchedEndDate && watchedStartDate === watchedEndDate;
+
+  // Step validation logic
+  const validateStep = async (step: number): Promise<boolean> => {
+    let fieldsToValidate: (keyof NewRentalBooking)[] = [];
+    
+    switch (step) {
+      case 1:
+        fieldsToValidate = ['customerName', 'phone', 'email'];
+        break;
+      case 2:
+        fieldsToValidate = ['serviceType', 'vehicleType', 'vehicleCapacity'];
+        break;
+      case 3:
+        fieldsToValidate = ['startDate', 'endDate', 'startTime', 'fromLocation', 'toLocation', 'recaptcha'];
+        // Add endTime only for single-day rentals
+        if (isSingleDayRental) {
+          fieldsToValidate.push('endTime');
+        }
+        break;
+    }
+    
+    const result = await form.trigger(fieldsToValidate);
+    return result;
+  };
+
+  // Navigate to a specific step with URL update
+  const navigateToStep = (step: number) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParams.set('step', step.toString());
+    
+    // Preserve service parameter if present
+    const currentService = urlParams.get('service');
+    const newUrl = currentService 
+      ? `/rental?service=${currentService}&step=${step}`
+      : `/rental?step=${step}`;
+    
+    window.history.pushState({}, '', newUrl);
+    setCurrentStep(step);
+  };
+
+  // Handle next step
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    
+    if (isValid) {
+      // Mark current step as completed
+      setCompletedSteps(prev => new Set(prev).add(currentStep));
+      // Move to next step
+      navigateToStep(currentStep + 1);
+    }
+  };
+
+  // Handle back step
+  const handleBack = () => {
+    navigateToStep(currentStep - 1);
+  };
+
+  // Handle progress bar click
+  const handleStepClick = (step: number) => {
+    navigateToStep(step);
+  };
 
   // Get filtered end time options (only times after start time for same-day rentals)
   const getFilteredEndTimeOptions = () => {
@@ -205,15 +359,23 @@ export default function Rental() {
       });
       return response.json();
     },
-    onSuccess: () => {
-      toast({
-        title: "Rental Booking Submitted",
-        description: "Thank you for your rental request. We will contact you shortly to confirm the details.",
-      });
-      form.reset();
-      setSelectedDate(undefined);
-      setEndDate(undefined);
+    onSuccess: (_, variables) => {
+      // Save submitted data and show thank you screen
+      setSubmittedData(variables);
+      setShowThankYou(true);
       queryClient.invalidateQueries({ queryKey: ["/api/rental-bookings"] });
+      
+      // Redirect back to rental form after 5 seconds
+      setTimeout(() => {
+        setShowThankYou(false);
+        setSubmittedData(null);
+        form.reset();
+        setSelectedDate(undefined);
+        setEndDate(undefined);
+        setCurrentStep(1);
+        setCompletedSteps(new Set());
+        setLocation('/rental?step=1');
+      }, 5000);
     },
     onError: (error) => {
       console.error('Booking submission error:', error);
@@ -336,20 +498,93 @@ export default function Rental() {
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto">
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-2xl font-bold text-center">
-                  Book Your Rental
-                </CardTitle>
-                <p className="text-muted-foreground text-center">
-                  Fill out the form below to request your vehicle rental
-                </p>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    {/* Customer Information */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {showThankYou && submittedData ? (
+              <Card>
+                <CardContent className="py-12">
+                  <div className="text-center space-y-6">
+                    <div className="flex justify-center">
+                      <div className="rounded-full bg-primary/10 p-6">
+                        <svg className="w-16 h-16 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    </div>
+                    <h2 className="text-3xl font-bold">Thank You!</h2>
+                    <p className="text-lg text-muted-foreground">
+                      Your rental booking has been submitted successfully.
+                    </p>
+                    
+                    <div className="max-w-md mx-auto bg-muted/50 rounded-lg p-6 space-y-4 text-left">
+                      <h3 className="font-semibold text-center mb-4">Booking Summary</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Name:</span>
+                          <span className="font-medium">{submittedData.customerName}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Phone:</span>
+                          <span className="font-medium">{submittedData.phone}</span>
+                        </div>
+                        {submittedData.email && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Email:</span>
+                            <span className="font-medium">{submittedData.email}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Service:</span>
+                          <span className="font-medium capitalize">{submittedData.serviceType}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Vehicle:</span>
+                          <span className="font-medium capitalize">{submittedData.vehicleCapacity} seater - {submittedData.vehicleType}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">From:</span>
+                          <span className="font-medium">{submittedData.fromLocation}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">To:</span>
+                          <span className="font-medium">{submittedData.toLocation}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Return Trip:</span>
+                          <span className="font-medium">{submittedData.isReturnTrip ? 'Yes' : 'No'}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-muted-foreground">
+                      We will contact you shortly to confirm the details.<br />
+                      Redirecting you back to the form in a moment...
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-2xl font-bold text-center">
+                    Book Your Rental
+                  </CardTitle>
+                  <p className="text-muted-foreground text-center">
+                    Fill out the form below to request your vehicle rental
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  {/* Progress Indicator */}
+                  <ProgressIndicator 
+                    currentStep={currentStep} 
+                    completedSteps={completedSteps} 
+                    onStepClick={handleStepClick}
+                  />
+
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                      {/* Step 1: User Information */}
+                      {currentStep === 1 && (
+                        <>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
                         name="customerName"
@@ -393,26 +628,43 @@ export default function Rental() {
                       />
                     </div>
 
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email Address</FormLabel>
-                          <FormControl>
-                            <Input 
-                              type="email" 
-                              placeholder="your.email@example.com"
-                              {...field}
-                              data-testid="input-email"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                          <FormField
+                            control={form.control}
+                            name="email"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Email Address</FormLabel>
+                                <FormControl>
+                                  <Input 
+                                    type="email" 
+                                    placeholder="your.email@example.com"
+                                    {...field}
+                                    data-testid="input-email"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
 
-                    {/* Service, Vehicle Type, Capacity moved up */}
+                          {/* Honeypot Fields - Hidden from users */}
+                          <HoneypotFields control={form.control} />
+
+                          <Button 
+                            type="button"
+                            onClick={handleNext}
+                            className="w-full"
+                            data-testid="button-next-step-1"
+                          >
+                            Next
+                          </Button>
+                        </>
+                      )}
+
+                      {/* Step 2: Service Information */}
+                      {currentStep === 2 && (
+                        <>
+                          {/* Service, Vehicle Type, Capacity */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
@@ -492,32 +744,57 @@ export default function Rental() {
                       />
                     </div>
 
-                    {/* Vehicle Image Preview */}
-                    {currentVehicleImage && (
-                      <div className="flex justify-center">
-                        <div className="text-center">
-                          <div className="relative w-[200px] h-[200px] mx-auto mb-2">
-                            {imageLoading && (
-                              <div className="absolute inset-0 bg-muted rounded-lg animate-pulse" />
-                            )}
-                            <img 
-                              src={currentVehicleImage}
-                              alt={`${watchedVehicleCapacity} vehicle`}
-                              className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${
-                                imageLoading ? 'opacity-0' : 'opacity-100'
-                              }`}
-                              data-testid="vehicle-image"
-                              onLoad={() => setImageLoading(false)}
-                            />
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {vehicleCapacityOptions.find(option => option.value === watchedVehicleCapacity)?.label} - {watchedVehicleType}
-                          </p>
-                        </div>
-                      </div>
-                    )}
+                          {/* Vehicle Image Preview */}
+                          {currentVehicleImage && (
+                            <div className="flex justify-center">
+                              <div className="text-center">
+                                <div className="relative w-[200px] h-[200px] mx-auto mb-2">
+                                  {imageLoading && (
+                                    <div className="absolute inset-0 bg-muted rounded-lg animate-pulse" />
+                                  )}
+                                  <img 
+                                    src={currentVehicleImage}
+                                    alt={`${watchedVehicleCapacity} vehicle`}
+                                    className={`w-full h-full object-contain rounded-lg transition-opacity duration-200 ${
+                                      imageLoading ? 'opacity-0' : 'opacity-100'
+                                    }`}
+                                    data-testid="vehicle-image"
+                                    onLoad={() => setImageLoading(false)}
+                                  />
+                                </div>
+                                <p className="text-sm text-muted-foreground">
+                                  {vehicleCapacityOptions.find(option => option.value === watchedVehicleCapacity)?.label} - {watchedVehicleType}
+                                </p>
+                              </div>
+                            </div>
+                          )}
 
-                    {/* Rental Period */}
+                          <div className="flex gap-4">
+                            <Button 
+                              type="button"
+                              onClick={handleBack}
+                              variant="outline"
+                              className="w-full"
+                              data-testid="button-back-step-2"
+                            >
+                              Back
+                            </Button>
+                            <Button 
+                              type="button"
+                              onClick={handleNext}
+                              className="w-full"
+                              data-testid="button-next-step-2"
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Step 3: Trip Information */}
+                      {currentStep === 3 && (
+                        <>
+                          {/* Rental Period */}
                     <div className="space-y-4">
                       <FormLabel>Rental Period *</FormLabel>
                       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
@@ -586,169 +863,185 @@ export default function Rental() {
                           </div>
                         </PopoverContent>
                       </Popover>
-                    </div>
-
-                    {/* Time Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="startTime"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <Clock className="w-4 h-4" />
-                              Start Time *
-                            </FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-start-time">
-                                  <SelectValue placeholder="Select start time" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {timeOptions.map((time) => (
-                                  <SelectItem key={time} value={time}>
-                                    {time}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {isSingleDayRental && (
-                        <FormField
-                          control={form.control}
-                          name="endTime"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="flex items-center gap-2">
-                                <Clock className="w-4 h-4" />
-                                End Time *
-                              </FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value || ""}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-end-time">
-                                    <SelectValue placeholder="Select end time" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {getFilteredEndTimeOptions().map((time) => (
-                                    <SelectItem key={time} value={time}>
-                                      {time}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-                    </div>
-
-                    {/* Location Fields */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="fromLocation"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              From *
-                            </FormLabel>
-                            <FormControl>
-                              <SimpleLocationDropdown
-                                value={field.value}
-                                placeholder="Type to search pickup location..."
-                                onSelect={field.onChange}
-                                error={!!form.formState.errors.fromLocation}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="toLocation"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="flex items-center gap-2">
-                              <MapPin className="w-4 h-4" />
-                              To *
-                            </FormLabel>
-                            <FormControl>
-                              <SimpleLocationDropdown
-                                value={field.value}
-                                placeholder="Type to search destination..."
-                                onSelect={field.onChange}
-                                error={!!form.formState.errors.toLocation}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    {/* Return Trip Checkbox */}
-                    <FormField
-                      control={form.control}
-                      name="isReturnTrip"
-                      render={({ field }) => (
-                        <FormItem>
-                          <div className="flex items-center space-x-2">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                                data-testid="checkbox-return-trip"
-                              />
-                            </FormControl>
-                            <FormLabel className="text-sm flex items-center gap-2">
-                              <ArrowLeftRight className="w-4 h-4" />
-                              Both Way / Return Trip?
-                            </FormLabel>
                           </div>
-                          <Alert>
-                            <Info className="h-4 w-4" />
-                            <AlertDescription className="text-sm">
-                              Check this if you need transportation back to your pickup location after reaching your destination.
-                            </AlertDescription>
-                          </Alert>
-                          <FormMessage />
-                        </FormItem>
+
+                          {/* Time Fields */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="startTime"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center gap-2">
+                                    <Clock className="w-4 h-4" />
+                                    Start Time *
+                                  </FormLabel>
+                                  <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl>
+                                      <SelectTrigger data-testid="select-start-time">
+                                        <SelectValue placeholder="Select start time" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      {timeOptions.map((time) => (
+                                        <SelectItem key={time} value={time}>
+                                          {time}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            {isSingleDayRental && (
+                              <FormField
+                                control={form.control}
+                                name="endTime"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4" />
+                                      End Time *
+                                    </FormLabel>
+                                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                                      <FormControl>
+                                        <SelectTrigger data-testid="select-end-time">
+                                          <SelectValue placeholder="Select end time" />
+                                        </SelectTrigger>
+                                      </FormControl>
+                                      <SelectContent>
+                                        {getFilteredEndTimeOptions().map((time) => (
+                                          <SelectItem key={time} value={time}>
+                                            {time}
+                                          </SelectItem>
+                                        ))}
+                                      </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            )}
+                          </div>
+
+                          {/* Location Fields */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="fromLocation"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4" />
+                                    From *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <SimpleLocationDropdown
+                                      value={field.value}
+                                      placeholder="Type to search pickup location..."
+                                      onSelect={field.onChange}
+                                      error={!!form.formState.errors.fromLocation}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+
+                            <FormField
+                              control={form.control}
+                              name="toLocation"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="flex items-center gap-2">
+                                    <MapPin className="w-4 h-4" />
+                                    To *
+                                  </FormLabel>
+                                  <FormControl>
+                                    <SimpleLocationDropdown
+                                      value={field.value}
+                                      placeholder="Type to search destination..."
+                                      onSelect={field.onChange}
+                                      error={!!form.formState.errors.toLocation}
+                                    />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+
+                          {/* Return Trip Checkbox */}
+                          <FormField
+                            control={form.control}
+                            name="isReturnTrip"
+                            render={({ field }) => (
+                              <FormItem>
+                                <div className="flex items-center space-x-2">
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      data-testid="checkbox-return-trip"
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm flex items-center gap-2">
+                                    <ArrowLeftRight className="w-4 h-4" />
+                                    Both Way / Return Trip?
+                                  </FormLabel>
+                                </div>
+                                <Alert>
+                                  <Info className="h-4 w-4" />
+                                  <AlertDescription className="text-sm">
+                                    Check this if you need transportation back to your pickup location after reaching your destination.
+                                  </AlertDescription>
+                                </Alert>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          {/* Separator */}
+                          <div className="border-t pt-6">
+                            <h3 className="text-sm font-semibold mb-4">Security Verification</h3>
+                            
+                            {/* reCAPTCHA */}
+                            <RecaptchaField 
+                              control={form.control} 
+                              name="recaptcha" 
+                              siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                              required={true}
+                            />
+                          </div>
+
+                          <div className="flex gap-4">
+                            <Button 
+                              type="button"
+                              onClick={handleBack}
+                              variant="outline"
+                              className="w-full"
+                              data-testid="button-back-step-3"
+                            >
+                              Back
+                            </Button>
+                            <Button 
+                              type="submit" 
+                              className="w-full" 
+                              disabled={mutation.isPending}
+                              data-testid="button-submit-rental"
+                            >
+                              {mutation.isPending ? "Submitting..." : "Submit Rental Request"}
+                            </Button>
+                          </div>
+                        </>
                       )}
-                    />
-
-                    {/* Honeypot Fields - Hidden from users, trap for bots */}
-                    <HoneypotFields control={form.control} />
-
-                    {/* reCAPTCHA */}
-                    <RecaptchaField 
-                      control={form.control} 
-                      name="recaptcha" 
-                      siteKey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
-                      required={true}
-                    />
-
-                    <Button 
-                      type="submit" 
-                      className="w-full" 
-                      disabled={mutation.isPending}
-                      data-testid="button-submit-rental"
-                    >
-                      {mutation.isPending ? "Submitting..." : "Submit Rental Request"}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </section>
