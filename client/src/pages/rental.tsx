@@ -113,12 +113,12 @@ function ProgressIndicator({ currentStep, completedSteps, onStepClick }: {
               ${step.number === currentStep 
                 ? 'bg-primary' 
                 : completedSteps.has(step.number)
-                ? 'bg-primary/60'
-                : 'bg-muted'
+                ? 'bg-primary/70'
+                : 'bg-muted-foreground/30'
               }
               ${completedSteps.has(step.number) || step.number === currentStep 
                 ? 'cursor-pointer hover:opacity-80' 
-                : 'cursor-not-allowed opacity-50'
+                : 'cursor-not-allowed'
               }
             `}
           />
