@@ -10,7 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
-### Facebook Pixel Integration Complete (Latest)
+### Rental Form Multi-Day Booking Fix (Latest)
+- **End Time Field Logic**: Fixed validation error when customers select multiple days
+- **Frontend**: End time field hidden for multi-day rentals, only shown for single-day bookings
+- **Backend Default**: Automatically sets end time to 11:59 PM for multi-day rentals
+- **Validation Update**: Backend validation now properly handles optional end time using falsy values check
+- **Database Integrity**: Ensures all rental bookings have valid end time values (user-selected or default)
+
+### Facebook Pixel Integration Complete
 - **Hardcoded Implementation**: Facebook Pixel now directly embedded in HTML head for maximum reliability
 - **Content Security Policy**: Updated CSP to allow Facebook domains and scripts
 - **Proper HTML5 Structure**: Pixel script in head, noscript fallback in body section
