@@ -10,7 +10,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
-### Rental Form Calendar Selection Fix (Latest)
+### Service Type Auto-Selection for Rental Form (Latest)
+- **Query Parameter Routing**: Airport Transfers and City Tours links navigate to `/rental?service=airport` and `/rental?service=tourism`
+- **Reactive Pre-selection**: Service type field automatically updates based on URL query parameter
+- **Dynamic Updates**: Service type changes when navigating between different service links
+- **Default Fallback**: Resets to "Business Transportation" when no query parameter present
+- **SPA Navigation Support**: Works for both initial page load and in-page navigation via polling mechanism
+
+### Rental Form Calendar Selection Fix
 - **Date Pre-selection Removed**: Eliminated auto-selection of today's date on page load
 - **Clean Calendar UX**: Calendar now opens with no dates highlighted for first-time users
 - **Single-Click Selection**: Users can select a single date with one click (sets both start and end)
