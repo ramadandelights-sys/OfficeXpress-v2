@@ -82,8 +82,9 @@ const vehicleImages = {
 };
 
 // Progress Indicator Component
-function ProgressIndicator({ currentStep, onStepClick }: { 
-  currentStep: number; 
+function ProgressIndicator({ currentStep, highestStepReached, onStepClick }: { 
+  currentStep: number;
+  highestStepReached: number;
   onStepClick: (step: number) => void;
 }) {
   const steps = [
@@ -95,7 +96,8 @@ function ProgressIndicator({ currentStep, onStepClick }: {
   // Auto-determine completed steps based on current step
   const isCompleted = (stepNumber: number) => stepNumber < currentStep;
   const isCurrent = (stepNumber: number) => stepNumber === currentStep;
-  const canNavigate = (stepNumber: number) => isCompleted(stepNumber) || isCurrent(stepNumber);
+  // Allow navigation to any step up to the highest reached
+  const canNavigate = (stepNumber: number) => stepNumber <= highestStepReached;
 
   return (
     <div className="mb-8">
@@ -152,6 +154,7 @@ export default function Rental() {
   
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1);
+  const [highestStepReached, setHighestStepReached] = useState(1);
   const [showThankYou, setShowThankYou] = useState(false);
   const [submittedData, setSubmittedData] = useState<NewRentalBooking | null>(null);
   
@@ -189,6 +192,10 @@ export default function Rental() {
     
     if (stepNumber >= 1 && stepNumber <= 3) {
       setCurrentStep(stepNumber);
+      // Update highest step reached on initial load
+      if (stepNumber > highestStepReached) {
+        setHighestStepReached(stepNumber);
+      }
     }
   }, []);
 
@@ -204,6 +211,10 @@ export default function Rental() {
       
       if (stepNumber >= 1 && stepNumber <= 3) {
         setCurrentStep(stepNumber);
+        // Update highest step reached during navigation
+        if (stepNumber > highestStepReached) {
+          setHighestStepReached(stepNumber);
+        }
       }
     };
     
@@ -217,7 +228,7 @@ export default function Rental() {
       window.removeEventListener('popstate', handleLocationChange);
       clearInterval(intervalId);
     };
-  }, []);
+  }, [highestStepReached]);
   
   // Pre-select service type from URL query parameter (updates when on step 2)
   useEffect(() => {
@@ -281,6 +292,11 @@ export default function Rental() {
     
     window.history.pushState({}, '', newUrl);
     setCurrentStep(step);
+    
+    // Update highest step reached if moving forward
+    if (step > highestStepReached) {
+      setHighestStepReached(step);
+    }
   };
 
   // Handle next step
@@ -362,6 +378,7 @@ export default function Rental() {
         setSelectedDate(undefined);
         setEndDate(undefined);
         setCurrentStep(1);
+        setHighestStepReached(1);
         setLocation('/rental?step=1');
       }, 5000);
     },
@@ -562,7 +579,8 @@ export default function Rental() {
                 <CardContent>
                   {/* Progress Indicator */}
                   <ProgressIndicator 
-                    currentStep={currentStep} 
+                    currentStep={currentStep}
+                    highestStepReached={highestStepReached}
                     onStepClick={handleStepClick}
                   />
 
