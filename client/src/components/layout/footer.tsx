@@ -137,7 +137,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  href="/contact" 
+                  href="/rental?service=airport" 
                   className="transition-colors"
                   style={linkStyle}
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
@@ -148,7 +148,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link 
-                  href="/contact" 
+                  href="/rental?service=tourism" 
                   className="transition-colors"
                   style={linkStyle}
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}

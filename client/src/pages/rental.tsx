@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useLocation } from "wouter";
 import { Car, Calendar, Clock, MapPin, Users, ArrowLeftRight, Info } from "lucide-react";
 import { format, addDays, differenceInDays, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,9 @@ export default function Rental() {
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [imageLoading, setImageLoading] = useState(false);
   
+  // Track search string for reactive query param handling
+  const [searchString, setSearchString] = useState(window.location.search);
+  
   const form = useForm<NewRentalBooking>({
     resolver: zodResolver(newRentalBookingSchema),
     defaultValues: {
@@ -114,6 +118,38 @@ export default function Rental() {
       recaptcha: ""
     },
   });
+  
+  // Listen for navigation changes to update search string
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setSearchString(window.location.search);
+    };
+    
+    // Listen for popstate (back/forward navigation)
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Also check periodically for programmatic navigation
+    const intervalId = setInterval(handleLocationChange, 100);
+    
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      clearInterval(intervalId);
+    };
+  }, []);
+  
+  // Pre-select service type from URL query parameter (updates when search string changes)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(searchString);
+    const serviceParam = urlParams.get('service');
+    const validServices = ["personal", "business", "airport", "wedding", "event", "tourism"];
+    
+    if (serviceParam && validServices.includes(serviceParam)) {
+      form.setValue('serviceType', serviceParam as any);
+    } else {
+      // Reset to default when no valid service parameter
+      form.setValue('serviceType', 'business');
+    }
+  }, [searchString, form]);
 
   const watchedVehicleType = form.watch("vehicleType");
   const watchedVehicleCapacity = form.watch("vehicleCapacity");

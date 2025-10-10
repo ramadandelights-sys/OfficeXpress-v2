@@ -117,11 +117,11 @@ export default function Home() {
               <h3 className="text-xl font-semibold text-card-foreground mb-4">Airport Transfers</h3>
               <p className="text-muted-foreground mb-6">Reliable airport pickup and drop services with English-speaking, tech-savvy chauffeurs for foreign visitors.</p>
               <Link 
-                href="/contact" 
+                href="/rental?service=airport" 
                 className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="airport-learn-more"
               >
-                Learn More <ArrowRight className="ml-2 w-4 h-4" />
+                Book Now <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </div>
           </div>
