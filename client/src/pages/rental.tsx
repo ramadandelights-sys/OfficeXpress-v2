@@ -82,9 +82,8 @@ const vehicleImages = {
 };
 
 // Progress Indicator Component
-function ProgressIndicator({ currentStep, completedSteps, onStepClick }: { 
+function ProgressIndicator({ currentStep, onStepClick }: { 
   currentStep: number; 
-  completedSteps: Set<number>; 
   onStepClick: (step: number) => void;
 }) {
   const steps = [
@@ -92,6 +91,11 @@ function ProgressIndicator({ currentStep, completedSteps, onStepClick }: {
     { number: 2, label: "Service Information" },
     { number: 3, label: "Trip Information" }
   ];
+
+  // Auto-determine completed steps based on current step
+  const isCompleted = (stepNumber: number) => stepNumber < currentStep;
+  const isCurrent = (stepNumber: number) => stepNumber === currentStep;
+  const canNavigate = (stepNumber: number) => isCompleted(stepNumber) || isCurrent(stepNumber);
 
   return (
     <div className="mb-8">
@@ -102,21 +106,20 @@ function ProgressIndicator({ currentStep, completedSteps, onStepClick }: {
             key={step.number}
             type="button"
             onClick={() => {
-              // Allow clicking on completed steps or current step
-              if (completedSteps.has(step.number) || step.number === currentStep) {
+              if (canNavigate(step.number)) {
                 onStepClick(step.number);
               }
             }}
-            disabled={!completedSteps.has(step.number) && step.number !== currentStep}
+            disabled={!canNavigate(step.number)}
             className={`
               flex-1 h-2 rounded-full transition-all duration-200
-              ${step.number === currentStep 
+              ${isCurrent(step.number)
                 ? 'bg-primary' 
-                : completedSteps.has(step.number)
-                ? 'bg-primary/70'
-                : 'bg-muted-foreground/30'
+                : isCompleted(step.number)
+                ? 'bg-primary/40'
+                : 'border-2 border-muted-foreground/40 bg-transparent'
               }
-              ${completedSteps.has(step.number) || step.number === currentStep 
+              ${canNavigate(step.number)
                 ? 'cursor-pointer hover:opacity-80' 
                 : 'cursor-not-allowed'
               }
@@ -149,7 +152,6 @@ export default function Rental() {
   
   // Multi-step form state
   const [currentStep, setCurrentStep] = useState(1);
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
   const [showThankYou, setShowThankYou] = useState(false);
   const [submittedData, setSubmittedData] = useState<NewRentalBooking | null>(null);
   
@@ -285,8 +287,6 @@ export default function Rental() {
     const isValid = await validateStep(currentStep);
     
     if (isValid) {
-      // Mark current step as completed
-      setCompletedSteps(prev => new Set(prev).add(currentStep));
       // Move to next step
       navigateToStep(currentStep + 1);
     }
@@ -361,7 +361,6 @@ export default function Rental() {
         setSelectedDate(undefined);
         setEndDate(undefined);
         setCurrentStep(1);
-        setCompletedSteps(new Set());
         setLocation('/rental?step=1');
       }, 5000);
     },
@@ -563,7 +562,6 @@ export default function Rental() {
                   {/* Progress Indicator */}
                   <ProgressIndicator 
                     currentStep={currentStep} 
-                    completedSteps={completedSteps} 
                     onStepClick={handleStepClick}
                   />
 
