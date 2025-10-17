@@ -157,20 +157,22 @@ export default function Corporate() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Mobile Carousel - visible only on mobile */}
-            <div className="lg:hidden">
-              <div className="overflow-hidden" ref={emblaRef}>
+            <div className="lg:hidden w-full">
+              <div className="overflow-hidden -mx-4" ref={emblaRef}>
                 <div className="flex">
                   {services.map((service, index) => {
                     const IconComponent = service.icon;
                     return (
-                      <div key={index} className="flex-[0_0_100%] min-w-0 px-2">
-                        <div className="flex items-start space-x-4 p-4 bg-background/50 rounded-lg">
-                          <div className={`w-12 h-12 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                            <IconComponent className={`${service.iconColor} w-6 h-6`} />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-xl font-semibold text-card-foreground mb-2">{service.title}</h3>
-                            <p className="text-muted-foreground">{service.description}</p>
+                      <div key={index} className="flex-[0_0_100%] min-w-0 px-4">
+                        <div className="bg-background rounded-lg p-4 border border-border h-full">
+                          <div className="flex items-start gap-4">
+                            <div className={`w-12 h-12 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                              <IconComponent className={`${service.iconColor} w-6 h-6`} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="text-lg font-semibold text-card-foreground mb-2">{service.title}</h3>
+                              <p className="text-sm text-muted-foreground leading-relaxed">{service.description}</p>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -179,7 +181,7 @@ export default function Corporate() {
                 </div>
               </div>
               {/* Carousel indicators */}
-              <div className="flex justify-center gap-2 mt-4">
+              <div className="flex justify-center gap-2 mt-6">
                 {services.map((_, index) => (
                   <div key={index} className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                 ))}
