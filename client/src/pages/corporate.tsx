@@ -137,15 +137,15 @@ export default function Corporate() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Header Section */}
-      <section className="py-12 md:py-16 bg-gradient-to-br from-brand-primary to-brand-secondary">
+      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
+            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
               Corporate Transportation Services
             </h1>
-            <p className="text-lg md:text-xl text-primary-foreground/80 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
             </p>
           </div>
@@ -153,7 +153,7 @@ export default function Corporate() {
       </section>
 
       {/* Services Details & Form */}
-      <section className="py-8 md:py-12 bg-card">
+      <section className="py-8 md:py-12 bg-muted">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-start">
             {/* Mobile Carousel - visible only on mobile */}
