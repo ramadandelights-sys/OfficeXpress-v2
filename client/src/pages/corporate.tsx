@@ -155,9 +155,9 @@ export default function Corporate() {
       {/* Services Details & Form */}
       <section className="py-8 md:py-12 bg-muted">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-start max-w-full">
+          <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 lg:gap-8 lg:items-start">
             {/* Mobile Carousel - visible only on mobile */}
-            <div className="lg:hidden w-full">
+            <div className="lg:hidden">
               <div className="overflow-hidden -mx-2" ref={emblaRef}>
                 <div className="flex">
                   {services.map((service, index) => {
@@ -208,7 +208,7 @@ export default function Corporate() {
               </div>
             </div>
 
-            <Card className="w-full max-w-full">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building className="w-6 h-6" />
