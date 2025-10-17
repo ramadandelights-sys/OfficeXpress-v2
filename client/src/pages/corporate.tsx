@@ -137,15 +137,15 @@ export default function Corporate() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header Section */}
       <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-12 md:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent leading-tight">
               Corporate Transportation Services
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
+            <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
               Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
             </p>
           </div>
@@ -155,16 +155,16 @@ export default function Corporate() {
       {/* Services Details & Form */}
       <section className="py-8 md:py-12 bg-muted">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-start">
+          <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-start max-w-full">
             {/* Mobile Carousel - visible only on mobile */}
-            <div className="lg:hidden">
-              <div className="overflow-hidden" ref={emblaRef}>
+            <div className="lg:hidden w-full">
+              <div className="overflow-hidden -mx-2" ref={emblaRef}>
                 <div className="flex">
                   {services.map((service, index) => {
                     const IconComponent = service.icon;
                     return (
-                      <div key={index} className="flex-[0_0_100%] min-w-0">
-                        <div className="bg-background rounded-lg p-4 border border-border mx-1">
+                      <div key={index} className="flex-[0_0_100%] min-w-0 px-2">
+                        <div className="bg-background rounded-lg p-4 border border-border">
                           <div className="flex items-start gap-3">
                             <div className={`w-10 h-10 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
                               <IconComponent className={`${service.iconColor} w-5 h-5`} />
@@ -208,7 +208,7 @@ export default function Corporate() {
               </div>
             </div>
 
-            <Card>
+            <Card className="w-full max-w-full">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building className="w-6 h-6" />
