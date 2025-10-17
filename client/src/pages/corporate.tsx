@@ -139,13 +139,13 @@ export default function Corporate() {
   return (
     <div className="min-h-screen">
       {/* Header Section */}
-      <section className="py-16 bg-gradient-to-br from-brand-primary to-brand-secondary">
+      <section className="py-12 md:py-16 bg-gradient-to-br from-brand-primary to-brand-secondary">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
               Corporate Transportation Services
             </h1>
-            <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto">
+            <p className="text-lg md:text-xl text-primary-foreground/80 max-w-3xl mx-auto leading-relaxed">
               Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
             </p>
           </div>
@@ -153,9 +153,9 @@ export default function Corporate() {
       </section>
 
       {/* Services Details & Form */}
-      <section className="py-16 bg-card">
+      <section className="py-8 md:py-12 bg-card">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-start">
+          <div className="grid lg:grid-cols-2 gap-8 items-start">
             {/* Mobile Carousel - visible only on mobile */}
             <div className="lg:hidden">
               <div className="overflow-hidden" ref={emblaRef}>
@@ -181,7 +181,7 @@ export default function Corporate() {
                 </div>
               </div>
               {/* Carousel indicators */}
-              <div className="flex justify-center gap-2 mt-6">
+              <div className="flex justify-center gap-2 mt-4">
                 {services.map((_, index) => (
                   <div key={index} className="w-2 h-2 rounded-full bg-muted-foreground/30" />
                 ))}
@@ -190,7 +190,7 @@ export default function Corporate() {
 
             {/* Desktop List - visible only on desktop */}
             <div className="hidden lg:block">
-              <div className="space-y-8">
+              <div className="space-y-6">
                 {services.map((service, index) => {
                   const IconComponent = service.icon;
                   return (
