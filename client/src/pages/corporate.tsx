@@ -157,20 +157,20 @@ export default function Corporate() {
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
             {/* Mobile Carousel - visible only on mobile */}
-            <div className="lg:hidden w-full">
-              <div className="overflow-hidden -mx-4" ref={emblaRef}>
+            <div className="lg:hidden">
+              <div className="overflow-hidden" ref={emblaRef}>
                 <div className="flex">
                   {services.map((service, index) => {
                     const IconComponent = service.icon;
                     return (
-                      <div key={index} className="flex-[0_0_100%] min-w-0 px-4">
-                        <div className="bg-background rounded-lg p-4 border border-border h-full">
-                          <div className="flex items-start gap-4">
-                            <div className={`w-12 h-12 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                              <IconComponent className={`${service.iconColor} w-6 h-6`} />
+                      <div key={index} className="flex-[0_0_100%] min-w-0">
+                        <div className="bg-background rounded-lg p-4 border border-border mx-1">
+                          <div className="flex items-start gap-3">
+                            <div className={`w-10 h-10 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                              <IconComponent className={`${service.iconColor} w-5 h-5`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="text-lg font-semibold text-card-foreground mb-2">{service.title}</h3>
+                              <h3 className="text-base font-semibold text-card-foreground mb-2">{service.title}</h3>
                               <p className="text-sm text-muted-foreground leading-relaxed">{service.description}</p>
                             </div>
                           </div>
