@@ -103,7 +103,7 @@ export default function Corporate() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              Executive Corporate Transportation Services
+              Corporate Transportation Services
             </h1>
             <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto">
               Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
@@ -123,8 +123,8 @@ export default function Corporate() {
                     <Route className="text-brand-primary w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Employee Pick & Drop</h3>
-                    <p className="text-muted-foreground">Daily transportation for your employees with fixed routes and timings. Reliable and punctual service that ensures your team arrives on time.</p>
+                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Daily Employee Commutes</h3>
+                    <p className="text-muted-foreground">Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking, ensuring your entire team arrives on time, every time, and ready for peak productivity.</p>
                   </div>
                 </div>
 
@@ -133,8 +133,18 @@ export default function Corporate() {
                     <Calendar className="text-brand-secondary w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Monthly Contracts</h3>
-                    <p className="text-muted-foreground">Cost-effective monthly transportation packages for businesses. Flexible scheduling and dedicated vehicles for your corporate needs.</p>
+                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Flexible Monthly Pay-Per-Use Contracts</h3>
+                    <p className="text-muted-foreground">Dedicated fleet access designed for maximum flexibility and integrated control. Our packages offer highly cost-effective monthly transportation for businesses, featuring flexible scheduling and dedicated vehicles that primarily serve fixed routing needs while offering limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities for optimal employee comfort.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-brand-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Building className="text-brand-primary w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold text-card-foreground mb-2">On-Demand (Ad Hoc) Car Requirements</h3>
+                    <p className="text-muted-foreground">Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, providing rapid response without contractual commitment.</p>
                   </div>
                 </div>
 
@@ -143,8 +153,8 @@ export default function Corporate() {
                     <Plane className="text-accent-foreground w-6 h-6" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Airport Transfers</h3>
-                    <p className="text-muted-foreground">Professional airport pickup and drop services for business travelers. Premium vehicles with professional chauffeurs.</p>
+                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Executive & VIP Airport Transfers</h3>
+                    <p className="text-muted-foreground">Ensure a flawless welcome and departure for your most valuable travelers. We provide premium, professional airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy the comfort of our premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality.</p>
                   </div>
                 </div>
               </div>
