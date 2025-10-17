@@ -103,10 +103,10 @@ export default function Corporate() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              Corporate Transportation Services
+              Executive Corporate Transportation Services
             </h1>
             <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto">
-              Streamline your company's transportation needs with our reliable corporate services including employee pick & drop, monthly contracts, and special airport transfers.
+              Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
             </p>
           </div>
         </div>
