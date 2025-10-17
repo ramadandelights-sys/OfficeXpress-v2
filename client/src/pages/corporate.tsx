@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,10 +14,50 @@ import { insertCorporateBookingSchema, type InsertCorporateBooking } from "@shar
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
 import { z } from "zod";
+import useEmblaCarousel from "embla-carousel-react";
+import Autoplay from "embla-carousel-autoplay";
+
+// Services data
+const services = [
+  {
+    icon: Route,
+    iconBg: "bg-brand-primary/20",
+    iconColor: "text-brand-primary",
+    title: "Daily Employee Commutes",
+    description: "Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking, ensuring your entire team arrives on time, every time, and ready for peak productivity."
+  },
+  {
+    icon: Calendar,
+    iconBg: "bg-brand-secondary/20",
+    iconColor: "text-brand-secondary",
+    title: "Flexible Monthly Pay-Per-Use Contracts",
+    description: "Dedicated fleet access designed for maximum flexibility and integrated control. Our packages offer highly cost-effective monthly transportation for businesses, featuring flexible scheduling and dedicated vehicles that primarily serve fixed routing needs while offering limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities for optimal employee comfort."
+  },
+  {
+    icon: Building,
+    iconBg: "bg-brand-primary/20",
+    iconColor: "text-brand-primary",
+    title: "On-Demand (Ad Hoc) Car Requirements",
+    description: "Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, providing rapid response without contractual commitment."
+  },
+  {
+    icon: Plane,
+    iconBg: "bg-brand-accent/20",
+    iconColor: "text-accent-foreground",
+    title: "Executive & VIP Airport Transfers",
+    description: "Ensure a flawless welcome and departure for your most valuable travelers. We provide premium, professional airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy the comfort of our premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality."
+  }
+];
 
 export default function Corporate() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Carousel for mobile
+  const [emblaRef] = useEmblaCarousel(
+    { loop: true },
+    [Autoplay({ delay: 4000, stopOnInteraction: false })]
+  );
   
   const corporateBookingWithAntiSpam = insertCorporateBookingSchema.extend({
     email: insertCorporateBookingSchema.shape.email.refine((email) => {
@@ -116,47 +156,53 @@ export default function Corporate() {
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <div className="grid lg:grid-cols-2 gap-12 items-start">
-            <div>
+            {/* Mobile Carousel - visible only on mobile */}
+            <div className="lg:hidden">
+              <div className="overflow-hidden" ref={emblaRef}>
+                <div className="flex">
+                  {services.map((service, index) => {
+                    const IconComponent = service.icon;
+                    return (
+                      <div key={index} className="flex-[0_0_100%] min-w-0 px-2">
+                        <div className="flex items-start space-x-4 p-4 bg-background/50 rounded-lg">
+                          <div className={`w-12 h-12 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                            <IconComponent className={`${service.iconColor} w-6 h-6`} />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold text-card-foreground mb-2">{service.title}</h3>
+                            <p className="text-muted-foreground">{service.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {/* Carousel indicators */}
+              <div className="flex justify-center gap-2 mt-4">
+                {services.map((_, index) => (
+                  <div key={index} className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                ))}
+              </div>
+            </div>
+
+            {/* Desktop List - visible only on desktop */}
+            <div className="hidden lg:block">
               <div className="space-y-8">
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-brand-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Route className="text-brand-primary w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Daily Employee Commutes</h3>
-                    <p className="text-muted-foreground">Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking, ensuring your entire team arrives on time, every time, and ready for peak productivity.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-brand-secondary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Calendar className="text-brand-secondary w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Flexible Monthly Pay-Per-Use Contracts</h3>
-                    <p className="text-muted-foreground">Dedicated fleet access designed for maximum flexibility and integrated control. Our packages offer highly cost-effective monthly transportation for businesses, featuring flexible scheduling and dedicated vehicles that primarily serve fixed routing needs while offering limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities for optimal employee comfort.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-brand-primary/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Building className="text-brand-primary w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">On-Demand (Ad Hoc) Car Requirements</h3>
-                    <p className="text-muted-foreground">Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, providing rapid response without contractual commitment.</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start space-x-4">
-                  <div className="w-12 h-12 bg-brand-accent/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                    <Plane className="text-accent-foreground w-6 h-6" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-card-foreground mb-2">Executive & VIP Airport Transfers</h3>
-                    <p className="text-muted-foreground">Ensure a flawless welcome and departure for your most valuable travelers. We provide premium, professional airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy the comfort of our premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality.</p>
-                  </div>
-                </div>
+                {services.map((service, index) => {
+                  const IconComponent = service.icon;
+                  return (
+                    <div key={index} className="flex items-start space-x-4">
+                      <div className={`w-12 h-12 ${service.iconBg} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                        <IconComponent className={`${service.iconColor} w-6 h-6`} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-semibold text-card-foreground mb-2">{service.title}</h3>
+                        <p className="text-muted-foreground">{service.description}</p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
