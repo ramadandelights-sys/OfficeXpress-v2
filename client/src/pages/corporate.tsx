@@ -155,7 +155,7 @@ export default function Corporate() {
       {/* Services Details & Form */}
       <section className="py-8 md:py-12 bg-card">
         <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-8 items-start">
+          <div className="grid lg:grid-cols-2 gap-4 lg:gap-8 items-start">
             {/* Mobile Carousel - visible only on mobile */}
             <div className="lg:hidden">
               <div className="overflow-hidden" ref={emblaRef}>
