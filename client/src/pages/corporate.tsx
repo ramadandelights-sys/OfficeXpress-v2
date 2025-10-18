@@ -24,28 +24,28 @@ const services = [
     iconBg: "bg-brand-primary/20",
     iconColor: "text-brand-primary",
     title: "Daily Employee Commutes",
-    description: "Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking, ensuring your entire team arrives on time, every time, and ready for peak productivity."
+    description: "Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking. This complete system ensures your entire team arrives on time, every time, ready for peak productivity and minimizing all delays."
   },
   {
     icon: Calendar,
     iconBg: "bg-brand-secondary/20",
     iconColor: "text-brand-secondary",
     title: "Flexible Monthly Pay-Per-Use Contracts",
-    description: "Dedicated fleet access designed for maximum flexibility and integrated control. Our packages offer highly cost-effective monthly transportation for businesses, featuring flexible scheduling and dedicated vehicles that primarily serve fixed routing needs while offering limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities for optimal employee comfort."
+    description: "Dedicated fleet access designed for maximum flexibility and integrated control. Our cost-effective monthly packages feature dedicated vehicles for fixed routing needs and offer limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities."
   },
   {
     icon: Building,
     iconBg: "bg-brand-primary/20",
     iconColor: "text-brand-primary",
     title: "On-Demand (Ad Hoc) Car Requirements",
-    description: "Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, providing rapid response without contractual commitment."
+    description: "Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, ensuring rapid response and premium quality without contractual commitment."
   },
   {
     icon: Plane,
     iconBg: "bg-brand-accent/20",
     iconColor: "text-accent-foreground",
     title: "Executive & VIP Airport Transfers",
-    description: "Ensure a flawless welcome and departure for your most valuable travelers. We provide premium, professional airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy the comfort of our premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality."
+    description: "Ensure a flawless welcome and departure for your most valuable travelers. We provide premium airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality."
   }
 ];
 
