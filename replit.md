@@ -57,7 +57,9 @@ Preferred communication style: Simple, everyday language.
 - **Environment Configuration**: VITE_FACEBOOK_PIXEL_ID and FACEBOOK_ACCESS_TOKEN support
 
 ### Google Analytics 4 (GA4) Integration
-- **Measurement ID**: G-MFZ89N6C2R hardcoded in HTML head for immediate tracking
+- **Dynamic Initialization**: GA4 initialized through MarketingContext based on admin settings
+- **Default Measurement ID**: G-MFZ89N6C2R (configurable via admin panel or VITE_GA4_MEASUREMENT_ID)
+- **Conditional Loading**: Only loads when trackingEnabled and googleEnabled are true in marketing settings
 - **Event Tracking**: Comprehensive event tracking for all conversion points
   - **generate_lead**: Corporate and rental bookings with value-based tracking
     - Corporate: $100 (monthly contracts), $50 (other contracts)
