@@ -56,6 +56,21 @@ Preferred communication style: Simple, everyday language.
 - **User Data Hashing**: SHA-256 hashing for email, phone, and name (Facebook requirement)
 - **Environment Configuration**: VITE_FACEBOOK_PIXEL_ID and FACEBOOK_ACCESS_TOKEN support
 
+### Google Analytics 4 (GA4) Integration
+- **Measurement ID**: G-MFZ89N6C2R hardcoded in HTML head for immediate tracking
+- **Event Tracking**: Comprehensive event tracking for all conversion points
+  - **generate_lead**: Corporate and rental bookings with value-based tracking
+    - Corporate: $100 (monthly contracts), $50 (other contracts)
+    - Rental: $20-$75 based on vehicle tier (economy to ultra-luxury)
+  - **sign_up**: Vendor registrations with vehicle type tracking
+  - **contact**: Contact form submissions (GA4 recommended event)
+- **Custom Parameters**: All events include service type, vehicle type, contract details, UTM parameters
+- **Campaign Attribution**: Full UTM parameter tracking (utm_source, utm_medium, utm_campaign)
+- **Enhanced Measurement**: Automatic tracking of page views, scrolls, outbound clicks
+- **Content Security Policy**: CSP configured to allow Google Analytics and Tag Manager domains
+- **Dual Tracking**: All forms tracked with both Facebook Pixel and Google Analytics
+- **Environment Variable**: VITE_GA4_MEASUREMENT_ID for configuration flexibility
+
 ### Deployment & Production Configuration (Latest)
 - **API Base URL System**: Environment-aware API configuration for production deployment
 - **Location Search Fix**: Fixed location autocomplete to work properly on deployed site

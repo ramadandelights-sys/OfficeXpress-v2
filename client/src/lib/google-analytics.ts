@@ -109,59 +109,145 @@ class GoogleAnalytics {
   }
 
   // Track corporate booking
-  trackCorporateBooking(data: any): void {
+  trackCorporateBooking(data: {
+    companyName: string;
+    customerName: string;
+    email: string;
+    phone: string;
+    serviceType: string;
+    contractType: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    [key: string]: any;
+  }): void {
+    // Assign higher value to monthly contracts
+    const leadValue = data.contractType === 'monthly' ? 100 : 50;
+
+    // Track as generate_lead event (GA4 recommended event)
     this.trackEvent({
-      event: 'corporate_booking',
-      eventCategory: 'conversion',
-      eventAction: 'booking_submit',
-      eventLabel: 'corporate',
+      event: 'generate_lead',
+      eventCategory: 'Lead',
+      eventAction: 'corporate_booking',
+      eventLabel: 'Corporate Service Booking',
+      value: leadValue,
       customParameters: {
+        currency: 'USD',
         service_type: data.serviceType,
-        vehicle_type: data.vehicleType,
-        capacity: data.capacity,
+        contract_type: data.contractType,
+        company_name: data.companyName,
+        form_type: 'corporate_booking',
+        utm_source: data.utm_source,
+        utm_medium: data.utm_medium,
+        utm_campaign: data.utm_campaign,
       },
     });
   }
 
   // Track rental booking
-  trackRentalBooking(data: any): void {
+  trackRentalBooking(data: {
+    customerName: string;
+    email: string;
+    phone: string;
+    vehicleType: string;
+    vehicleCapacity: string;
+    pickupDate: string;
+    serviceType: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    [key: string]: any;
+  }): void {
+    // Assign value based on vehicle type (premium vehicles = higher value)
+    const vehicleValues: Record<string, number> = {
+      'ultra-luxury': 75,
+      'luxury': 60,
+      'premium': 50,
+      'standard': 35,
+      'economy': 25,
+      'super-economy': 20,
+    };
+    
+    const leadValue = vehicleValues[data.vehicleType] || 40;
+
+    // Track as generate_lead event (GA4 recommended event)
     this.trackEvent({
-      event: 'rental_booking',
-      eventCategory: 'conversion',
-      eventAction: 'booking_submit',
-      eventLabel: 'rental',
+      event: 'generate_lead',
+      eventCategory: 'Lead',
+      eventAction: 'rental_booking',
+      eventLabel: 'Vehicle Rental Booking',
+      value: leadValue,
       customParameters: {
-        service_type: data.serviceType,
+        currency: 'USD',
         vehicle_type: data.vehicleType,
-        capacity: data.capacity,
-        duration: data.duration,
+        vehicle_capacity: data.vehicleCapacity,
+        service_type: data.serviceType,
+        pickup_date: data.pickupDate,
+        form_type: 'rental_booking',
+        utm_source: data.utm_source,
+        utm_medium: data.utm_medium,
+        utm_campaign: data.utm_campaign,
       },
     });
   }
 
   // Track vendor registration
-  trackVendorRegistration(data: any): void {
+  trackVendorRegistration(data: {
+    companyName: string;
+    contactPerson: string;
+    email: string;
+    phone: string;
+    vehicleTypes: string[];
+    experience: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    [key: string]: any;
+  }): void {
+    // Track as sign_up event (GA4 recommended event)
     this.trackEvent({
-      event: 'vendor_registration',
-      eventCategory: 'conversion',
-      eventAction: 'registration_submit',
-      eventLabel: 'vendor',
+      event: 'sign_up',
+      eventCategory: 'Registration',
+      eventAction: 'vendor_registration',
+      eventLabel: 'Vendor Registration',
       customParameters: {
-        vehicle_types: data.vehicleTypes,
-        experience: data.experience,
+        method: 'website_form',
+        company_name: data.companyName,
+        vehicle_types: data.vehicleTypes.join(','),
+        vehicle_types_count: data.vehicleTypes.length,
+        experience_years: data.experience,
+        form_type: 'vendor_registration',
+        utm_source: data.utm_source,
+        utm_medium: data.utm_medium,
+        utm_campaign: data.utm_campaign,
       },
     });
   }
 
   // Track contact form
-  trackContactSubmission(data: any): void {
+  trackContactSubmission(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    subject?: string;
+    message?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    [key: string]: any;
+  }): void {
+    // Track as contact event (GA4 recommended event)
     this.trackEvent({
-      event: 'contact_submit',
-      eventCategory: 'engagement',
+      event: 'contact',
+      eventCategory: 'Contact',
       eventAction: 'form_submit',
-      eventLabel: 'contact',
+      eventLabel: 'Contact Form',
       customParameters: {
+        form_type: 'contact',
         subject: data.subject,
+        utm_source: data.utm_source,
+        utm_medium: data.utm_medium,
+        utm_campaign: data.utm_campaign,
       },
     });
   }

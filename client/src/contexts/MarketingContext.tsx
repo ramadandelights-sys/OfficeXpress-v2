@@ -54,44 +54,83 @@ export function MarketingProvider({ children }: MarketingProviderProps) {
 
   // Facebook Pixel tracking functions
   const trackCorporateBooking = async (data: any) => {
-    if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
+    if (!marketingSettings?.trackingEnabled) return;
     
-    const pixel = getFacebookPixel();
-    if (pixel) {
-      await pixel.trackCorporateBooking({
-        ...data,
-        utm_source: marketingSettings.utmSource,
-        utm_medium: marketingSettings.utmMedium,
-        utm_campaign: marketingSettings.utmCampaign,
-      });
+    const dataWithUTM = {
+      ...data,
+      utm_source: marketingSettings.utmSource,
+      utm_medium: marketingSettings.utmMedium,
+      utm_campaign: marketingSettings.utmCampaign,
+    };
+
+    // Track with Facebook Pixel
+    if (marketingSettings.facebookEnabled) {
+      const pixel = getFacebookPixel();
+      if (pixel) {
+        await pixel.trackCorporateBooking(dataWithUTM);
+      }
+    }
+
+    // Track with Google Analytics
+    if (marketingSettings.googleEnabled) {
+      const ga = getGoogleAnalytics();
+      if (ga) {
+        ga.trackCorporateBooking(dataWithUTM);
+      }
     }
   };
 
   const trackRentalBooking = async (data: any) => {
-    if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
+    if (!marketingSettings?.trackingEnabled) return;
     
-    const pixel = getFacebookPixel();
-    if (pixel) {
-      await pixel.trackRentalBooking({
-        ...data,
-        utm_source: marketingSettings.utmSource,
-        utm_medium: marketingSettings.utmMedium,
-        utm_campaign: marketingSettings.utmCampaign,
-      });
+    const dataWithUTM = {
+      ...data,
+      utm_source: marketingSettings.utmSource,
+      utm_medium: marketingSettings.utmMedium,
+      utm_campaign: marketingSettings.utmCampaign,
+    };
+
+    // Track with Facebook Pixel
+    if (marketingSettings.facebookEnabled) {
+      const pixel = getFacebookPixel();
+      if (pixel) {
+        await pixel.trackRentalBooking(dataWithUTM);
+      }
+    }
+
+    // Track with Google Analytics
+    if (marketingSettings.googleEnabled) {
+      const ga = getGoogleAnalytics();
+      if (ga) {
+        ga.trackRentalBooking(dataWithUTM);
+      }
     }
   };
 
   const trackVendorRegistration = async (data: any) => {
-    if (!marketingSettings?.trackingEnabled || !marketingSettings?.facebookEnabled) return;
+    if (!marketingSettings?.trackingEnabled) return;
     
-    const pixel = getFacebookPixel();
-    if (pixel) {
-      await pixel.trackVendorRegistration({
-        ...data,
-        utm_source: marketingSettings.utmSource,
-        utm_medium: marketingSettings.utmMedium,
-        utm_campaign: marketingSettings.utmCampaign,
-      });
+    const dataWithUTM = {
+      ...data,
+      utm_source: marketingSettings.utmSource,
+      utm_medium: marketingSettings.utmMedium,
+      utm_campaign: marketingSettings.utmCampaign,
+    };
+
+    // Track with Facebook Pixel
+    if (marketingSettings.facebookEnabled) {
+      const pixel = getFacebookPixel();
+      if (pixel) {
+        await pixel.trackVendorRegistration(dataWithUTM);
+      }
+    }
+
+    // Track with Google Analytics
+    if (marketingSettings.googleEnabled) {
+      const ga = getGoogleAnalytics();
+      if (ga) {
+        ga.trackVendorRegistration(dataWithUTM);
+      }
     }
   };
 
