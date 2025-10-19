@@ -84,6 +84,19 @@ Preferred communication style: Simple, everyday language.
 - **Office Address Field**: Added office address to corporate booking schema
 - **reCAPTCHA Integration**: Optional spam protection for all forms
 
+### Email Notifications (Latest)
+- **Transactional Email Service**: Resend integration for reliable email delivery
+- **Dual Notifications**: Every form submission triggers two emails:
+  - **Admin Notification**: Sent to hesham@officexpress.org with complete form details
+  - **Customer Confirmation**: Sent to customer's email (if provided) with booking/message summary
+- **Email Templates**: Professional HTML templates for each form type:
+  - Corporate bookings: Company details, service type, contract information
+  - Rental bookings: Vehicle selection, pickup/destination, date/time details
+  - Vendor registrations: Company info, vehicle types, fleet size, experience
+  - Contact messages: Subject, message content, customer information
+- **Non-Blocking**: Email failures don't prevent form submissions from completing
+- **From Address**: Configured via Resend connection settings (domain verification required)
+
 ## System Architecture
 
 ### Frontend Architecture

@@ -28,6 +28,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
+import { sendEmailNotification } from "./lib/resend";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -105,6 +106,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const bookingData = insertCorporateBookingSchema.parse(req.body);
       const booking = await storage.createCorporateBooking(bookingData);
+      
+      // Send email notifications (admin + customer)
+      await sendEmailNotification('corporateBooking', bookingData);
+      
       res.json(booking);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -134,6 +139,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const bookingData = insertRentalBookingSchema.parse(req.body);
       const booking = await storage.createRentalBooking(bookingData);
+      
+      // Send email notifications (admin + customer)
+      await sendEmailNotification('rentalBooking', bookingData);
+      
       res.json(booking);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -158,6 +167,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const vendorData = insertVendorRegistrationSchema.parse(req.body);
       const vendor = await storage.createVendorRegistration(vendorData);
+      
+      // Send email notifications (admin + customer)
+      await sendEmailNotification('vendorRegistration', vendorData);
+      
       res.json(vendor);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -182,6 +195,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const messageData = insertContactMessageSchema.parse(req.body);
       const message = await storage.createContactMessage(messageData);
+      
+      // Send email notifications (admin + customer)
+      await sendEmailNotification('contactMessage', messageData);
+      
       res.json(message);
     } catch (error) {
       if (error instanceof z.ZodError) {

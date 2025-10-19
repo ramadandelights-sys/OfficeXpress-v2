@@ -185,6 +185,7 @@ export const validateCorporateBooking = [
       return await validateEmail(email);
     }),
   body('recaptcha')
+    .optional()
     .notEmpty()
     .withMessage('Please complete the security verification'),
   body('officeAddress')
@@ -225,6 +226,7 @@ export const validateRentalBooking = [
       return true;
     }),
   body('recaptcha')
+    .optional()
     .notEmpty()
     .withMessage('Please complete the security verification'),
   body('startDate')
@@ -313,6 +315,7 @@ export const validateVendorRegistration = [
       return await validateEmail(email);
     }),
   body('recaptcha')
+    .optional()
     .notEmpty()
     .withMessage('Please complete the security verification'),
   body('location')
@@ -370,6 +373,7 @@ export const validateContactMessage = [
     .withMessage('Message must be between 10 and 1000 characters')
     .customSanitizer(sanitizeInput),
   body('recaptcha')
+    .optional()
     .notEmpty()
     .withMessage('Please complete the security verification'),
   handleValidationErrors
