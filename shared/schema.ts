@@ -13,6 +13,7 @@ export const users = pgTable("users", {
 
 export const corporateBookings = pgTable("corporate_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
   companyName: text("company_name").notNull(),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
@@ -25,6 +26,7 @@ export const corporateBookings = pgTable("corporate_bookings", {
 
 export const rentalBookings = pgTable("rental_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
@@ -46,6 +48,7 @@ export const rentalBookings = pgTable("rental_bookings", {
 
 export const vendorRegistrations = pgTable("vendor_registrations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
   fullName: text("full_name").notNull(),
   phone: text("phone").notNull(),
   email: text("email").notNull(),
@@ -59,6 +62,7 @@ export const vendorRegistrations = pgTable("vendor_registrations", {
 
 export const contactMessages = pgTable("contact_messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
   name: text("name").notNull(),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
@@ -240,21 +244,25 @@ export const websiteSettings = pgTable("website_settings", {
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
+  referenceId: true,
   createdAt: true,
 });
 
 export const insertRentalBookingSchema = createInsertSchema(rentalBookings).omit({
   id: true,
+  referenceId: true,
   createdAt: true,
 });
 
 export const insertVendorRegistrationSchema = createInsertSchema(vendorRegistrations).omit({
   id: true,
+  referenceId: true,
   createdAt: true,
 });
 
 export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
   id: true,
+  referenceId: true,
   createdAt: true,
 });
 

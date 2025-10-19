@@ -127,11 +127,11 @@ function detailSection(title: string, items: Array<{label: string, value: string
 export const emailTemplates = {
   corporateBooking: {
     admin: (data: any) => ({
-      subject: `New Corporate Booking - ${data.companyName}`,
+      subject: `New Corporate Booking #${data.referenceId}`,
       html: emailWrapper(`
         <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
           <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
-            🔔 New Corporate Booking Submitted
+            🔔 New Corporate Booking Submitted - Reference #${data.referenceId}
           </p>
         </div>
         
@@ -140,6 +140,7 @@ export const emailTemplates = {
         </p>
         
         ${detailSection('Company Information', [
+          { label: 'Reference ID', value: `#${data.referenceId}` },
           { label: 'Company Name', value: data.companyName },
           { label: 'Primary Contact', value: data.customerName },
           { label: 'Email', value: data.email },
@@ -160,19 +161,25 @@ export const emailTemplates = {
       `, true)
     }),
     customer: (data: any) => ({
-      subject: 'Corporate Booking Confirmation - OfficeXpress',
+      subject: `New Corporate Booking #${data.referenceId}`,
       html: emailWrapper(`
         <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for your booking!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.customerName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your corporate transportation booking request for <strong>${data.companyName}</strong>. Our team will review your requirements and contact you shortly.
         </p>
+        
+        <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+          <p style="margin: 0; color: #374151; font-size: 16px; font-weight: 600;">
+            Reference ID: <span style="color: #004d40;">#${data.referenceId}</span>
+          </p>
+        </div>
         
         ${detailSection('Your Booking Details', [
           { label: 'Service Type', value: data.serviceType },
@@ -196,11 +203,11 @@ export const emailTemplates = {
   
   rentalBooking: {
     admin: (data: any) => ({
-      subject: `New Rental Booking - ${data.customerName}`,
+      subject: `New Rental Booking #${data.referenceId}`,
       html: emailWrapper(`
         <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
           <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
-            🚗 New Vehicle Rental Booking
+            🚗 New Vehicle Rental Booking - Reference #${data.referenceId}
           </p>
         </div>
         
@@ -209,6 +216,7 @@ export const emailTemplates = {
         </p>
         
         ${detailSection('Customer Information', [
+          { label: 'Reference ID', value: `#${data.referenceId}` },
           { label: 'Name', value: data.customerName },
           { label: 'Email', value: data.email || 'Not provided' },
           { label: 'Phone', value: data.phone }
@@ -232,19 +240,25 @@ export const emailTemplates = {
       `, true)
     }),
     customer: (data: any) => ({
-      subject: 'Rental Booking Confirmation - OfficeXpress',
+      subject: `New Rental Booking #${data.referenceId}`,
       html: emailWrapper(`
         <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for your booking!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.customerName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your vehicle rental booking request. Our team will confirm availability and contact you shortly.
         </p>
+        
+        <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+          <p style="margin: 0; color: #374151; font-size: 16px; font-weight: 600;">
+            Reference ID: <span style="color: #004d40;">#${data.referenceId}</span>
+          </p>
+        </div>
         
         ${detailSection('Your Booking Details', [
           { label: 'Service Type', value: data.serviceType },
@@ -272,11 +286,11 @@ export const emailTemplates = {
   
   vendorRegistration: {
     admin: (data: any) => ({
-      subject: `New Vendor Registration - ${data.fullName}`,
+      subject: `New Vendor Registration #${data.referenceId}`,
       html: emailWrapper(`
         <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
           <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
-            🤝 New Vendor Registration
+            🤝 New Vendor Registration - Reference #${data.referenceId}
           </p>
         </div>
         
@@ -285,6 +299,7 @@ export const emailTemplates = {
         </p>
         
         ${detailSection('Vendor Information', [
+          { label: 'Reference ID', value: `#${data.referenceId}` },
           { label: 'Full Name', value: data.fullName },
           { label: 'Email', value: data.email },
           { label: 'Phone', value: data.phone },
@@ -304,19 +319,25 @@ export const emailTemplates = {
       `, true)
     }),
     customer: (data: any) => ({
-      subject: 'Vendor Registration Received - OfficeXpress',
+      subject: `New Vendor Registration #${data.referenceId}`,
       html: emailWrapper(`
         <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for registering!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.fullName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your vendor registration. Our team will review your application and contact you shortly.
         </p>
+        
+        <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+          <p style="margin: 0; color: #374151; font-size: 16px; font-weight: 600;">
+            Reference ID: <span style="color: #004d40;">#${data.referenceId}</span>
+          </p>
+        </div>
         
         ${detailSection('Your Registration Details', [
           { label: 'Full Name', value: data.fullName },
@@ -341,11 +362,11 @@ export const emailTemplates = {
   
   contactMessage: {
     admin: (data: any) => ({
-      subject: `New Contact Message - ${data.subject || 'General Inquiry'}`,
+      subject: `New Contact Message #${data.referenceId}`,
       html: emailWrapper(`
         <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
           <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
-            ✉️ New Contact Message
+            ✉️ New Contact Message - Reference #${data.referenceId}
           </p>
         </div>
         
@@ -354,6 +375,7 @@ export const emailTemplates = {
         </p>
         
         ${detailSection('Contact Information', [
+          { label: 'Reference ID', value: `#${data.referenceId}` },
           { label: 'Name', value: data.name },
           { label: 'Email', value: data.email },
           ...(data.phone ? [{ label: 'Phone', value: data.phone }] : []),
@@ -377,19 +399,25 @@ export const emailTemplates = {
       `, true)
     }),
     customer: (data: any) => ({
-      subject: 'Message Received - OfficeXpress',
+      subject: `New Contact Message #${data.referenceId}`,
       html: emailWrapper(`
         <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for contacting us!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.name},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your message and will respond as soon as possible.
         </p>
+        
+        <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+          <p style="margin: 0; color: #374151; font-size: 16px; font-weight: 600;">
+            Reference ID: <span style="color: #004d40;">#${data.referenceId}</span>
+          </p>
+        </div>
         
         <div style="margin: 30px 0;">
           <h2 style="margin: 0 0 20px 0; color: #374151; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #B2DFDB;">

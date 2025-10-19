@@ -29,6 +29,12 @@ import { z } from "zod";
 import { db } from "./db";
 import { sql } from "drizzle-orm";
 import { sendEmailNotification } from "./lib/resend";
+import { nanoid } from "nanoid";
+
+// Generate unique 6-character alphanumeric reference ID
+function generateReferenceId(): string {
+  return nanoid(6).toUpperCase();
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -105,10 +111,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/corporate-bookings", validateCorporateBooking, async (req: any, res: any) => {
     try {
       const bookingData = insertCorporateBookingSchema.parse(req.body);
-      const booking = await storage.createCorporateBooking(bookingData);
+      const referenceId = generateReferenceId();
+      const booking = await storage.createCorporateBooking({ ...bookingData, referenceId } as any);
       
-      // Send email notifications (admin + customer)
-      await sendEmailNotification('corporateBooking', bookingData);
+      // Send email notifications (admin + customer) with reference ID
+      await sendEmailNotification('corporateBooking', { ...bookingData, referenceId });
       
       res.json(booking);
     } catch (error) {
@@ -138,10 +145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const bookingData = insertRentalBookingSchema.parse(req.body);
-      const booking = await storage.createRentalBooking(bookingData);
+      const referenceId = generateReferenceId();
+      const booking = await storage.createRentalBooking({ ...bookingData, referenceId } as any);
       
-      // Send email notifications (admin + customer)
-      await sendEmailNotification('rentalBooking', bookingData);
+      // Send email notifications (admin + customer) with reference ID
+      await sendEmailNotification('rentalBooking', { ...bookingData, referenceId });
       
       res.json(booking);
     } catch (error) {
@@ -166,10 +174,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vendor-registrations", validateVendorRegistration, async (req: any, res: any) => {
     try {
       const vendorData = insertVendorRegistrationSchema.parse(req.body);
-      const vendor = await storage.createVendorRegistration(vendorData);
+      const referenceId = generateReferenceId();
+      const vendor = await storage.createVendorRegistration({ ...vendorData, referenceId } as any);
       
-      // Send email notifications (admin + customer)
-      await sendEmailNotification('vendorRegistration', vendorData);
+      // Send email notifications (admin + customer) with reference ID
+      await sendEmailNotification('vendorRegistration', { ...vendorData, referenceId });
       
       res.json(vendor);
     } catch (error) {
@@ -194,10 +203,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/contact-messages", validateContactMessage, async (req: any, res: any) => {
     try {
       const messageData = insertContactMessageSchema.parse(req.body);
-      const message = await storage.createContactMessage(messageData);
+      const referenceId = generateReferenceId();
+      const message = await storage.createContactMessage({ ...messageData, referenceId } as any);
       
-      // Send email notifications (admin + customer)
-      await sendEmailNotification('contactMessage', messageData);
+      // Send email notifications (admin + customer) with reference ID
+      await sendEmailNotification('contactMessage', { ...messageData, referenceId });
       
       res.json(message);
     } catch (error) {
