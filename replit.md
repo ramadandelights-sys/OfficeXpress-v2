@@ -96,6 +96,10 @@ Preferred communication style: Simple, everyday language.
   - Contact messages: Subject, message content, customer information
 - **Non-Blocking**: Email failures don't prevent form submissions from completing
 - **From Address**: Configured via Resend connection settings (domain verification required)
+- **Environment-Based reCAPTCHA**: Validation is environment-aware
+  - **Production**: reCAPTCHA required when RECAPTCHA_SECRET_KEY is configured
+  - **Development/Testing**: Forms work without reCAPTCHA when secret key is not set
+  - **Security**: Bot protection enforced in production, testing flexibility in development
 
 ## System Architecture
 
