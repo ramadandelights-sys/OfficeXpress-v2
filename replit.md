@@ -10,7 +10,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Updates
 
-### Service Type Auto-Selection for Rental Form (Latest)
+### Reference ID Tracking System (Latest)
+- **Unique Reference IDs**: All form submissions now generate unique 6-character alphanumeric reference IDs (e.g., A7K9M2, B3K5L9)
+- **Database Integration**: Added referenceId field (varchar(6), NOT NULL, UNIQUE) to all 4 form tables
+- **Automatic Generation**: Reference IDs generated server-side using nanoid library with alphanumeric character set
+- **Email Integration**: Reference IDs included in both admin and customer email notifications
+  - Subject line format: "New {Service Type} #{RefID}"
+  - Reference ID displayed prominently in email body with teal badge styling
+- **Admin Panel Display**: Reference IDs shown as first column in all form submission tables
+  - Styled as teal badge for easy identification
+  - Included in CSV exports for tracking
+- **Migration Completed**: All existing entries (28 total) migrated with unique reference IDs
+- **Use Cases**: Customer support tracking, email thread organization, form submission identification
+
+### Service Type Auto-Selection for Rental Form
 - **Query Parameter Routing**: Airport Transfers and City Tours links navigate to `/rental?service=airport` and `/rental?service=tourism`
 - **Reactive Pre-selection**: Service type field automatically updates based on URL query parameter
 - **Dynamic Updates**: Service type changes when navigating between different service links
