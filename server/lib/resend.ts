@@ -58,11 +58,9 @@ function emailWrapper(content: string, isAdmin: boolean = false) {
             <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; max-width: 600px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
               <!-- Header Banner -->
               <tr>
-                <td style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); padding: 40px 30px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: bold; letter-spacing: -0.5px;">
-                    OfficeXpress
-                  </h1>
-                  <p style="margin: 8px 0 0 0; color: rgba(255,255,255,0.95); font-size: 14px; font-weight: 500;">
+                <td style="background-color: #B2DFDB; padding: 40px 30px; text-align: center;">
+                  <img src="https://officexpress.org/logo.jpg" alt="OfficeXpress" style="max-width: 200px; height: auto; margin-bottom: 10px;" />
+                  <p style="margin: 8px 0 0 0; color: #374151; font-size: 14px; font-weight: 500;">
                     Premium Transportation Services
                   </p>
                 </td>
@@ -77,16 +75,16 @@ function emailWrapper(content: string, isAdmin: boolean = false) {
               
               <!-- Footer -->
               <tr>
-                <td style="background-color: #1a1a1a; padding: 30px; text-align: center;">
+                <td style="background-color: #374151; padding: 30px; text-align: center;">
                   <p style="margin: 0 0 10px 0; color: #ffffff; font-size: 16px; font-weight: 600;">
                     OfficeXpress
                   </p>
-                  <p style="margin: 0; color: #a3a3a3; font-size: 13px; line-height: 1.6;">
+                  <p style="margin: 0; color: #d1d5db; font-size: 13px; line-height: 1.6;">
                     Your Trusted Transportation Partner in Bangladesh
                   </p>
                   ${!isAdmin ? `
-                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #333333;">
-                      <p style="margin: 0; color: #737373; font-size: 12px;">
+                    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #6b7280;">
+                      <p style="margin: 0; color: #9ca3af; font-size: 12px;">
                         This email was sent from OfficeXpress. Please do not reply to this email.
                       </p>
                     </div>
@@ -106,16 +104,16 @@ function emailWrapper(content: string, isAdmin: boolean = false) {
 function detailSection(title: string, items: Array<{label: string, value: string}>) {
   return `
     <div style="margin: 30px 0;">
-      <h2 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #f97316;">
+      <h2 style="margin: 0 0 20px 0; color: #374151; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #B2DFDB;">
         ${title}
       </h2>
       <table width="100%" cellpadding="0" cellspacing="0">
         ${items.map(item => `
           <tr>
-            <td style="padding: 8px 0; color: #525252; font-size: 14px; font-weight: 500; width: 40%;">
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500; width: 40%;">
               ${item.label}
             </td>
-            <td style="padding: 8px 0; color: #1a1a1a; font-size: 14px;">
+            <td style="padding: 8px 0; color: #374151; font-size: 14px;">
               ${item.value}
             </td>
           </tr>
@@ -131,13 +129,13 @@ export const emailTemplates = {
     admin: (data: any) => ({
       subject: `New Corporate Booking - ${data.companyName}`,
       html: emailWrapper(`
-        <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
-          <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 600;">
+        <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
             🔔 New Corporate Booking Submitted
           </p>
         </div>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           A new corporate booking has been submitted on OfficeXpress.
         </p>
         
@@ -156,7 +154,7 @@ export const emailTemplates = {
           ...(data.additionalRequirements ? [{ label: 'Additional Requirements', value: data.additionalRequirements }] : [])
         ])}
         
-        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #737373; font-size: 13px;">
+        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #9ca3af; font-size: 13px;">
           <em>Submitted on: ${new Date().toLocaleString()}</em>
         </p>
       `, true)
@@ -164,15 +162,15 @@ export const emailTemplates = {
     customer: (data: any) => ({
       subject: 'Corporate Booking Confirmation - OfficeXpress',
       html: emailWrapper(`
-        <h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 700;">
+        <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for your booking!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.customerName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your corporate transportation booking request for <strong>${data.companyName}</strong>. Our team will review your requirements and contact you shortly.
         </p>
         
@@ -182,15 +180,15 @@ export const emailTemplates = {
           { label: 'Number of Employees', value: data.numberOfEmployees }
         ])}
         
-        <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
-          <p style="margin: 0; color: #166534; font-size: 14px; line-height: 1.6;">
+        <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
             ✓ We will get back to you within 24 hours to discuss your requirements in detail.
           </p>
         </div>
         
-        <p style="margin: 32px 0 0 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Best regards,<br>
-          <strong style="color: #1a1a1a;">OfficeXpress Team</strong>
+          <strong style="color: #374151;">OfficeXpress Team</strong>
         </p>
       `, false)
     })
@@ -200,19 +198,19 @@ export const emailTemplates = {
     admin: (data: any) => ({
       subject: `New Rental Booking - ${data.customerName}`,
       html: emailWrapper(`
-        <div style="background-color: #dbeafe; border-left: 4px solid #3b82f6; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
-          <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+        <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
             🚗 New Vehicle Rental Booking
           </p>
         </div>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           A new rental booking has been submitted on OfficeXpress.
         </p>
         
         ${detailSection('Customer Information', [
           { label: 'Name', value: data.customerName },
-          { label: 'Email', value: data.email },
+          { label: 'Email', value: data.email || 'Not provided' },
           { label: 'Phone', value: data.phone }
         ])}
         
@@ -220,16 +218,15 @@ export const emailTemplates = {
           { label: 'Service Type', value: data.serviceType },
           { label: 'Vehicle Type', value: data.vehicleType },
           { label: 'Capacity', value: data.vehicleCapacity },
-          { label: 'Pickup Location', value: data.pickupLocation },
-          { label: 'Destination', value: data.destination },
-          { label: 'Pickup Date', value: data.pickupDate },
-          ...(data.returnDate ? [{ label: 'Return Date', value: data.returnDate }] : []),
-          { label: 'Pickup Time', value: data.pickupTime },
-          ...(data.endTime ? [{ label: 'End Time', value: data.endTime }] : []),
-          ...(data.specialRequirements ? [{ label: 'Special Requirements', value: data.specialRequirements }] : [])
+          { label: 'Pickup Location', value: data.fromLocation },
+          { label: 'Destination', value: data.toLocation },
+          { label: 'Pickup Date', value: data.startDate },
+          ...(data.endDate ? [{ label: 'Return Date', value: data.endDate }] : []),
+          { label: 'Pickup Time', value: data.startTime },
+          ...(data.endTime ? [{ label: 'End Time', value: data.endTime }] : [])
         ])}
         
-        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #737373; font-size: 13px;">
+        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #9ca3af; font-size: 13px;">
           <em>Submitted on: ${new Date().toLocaleString()}</em>
         </p>
       `, true)
@@ -237,15 +234,15 @@ export const emailTemplates = {
     customer: (data: any) => ({
       subject: 'Rental Booking Confirmation - OfficeXpress',
       html: emailWrapper(`
-        <h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 700;">
+        <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for your booking!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.customerName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your vehicle rental booking request. Our team will confirm availability and contact you shortly.
         </p>
         
@@ -253,21 +250,21 @@ export const emailTemplates = {
           { label: 'Service Type', value: data.serviceType },
           { label: 'Vehicle Type', value: data.vehicleType },
           { label: 'Capacity', value: data.vehicleCapacity },
-          { label: 'Pickup Location', value: data.pickupLocation },
-          { label: 'Destination', value: data.destination },
-          { label: 'Pickup Date', value: data.pickupDate },
-          { label: 'Pickup Time', value: data.pickupTime }
+          { label: 'Pickup Location', value: data.fromLocation },
+          { label: 'Destination', value: data.toLocation },
+          { label: 'Pickup Date', value: data.startDate },
+          { label: 'Pickup Time', value: data.startTime }
         ])}
         
-        <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
-          <p style="margin: 0; color: #166534; font-size: 14px; line-height: 1.6;">
+        <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
             ✓ We will get back to you within 24 hours to confirm your booking.
           </p>
         </div>
         
-        <p style="margin: 32px 0 0 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Best regards,<br>
-          <strong style="color: #1a1a1a;">OfficeXpress Team</strong>
+          <strong style="color: #374151;">OfficeXpress Team</strong>
         </p>
       `, false)
     })
@@ -275,34 +272,33 @@ export const emailTemplates = {
   
   vendorRegistration: {
     admin: (data: any) => ({
-      subject: `New Vendor Registration - ${data.companyName}`,
+      subject: `New Vendor Registration - ${data.fullName}`,
       html: emailWrapper(`
-        <div style="background-color: #f3e8ff; border-left: 4px solid #a855f7; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
-          <p style="margin: 0; color: #6b21a8; font-size: 14px; font-weight: 600;">
+        <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
             🤝 New Vendor Registration
           </p>
         </div>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           A new vendor has registered on OfficeXpress.
         </p>
         
-        ${detailSection('Company Information', [
-          { label: 'Company Name', value: data.companyName },
-          { label: 'Contact Person', value: data.contactPerson },
+        ${detailSection('Vendor Information', [
+          { label: 'Full Name', value: data.fullName },
           { label: 'Email', value: data.email },
-          { label: 'Phone', value: data.phone }
+          { label: 'Phone', value: data.phone },
+          { label: 'Location', value: data.location }
         ])}
         
         ${detailSection('Service Details', [
           { label: 'Vehicle Types', value: Array.isArray(data.vehicleTypes) ? data.vehicleTypes.join(', ') : data.vehicleTypes },
-          { label: 'Fleet Size', value: data.fleetSize },
+          { label: 'Service Modality', value: data.serviceModality },
           { label: 'Experience', value: data.experience },
-          { label: 'Service Areas', value: data.serviceAreas },
           ...(data.additionalInfo ? [{ label: 'Additional Information', value: data.additionalInfo }] : [])
         ])}
         
-        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #737373; font-size: 13px;">
+        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #9ca3af; font-size: 13px;">
           <em>Submitted on: ${new Date().toLocaleString()}</em>
         </p>
       `, true)
@@ -310,34 +306,34 @@ export const emailTemplates = {
     customer: (data: any) => ({
       subject: 'Vendor Registration Received - OfficeXpress',
       html: emailWrapper(`
-        <h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 700;">
+        <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for registering!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
-          Dear ${data.contactPerson},
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+          Dear ${data.fullName},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #525252; font-size: 15px; line-height: 1.6;">
-          We have received your vendor registration for <strong>${data.companyName}</strong>. Our team will review your application and contact you shortly.
+        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+          We have received your vendor registration. Our team will review your application and contact you shortly.
         </p>
         
         ${detailSection('Your Registration Details', [
-          { label: 'Company Name', value: data.companyName },
+          { label: 'Full Name', value: data.fullName },
           { label: 'Vehicle Types', value: Array.isArray(data.vehicleTypes) ? data.vehicleTypes.join(', ') : data.vehicleTypes },
-          { label: 'Fleet Size', value: data.fleetSize },
+          { label: 'Service Modality', value: data.serviceModality },
           { label: 'Experience', value: data.experience }
         ])}
         
-        <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
-          <p style="margin: 0; color: #166534; font-size: 14px; line-height: 1.6;">
+        <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
             ✓ We will get back to you within 48 hours regarding the next steps.
           </p>
         </div>
         
-        <p style="margin: 32px 0 0 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Best regards,<br>
-          <strong style="color: #1a1a1a;">OfficeXpress Team</strong>
+          <strong style="color: #374151;">OfficeXpress Team</strong>
         </p>
       `, false)
     })
@@ -347,13 +343,13 @@ export const emailTemplates = {
     admin: (data: any) => ({
       subject: `New Contact Message - ${data.subject || 'General Inquiry'}`,
       html: emailWrapper(`
-        <div style="background-color: #fce7f3; border-left: 4px solid #ec4899; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
-          <p style="margin: 0; color: #9f1239; font-size: 14px; font-weight: 600;">
+        <div style="background-color: #e0f2f1; border-left: 4px solid #B2DFDB; padding: 16px; margin-bottom: 24px; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; font-weight: 600;">
             ✉️ New Contact Message
           </p>
         </div>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           A new contact message has been submitted on OfficeXpress.
         </p>
         
@@ -365,17 +361,17 @@ export const emailTemplates = {
         ])}
         
         <div style="margin: 30px 0;">
-          <h2 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #f97316;">
+          <h2 style="margin: 0 0 20px 0; color: #374151; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #B2DFDB;">
             Message
           </h2>
-          <div style="background: #f5f5f5; padding: 20px; border-left: 4px solid #f97316; border-radius: 4px;">
-            <p style="margin: 0; color: #1a1a1a; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
+          <div style="background: #f5f5f5; padding: 20px; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+            <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
               ${data.message?.replace(/\n/g, '<br>') || ''}
             </p>
           </div>
         </div>
         
-        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #737373; font-size: 13px;">
+        <p style="margin: 30px 0 0 0; padding-top: 20px; border-top: 1px solid #e5e5e5; color: #9ca3af; font-size: 13px;">
           <em>Submitted on: ${new Date().toLocaleString()}</em>
         </p>
       `, true)
@@ -383,38 +379,38 @@ export const emailTemplates = {
     customer: (data: any) => ({
       subject: 'Message Received - OfficeXpress',
       html: emailWrapper(`
-        <h2 style="margin: 0 0 16px 0; color: #1a1a1a; font-size: 24px; font-weight: 700;">
+        <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
           Thank you for contacting us!
         </h2>
         
-        <p style="margin: 0 0 24px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Dear ${data.name},
         </p>
         
-        <p style="margin: 0 0 32px 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 0 0 32px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           We have received your message and will respond as soon as possible.
         </p>
         
         <div style="margin: 30px 0;">
-          <h2 style="margin: 0 0 20px 0; color: #1a1a1a; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #f97316;">
+          <h2 style="margin: 0 0 20px 0; color: #374151; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #B2DFDB;">
             Your Message
           </h2>
-          <div style="background: #f5f5f5; padding: 20px; border-left: 4px solid #f97316; border-radius: 4px;">
-            <p style="margin: 0; color: #1a1a1a; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
+          <div style="background: #f5f5f5; padding: 20px; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+            <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.8; white-space: pre-wrap;">
               ${data.message?.replace(/\n/g, '<br>') || ''}
             </p>
           </div>
         </div>
         
-        <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-left: 4px solid #22c55e; border-radius: 4px;">
-          <p style="margin: 0; color: #166534; font-size: 14px; line-height: 1.6;">
+        <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+          <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
             ✓ We typically respond to all inquiries within 24 hours.
           </p>
         </div>
         
-        <p style="margin: 32px 0 0 0; color: #525252; font-size: 15px; line-height: 1.6;">
+        <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
           Best regards,<br>
-          <strong style="color: #1a1a1a;">OfficeXpress Team</strong>
+          <strong style="color: #374151;">OfficeXpress Team</strong>
         </p>
       `, false)
     })
