@@ -185,9 +185,13 @@ export const validateCorporateBooking = [
       return await validateEmail(email);
     }),
   body('recaptcha')
-    .optional()
-    .notEmpty()
-    .withMessage('Please complete the security verification'),
+    .custom((value) => {
+      // Only require reCAPTCHA if RECAPTCHA_SECRET_KEY is configured
+      if (process.env.RECAPTCHA_SECRET_KEY && !value) {
+        throw new Error('Please complete the security verification');
+      }
+      return true;
+    }),
   body('officeAddress')
     .optional()
     .isLength({ max: 200 })
@@ -226,9 +230,13 @@ export const validateRentalBooking = [
       return true;
     }),
   body('recaptcha')
-    .optional()
-    .notEmpty()
-    .withMessage('Please complete the security verification'),
+    .custom((value) => {
+      // Only require reCAPTCHA if RECAPTCHA_SECRET_KEY is configured
+      if (process.env.RECAPTCHA_SECRET_KEY && !value) {
+        throw new Error('Please complete the security verification');
+      }
+      return true;
+    }),
   body('startDate')
     .isISO8601()
     .withMessage('Please provide a valid start date')
@@ -315,9 +323,13 @@ export const validateVendorRegistration = [
       return await validateEmail(email);
     }),
   body('recaptcha')
-    .optional()
-    .notEmpty()
-    .withMessage('Please complete the security verification'),
+    .custom((value) => {
+      // Only require reCAPTCHA if RECAPTCHA_SECRET_KEY is configured
+      if (process.env.RECAPTCHA_SECRET_KEY && !value) {
+        throw new Error('Please complete the security verification');
+      }
+      return true;
+    }),
   body('location')
     .isLength({ min: 2, max: 100 })
     .withMessage('Location must be between 2 and 100 characters')
@@ -373,8 +385,12 @@ export const validateContactMessage = [
     .withMessage('Message must be between 10 and 1000 characters')
     .customSanitizer(sanitizeInput),
   body('recaptcha')
-    .optional()
-    .notEmpty()
-    .withMessage('Please complete the security verification'),
+    .custom((value) => {
+      // Only require reCAPTCHA if RECAPTCHA_SECRET_KEY is configured
+      if (process.env.RECAPTCHA_SECRET_KEY && !value) {
+        throw new Error('Please complete the security verification');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
