@@ -137,6 +137,7 @@ function AdminDashboard() {
     if (formTypeFilter === "all" || formTypeFilter === "corporate") {
       corporateBookings.forEach(booking => {
         combined.push({
+          referenceId: booking.referenceId || "",
           type: "Corporate",
           name: booking.customerName,
           email: booking.email,
@@ -153,6 +154,7 @@ function AdminDashboard() {
     if (formTypeFilter === "all" || formTypeFilter === "rental") {
       rentalBookings.forEach(booking => {
         combined.push({
+          referenceId: booking.referenceId || "",
           type: "Rental",
           name: booking.customerName,
           email: booking.email,
@@ -170,6 +172,7 @@ function AdminDashboard() {
     if (formTypeFilter === "all" || formTypeFilter === "vendor") {
       vendorRegistrations.forEach(vendor => {
         combined.push({
+          referenceId: vendor.referenceId || "",
           type: "Vendor",
           name: vendor.fullName,
           email: vendor.email,
@@ -187,6 +190,7 @@ function AdminDashboard() {
     if (formTypeFilter === "all" || formTypeFilter === "contact") {
       contactMessages.forEach(message => {
         combined.push({
+          referenceId: message.referenceId || "",
           type: "Contact",
           name: message.name,
           email: message.email,
@@ -1465,6 +1469,7 @@ function FormSectionTable({
     switch (type) {
       case 'corporate':
         return [
+          { key: 'referenceId', label: 'Reference ID' },
           { key: 'customerName', label: 'Customer Name' },
           { key: 'companyName', label: 'Company Name' },
           { key: 'email', label: 'Email' },
@@ -1476,6 +1481,7 @@ function FormSectionTable({
         ];
       case 'rental':
         return [
+          { key: 'referenceId', label: 'Reference ID' },
           { key: 'customerName', label: 'Customer Name' },
           { key: 'email', label: 'Email' },
           { key: 'phone', label: 'Phone' },
@@ -1496,6 +1502,7 @@ function FormSectionTable({
         ];
       case 'vendor':
         return [
+          { key: 'referenceId', label: 'Reference ID' },
           { key: 'fullName', label: 'Full Name' },
           { key: 'email', label: 'Email' },
           { key: 'phone', label: 'Phone' },
@@ -1508,6 +1515,7 @@ function FormSectionTable({
         ];
       case 'contact':
         return [
+          { key: 'referenceId', label: 'Reference ID' },
           { key: 'name', label: 'Name' },
           { key: 'email', label: 'Email' },
           { key: 'phone', label: 'Phone' },
@@ -1554,6 +1562,14 @@ function FormSectionTable({
   // Format value for display
   const formatValue = (value: any, key: string) => {
     if (value === null || value === undefined) return '-';
+    
+    if (key === 'referenceId') {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+          #{value}
+        </span>
+      );
+    }
     
     if (key === 'createdAt') {
       return new Date(value).toLocaleString();
