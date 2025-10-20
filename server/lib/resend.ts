@@ -459,7 +459,7 @@ export async function sendEmailNotification(
     
     // Send admin notification
     await client.emails.send({
-      from: fromEmail,
+      from: `OfficeXpress <${fromEmail}>`,
       to: 'hesham@officexpress.org',
       subject: adminEmail.subject,
       html: adminEmail.html
@@ -468,7 +468,7 @@ export async function sendEmailNotification(
     // Send customer confirmation if email is provided
     if (data.email) {
       await client.emails.send({
-        from: fromEmail,
+        from: `OfficeXpress <${fromEmail}>`,
         to: data.email,
         subject: customerEmail.subject,
         html: customerEmail.html
