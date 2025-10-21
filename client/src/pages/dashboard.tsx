@@ -160,7 +160,7 @@ export default function CustomerDashboard() {
                           <p className="text-xs text-gray-500 mt-1">Ref: {booking.referenceId}</p>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {new Date(booking.createdAt).toLocaleDateString()}
+                          {new Date(booking.date || booking.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -193,7 +193,7 @@ export default function CustomerDashboard() {
                           <p className="text-xs text-gray-500 mt-1">Ref: {booking.referenceId}</p>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {new Date(booking.createdAt).toLocaleDateString()}
+                          {new Date(booking.startDate || booking.pickupDate || booking.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>

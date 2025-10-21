@@ -660,7 +660,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer endpoint - only returns own bookings
   app.get("/api/my/corporate-bookings", isAuthenticated, async (req: any, res: any) => {
     try {
-      const bookings = await storage.getCorporateBookingsByUser(req.session.userId);
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const bookings = await storage.getCorporateBookingsByPhone(user.phone);
       res.json(bookings);
     } catch (error) {
       console.error("Get customer corporate bookings error:", error);
@@ -744,7 +748,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Customer endpoint - only returns own bookings
   app.get("/api/my/rental-bookings", isAuthenticated, async (req: any, res: any) => {
     try {
-      const bookings = await storage.getRentalBookingsByUser(req.session.userId);
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const bookings = await storage.getRentalBookingsByPhone(user.phone);
       res.json(bookings);
     } catch (error) {
       console.error("Get customer rental bookings error:", error);

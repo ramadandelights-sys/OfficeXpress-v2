@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette } from "lucide-react";
-import AdminLogin from "@/components/admin-login";
+import { useLocation } from "wouter";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
 import { MarketingSettingsForm, MarketingSettingsDisplay } from "@/components/marketing-settings";
@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { generateSlug } from "@/lib/slugUtils";
 import type { 
@@ -46,21 +47,33 @@ import type {
 import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema } from "@shared/schema";
 
 export default function Admin() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { user, isLoading } = useAuth();
+  const [, navigate] = useLocation();
 
   useEffect(() => {
-    const authStatus = sessionStorage.getItem("adminAuthenticated");
-    setIsAuthenticated(authStatus === "true");
-  }, []);
+    if (!isLoading && (!user || (user.role !== 'employee' && user.role !== 'superadmin'))) {
+      navigate("/login");
+    }
+  }, [user, isLoading, navigate]);
 
-  if (!isAuthenticated) {
-    return <AdminLogin onLogin={() => setIsAuthenticated(true)} />;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-semibold">Loading...</div>
+        </div>
+      </div>
+    );
   }
 
-  return <AdminDashboard />;
+  if (!user || (user.role !== 'employee' && user.role !== 'superadmin')) {
+    return null;
+  }
+
+  return <AdminDashboard user={user} />;
 }
 
-function AdminDashboard() {
+function AdminDashboard({ user }: { user: any }) {
   const { toast } = useToast();
   const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
@@ -212,11 +225,6 @@ function AdminDashboard() {
     }
 
     return combined;
-  };
-
-  const handleLogout = () => {
-    sessionStorage.removeItem("adminAuthenticated");
-    window.location.reload(); // Reload to reset the component state
   };
 
   const { data: blogPosts = [], isLoading: loadingPosts } = useQuery<BlogPost[]>({
@@ -448,15 +456,9 @@ function AdminDashboard() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white" data-testid="heading-admin">
             Admin Panel
           </h1>
-          <Button 
-            variant="outline" 
-            onClick={handleLogout}
-            className="flex items-center gap-2"
-            data-testid="logout-btn"
-          >
-            <LogOut className="h-4 w-4" />
-            Logout
-          </Button>
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            Logged in as: <span className="font-semibold">{user.phone}</span> ({user.role})
+          </div>
         </div>
 
         {/* Blog Posts Management */}

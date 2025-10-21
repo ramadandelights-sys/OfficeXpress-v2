@@ -1,14 +1,19 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Search, Menu, X } from "lucide-react";
+import { Car, Search, Menu, X, User, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Header() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
 
   // Fetch dynamic logo
   const { data: logoData } = useQuery({
@@ -29,7 +34,16 @@ export default function Header() {
     { name: "Blog", href: "/blog" },
   ];
 
-  const secondaryNavigation: never[] = [];
+  const handleLogout = async () => {
+    try {
+      await apiRequest("POST", "/api/auth/logout");
+      toast({ title: "Logged out successfully" });
+      navigate("/");
+      window.location.reload();
+    } catch (error) {
+      toast({ title: "Logout failed", variant: "destructive" });
+    }
+  };
 
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
@@ -69,6 +83,62 @@ export default function Header() {
                 {item.name}
               </Link>
             ))}
+            
+            {/* Auth Navigation */}
+            {!authLoading && (
+              <>
+                {user ? (
+                  <>
+                    {user.role === 'customer' && (
+                      <Link
+                        href="/dashboard"
+                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                          isActive("/dashboard")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        data-testid="nav-dashboard"
+                      >
+                        <User className="w-4 h-4" />
+                        Dashboard
+                      </Link>
+                    )}
+                    {(user.role === 'employee' || user.role === 'superadmin') && (
+                      <Link
+                        href="/admin"
+                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                          isActive("/admin")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        data-testid="nav-admin"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Admin Panel
+                      </Link>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="flex items-center gap-1"
+                      data-testid="button-logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="font-medium transition-colors px-3 py-2 rounded-lg text-sm bg-brand-primary text-primary-foreground hover:bg-brand-primary/90"
+                    data-testid="nav-login"
+                  >
+                    Login
+                  </Link>
+                )}
+              </>
+            )}
           </nav>
 
           {/* Search & Mobile Menu */}
@@ -115,6 +185,67 @@ export default function Header() {
                   {item.name}
                 </Link>
               ))}
+              
+              {/* Mobile Auth Navigation */}
+              {!authLoading && (
+                <>
+                  {user ? (
+                    <>
+                      {user.role === 'customer' && (
+                        <Link
+                          href="/dashboard"
+                          className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                            isActive("/dashboard")
+                              ? "bg-brand-primary text-primary-foreground"
+                              : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                          }`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          data-testid="mobile-nav-dashboard"
+                        >
+                          <User className="w-4 h-4" />
+                          Dashboard
+                        </Link>
+                      )}
+                      {(user.role === 'employee' || user.role === 'superadmin') && (
+                        <Link
+                          href="/admin"
+                          className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                            isActive("/admin")
+                              ? "bg-brand-primary text-primary-foreground"
+                              : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                          }`}
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          data-testid="mobile-nav-admin"
+                        >
+                          <Settings className="w-4 h-4" />
+                          Admin Panel
+                        </Link>
+                      )}
+                      <Button
+                        variant="ghost"
+                        onClick={() => {
+                          handleLogout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="flex items-center gap-2 justify-start px-3"
+                        data-testid="mobile-button-logout"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </Button>
+                    </>
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="font-medium transition-colors px-3 py-2 rounded-lg bg-brand-primary text-primary-foreground hover:bg-brand-primary/90"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      data-testid="mobile-nav-login"
+                    >
+                      Login
+                    </Link>
+                  )}
+                </>
+              )}
             </nav>
             <div className="mt-4 sm:hidden">
               <Input

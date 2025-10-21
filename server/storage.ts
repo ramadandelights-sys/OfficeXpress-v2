@@ -72,6 +72,8 @@ export interface IStorage {
   createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking>;
   getRentalBookings(): Promise<RentalBooking[]>;
   getRentalBookingsByUser(userId: string): Promise<RentalBooking[]>;
+  getRentalBookingsByPhone(phone: string): Promise<RentalBooking[]>;
+  getCorporateBookingsByPhone(phone: string): Promise<CorporateBooking[]>;
   assignDriverToRental(rentalId: string, driverId: string): Promise<RentalBooking>;
   
   // Vendor registrations
@@ -255,6 +257,18 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(rentalBookings)
       .where(eq(rentalBookings.userId, userId))
       .orderBy(desc(rentalBookings.createdAt));
+  }
+
+  async getRentalBookingsByPhone(phone: string): Promise<RentalBooking[]> {
+    return await db.select().from(rentalBookings)
+      .where(eq(rentalBookings.phone, phone))
+      .orderBy(desc(rentalBookings.createdAt));
+  }
+
+  async getCorporateBookingsByPhone(phone: string): Promise<CorporateBooking[]> {
+    return await db.select().from(corporateBookings)
+      .where(eq(corporateBookings.phone, phone))
+      .orderBy(desc(corporateBookings.createdAt));
   }
 
   async assignDriverToRental(rentalId: string, driverId: string): Promise<RentalBooking> {
