@@ -1,5 +1,6 @@
 import { 
   users, 
+  drivers,
   corporateBookings,
   rentalBookings, 
   vendorRegistrations,
@@ -12,6 +13,9 @@ import {
   websiteSettings,
   type User, 
   type InsertUser,
+  type Driver,
+  type InsertDriver,
+  type UpdateDriver,
   type CorporateBooking,
   type InsertCorporateBooking,
   type RentalBooking,
@@ -42,17 +46,33 @@ import { db } from "./db";
 import { eq, desc, or, ilike } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByPhone(phone: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User>;
+  getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]>;
+  linkExistingBookingsToUser(userId: string, phone: string): Promise<void>;
+  
+  // Driver operations
+  getDrivers(): Promise<Driver[]>;
+  getActiveDrivers(): Promise<Driver[]>;
+  getDriver(id: string): Promise<Driver | undefined>;
+  createDriver(driver: InsertDriver): Promise<Driver>;
+  updateDriver(driver: UpdateDriver): Promise<Driver>;
+  deleteDriver(id: string): Promise<void>;
   
   // Corporate bookings
   createCorporateBooking(booking: InsertCorporateBooking): Promise<CorporateBooking>;
   getCorporateBookings(): Promise<CorporateBooking[]>;
+  getCorporateBookingsByUser(userId: string): Promise<CorporateBooking[]>;
   
   // Rental bookings
   createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking>;
   getRentalBookings(): Promise<RentalBooking[]>;
+  getRentalBookingsByUser(userId: string): Promise<RentalBooking[]>;
+  assignDriverToRental(rentalId: string, driverId: string): Promise<RentalBooking>;
   
   // Vendor registrations
   createVendorRegistration(vendor: InsertVendorRegistration): Promise<VendorRegistration>;
@@ -106,22 +126,99 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // User operations
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
+  async getUserByPhone(phone: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.phone, phone));
+    return user || undefined;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!email) return undefined;
+    const [user] = await db.select().from(users).where(eq(users.email, email));
     return user || undefined;
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
-      .values(insertUser)
+      .values({
+        ...insertUser,
+        role: 'customer',
+        permissions: {},
+        temporaryPassword: false
+      })
       .returning();
     return user;
+  }
+
+  async updateUser(id: string, data: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User> {
+    const [user] = await db
+      .update(users)
+      .set(data as any)
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]> {
+    return await db.select().from(users).where(eq(users.role, role));
+  }
+
+  async linkExistingBookingsToUser(userId: string, phone: string): Promise<void> {
+    // Link corporate bookings
+    await db
+      .update(corporateBookings)
+      .set({ userId })
+      .where(eq(corporateBookings.phone, phone));
+    
+    // Link rental bookings
+    await db
+      .update(rentalBookings)
+      .set({ userId })
+      .where(eq(rentalBookings.phone, phone));
+  }
+
+  // Driver operations
+  async getDrivers(): Promise<Driver[]> {
+    return await db.select().from(drivers).orderBy(desc(drivers.createdAt));
+  }
+
+  async getActiveDrivers(): Promise<Driver[]> {
+    return await db.select().from(drivers).where(eq(drivers.isActive, true));
+  }
+
+  async getDriver(id: string): Promise<Driver | undefined> {
+    const [driver] = await db.select().from(drivers).where(eq(drivers.id, id));
+    return driver || undefined;
+  }
+
+  async createDriver(insertDriver: InsertDriver): Promise<Driver> {
+    const [driver] = await db
+      .insert(drivers)
+      .values(insertDriver)
+      .returning();
+    return driver;
+  }
+
+  async updateDriver(driverData: UpdateDriver): Promise<Driver> {
+    const [driver] = await db
+      .update(drivers)
+      .set({
+        ...driverData,
+        updatedAt: new Date()
+      })
+      .where(eq(drivers.id, driverData.id))
+      .returning();
+    return driver;
+  }
+
+  async deleteDriver(id: string): Promise<void> {
+    await db.delete(drivers).where(eq(drivers.id, id));
   }
 
   async createCorporateBooking(booking: InsertCorporateBooking): Promise<CorporateBooking> {
@@ -136,6 +233,12 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(corporateBookings).orderBy(desc(corporateBookings.createdAt));
   }
 
+  async getCorporateBookingsByUser(userId: string): Promise<CorporateBooking[]> {
+    return await db.select().from(corporateBookings)
+      .where(eq(corporateBookings.userId, userId))
+      .orderBy(desc(corporateBookings.createdAt));
+  }
+
   async createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking> {
     const [newBooking] = await db
       .insert(rentalBookings)
@@ -146,6 +249,21 @@ export class DatabaseStorage implements IStorage {
 
   async getRentalBookings(): Promise<RentalBooking[]> {
     return await db.select().from(rentalBookings).orderBy(desc(rentalBookings.createdAt));
+  }
+
+  async getRentalBookingsByUser(userId: string): Promise<RentalBooking[]> {
+    return await db.select().from(rentalBookings)
+      .where(eq(rentalBookings.userId, userId))
+      .orderBy(desc(rentalBookings.createdAt));
+  }
+
+  async assignDriverToRental(rentalId: string, driverId: string): Promise<RentalBooking> {
+    const [booking] = await db
+      .update(rentalBookings)
+      .set({ driverId })
+      .where(eq(rentalBookings.id, rentalId))
+      .returning();
+    return booking;
   }
 
   async createVendorRegistration(vendor: InsertVendorRegistration): Promise<VendorRegistration> {

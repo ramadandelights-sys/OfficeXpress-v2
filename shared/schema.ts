@@ -1,19 +1,50 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, json, numeric, serial } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, json, jsonb, numeric, serial, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Session storage table for express-session
+export const sessions = pgTable(
+  "sessions",
+  {
+    sid: varchar("sid").primaryKey(),
+    sess: jsonb("sess").notNull(),
+    expire: timestamp("expire").notNull(),
+  },
+  (table) => [index("IDX_session_expire").on(table.expire)],
+);
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
+  phone: text("phone").notNull().unique(),
+  email: text("email"),
+  name: text("name").notNull(),
   password: text("password").notNull(),
-  isAdmin: boolean("is_admin").default(false),
+  role: text("role").notNull().default("customer"), // customer, employee, superadmin
+  permissions: json("permissions").$type<{
+    blogPosts?: boolean;
+    portfolioClients?: boolean;
+    corporateBookings?: boolean;
+    rentalBookings?: boolean;
+    vendorRegistrations?: boolean;
+    contactMessages?: boolean;
+    marketingSettings?: boolean;
+    websiteSettings?: boolean;
+    legalPages?: boolean;
+    drivers?: boolean;
+    driverAssignment?: boolean;
+    employeeManagement?: boolean;
+  }>().default({}),
+  temporaryPassword: boolean("temporary_password").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  lastLogin: timestamp("last_login"),
 });
 
 export const corporateBookings = pgTable("corporate_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
+  userId: varchar("user_id"),
   companyName: text("company_name").notNull(),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
@@ -27,6 +58,8 @@ export const corporateBookings = pgTable("corporate_bookings", {
 export const rentalBookings = pgTable("rental_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
+  userId: varchar("user_id"),
+  driverId: varchar("driver_id"),
   customerName: text("customer_name").notNull(),
   phone: text("phone").notNull(),
   email: text("email"),
@@ -241,16 +274,32 @@ export const websiteSettings = pgTable("website_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const drivers = pgTable("drivers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  phone: text("phone").notNull(),
+  licensePlate: text("license_plate").notNull(),
+  vehicleMake: text("vehicle_make").notNull(),
+  vehicleModel: text("vehicle_model").notNull(),
+  vehicleYear: text("vehicle_year").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
   referenceId: true,
+  userId: true,
   createdAt: true,
 });
 
 export const insertRentalBookingSchema = createInsertSchema(rentalBookings).omit({
   id: true,
   referenceId: true,
+  userId: true,
+  driverId: true,
   createdAt: true,
 });
 
@@ -287,9 +336,27 @@ export const insertMarketingSettingsSchema = createInsertSchema(marketingSetting
   updatedAt: true,
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  role: true,
+  permissions: true,
+  temporaryPassword: true,
+  createdAt: true,
+  lastLogin: true,
+});
+
+export const insertDriverSchema = createInsertSchema(drivers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateDriverSchema = createInsertSchema(drivers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
 });
 
 export const updateBlogPostSchema = createInsertSchema(blogPosts).omit({
@@ -372,3 +439,6 @@ export type UpdateLegalPage = z.infer<typeof updateLegalPageSchema>;
 export type WebsiteSettings = typeof websiteSettings.$inferSelect;
 export type InsertWebsiteSettings = z.infer<typeof insertWebsiteSettingsSchema>;
 export type UpdateWebsiteSettings = z.infer<typeof updateWebsiteSettingsSchema>;
+export type Driver = typeof drivers.$inferSelect;
+export type InsertDriver = z.infer<typeof insertDriverSchema>;
+export type UpdateDriver = z.infer<typeof updateDriverSchema>;

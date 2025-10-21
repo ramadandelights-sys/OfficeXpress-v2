@@ -2,6 +2,16 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { 
+  setupAuth,
+  isAuthenticated,
+  isSuperAdmin,
+  isEmployeeOrAdmin,
+  hasPermission,
+  hashPassword,
+  comparePassword,
+  generateTemporaryPassword
+} from "./auth";
+import { 
   validateCorporateBooking,
   validateRentalBooking,
   validateVendorRegistration,
@@ -10,6 +20,7 @@ import {
 import path from "path";
 import fs from "fs";
 import { 
+  users,
   insertCorporateBookingSchema,
   insertRentalBookingSchema,
   insertVendorRegistrationSchema,
@@ -23,20 +34,237 @@ import {
   insertWebsiteSettingsSchema,
   updateWebsiteSettingsSchema,
   insertLegalPageSchema,
-  updateLegalPageSchema
+  updateLegalPageSchema,
+  insertUserSchema,
+  insertDriverSchema,
+  updateDriverSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
-import { sql } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import { sendEmailNotification } from "./lib/resend";
 import { nanoid } from "nanoid";
+import rateLimit from "express-rate-limit";
+
+// Rate limiter for authentication endpoints to prevent brute-force attacks
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: "Too many authentication attempts, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  // Use default IP-based rate limiting (handles IPv4 and IPv6 properly)
+  skipSuccessfulRequests: false,
+  skipFailedRequests: false
+});
 
 // Generate unique 6-character alphanumeric reference ID
 function generateReferenceId(): string {
   return nanoid(6).toUpperCase();
 }
 
+// CSRF protection middleware - validates Origin header for state-changing requests
+function csrfProtection(req: any, res: any, next: any) {
+  // Only check POST, PUT, DELETE, PATCH requests
+  if (!['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+    return next();
+  }
+  
+  // Skip CSRF check for public booking endpoints (allow cross-origin bookings)
+  const publicEndpoints = ['/api/corporate-bookings', '/api/rental-bookings', '/api/vendor-registrations', '/api/contact-messages'];
+  if (publicEndpoints.some(endpoint => req.path === endpoint && req.method === 'POST')) {
+    return next();
+  }
+  
+  const origin = req.get('origin') || req.get('referer');
+  const host = req.get('host');
+  
+  if (!origin) {
+    return res.status(403).json({ message: "CSRF validation failed: Missing origin header" });
+  }
+  
+  // Extract hostname from origin/referer
+  let originHost;
+  try {
+    originHost = new URL(origin).host;
+  } catch (e) {
+    return res.status(403).json({ message: "CSRF validation failed: Invalid origin" });
+  }
+  
+  // Verify origin matches host
+  if (originHost !== host) {
+    return res.status(403).json({ message: "CSRF validation failed: Origin mismatch" });
+  }
+  
+  next();
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication middleware
+  await setupAuth(app);
+  
+  // Apply CSRF protection to all routes
+  app.use(csrfProtection);
+
+  // Authentication routes
+  app.post("/api/auth/login", authRateLimiter, async (req: any, res: any) => {
+    try {
+      const { phone, password } = req.body;
+      
+      if (!phone || !password) {
+        return res.status(400).json({ message: "Phone and password are required" });
+      }
+      
+      const user = await storage.getUserByPhone(phone);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid phone or password" });
+      }
+      
+      const isValid = await comparePassword(password, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid phone or password" });
+      }
+      
+      // Regenerate session to prevent session fixation attacks
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        // Store user info in new session
+        req.session.userId = user.id;
+        req.session.role = user.role;
+        req.session.permissions = user.permissions as Record<string, boolean>;
+        
+        // Save session before responding
+        req.session.save(async (saveErr: any) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          
+          // Update last login
+          await storage.updateUser(user.id, { lastLogin: new Date() } as any);
+          
+          res.json({ 
+            id: user.id,
+            phone: user.phone,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            permissions: user.permissions,
+            temporaryPassword: user.temporaryPassword
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req: any, res: any) => {
+    req.session.destroy((err: any) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        id: user.id,
+        phone: user.phone,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        temporaryPassword: user.temporaryPassword
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/api/auth/change-password", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: "Current and new passwords are required" });
+      }
+      
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const isValid = await comparePassword(currentPassword, user.password);
+      if (!isValid) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+      
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { 
+        password: hashedPassword,
+        temporaryPassword: false
+      } as any);
+      
+      res.json({ message: "Password changed successfully" });
+    } catch (error) {
+      console.error("Change password error:", error);
+      res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // One-time superadmin setup (only works if no users exist)
+  app.post("/api/auth/setup-superadmin", authRateLimiter, async (req: any, res: any) => {
+    try {
+      const existingUsers = await storage.getUsersByRole('superadmin');
+      if (existingUsers.length > 0) {
+        return res.status(400).json({ message: "Superadmin already exists" });
+      }
+      
+      const { phone, email, name, password } = req.body;
+      
+      if (!phone || !name || !password) {
+        return res.status(400).json({ message: "Phone, name, and password are required" });
+      }
+      
+      const existingUser = await storage.getUserByPhone(phone);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this phone already exists" });
+      }
+      
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        phone,
+        email: email || null,
+        name,
+        password: hashedPassword
+      });
+      
+      // Update to superadmin role
+      await storage.updateUser(user.id, { 
+        role: 'superadmin',
+        permissions: {} // Superadmin has all permissions by default
+      } as any);
+      
+      res.json({ message: "Superadmin created successfully" });
+    } catch (error) {
+      console.error("Setup superadmin error:", error);
+      res.status(500).json({ message: "Failed to create superadmin" });
+    }
+  });
 
   // Health check endpoint for debugging
   app.get("/api/health", (req, res) => {
@@ -107,27 +335,341 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // User management routes (superadmin only)
+  app.get("/api/users", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const allUsers = await db.select().from(users);
+      res.json(allUsers.map(u => ({
+        id: u.id,
+        phone: u.phone,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        permissions: u.permissions,
+        temporaryPassword: u.temporaryPassword,
+        createdAt: u.createdAt,
+        lastLogin: u.lastLogin
+      })));
+    } catch (error) {
+      console.error("Get users error:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  app.get("/api/users/:id", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      res.json({
+        id: user.id,
+        phone: user.phone,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        temporaryPassword: user.temporaryPassword,
+        createdAt: user.createdAt,
+        lastLogin: user.lastLogin
+      });
+    } catch (error) {
+      console.error("Get user error:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  app.post("/api/users", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const { phone, email, name, role, permissions } = req.body;
+      
+      if (!phone || !name || !role) {
+        return res.status(400).json({ message: "Phone, name, and role are required" });
+      }
+      
+      const existingUser = await storage.getUserByPhone(phone);
+      if (existingUser) {
+        return res.status(400).json({ message: "User with this phone already exists" });
+      }
+      
+      const tempPassword = generateTemporaryPassword();
+      const hashedPassword = await hashPassword(tempPassword);
+      
+      const user = await storage.createUser({
+        phone,
+        email: email || null,
+        name,
+        password: hashedPassword
+      });
+      
+      await storage.updateUser(user.id, {
+        role,
+        permissions: permissions || {},
+        temporaryPassword: true
+      } as any);
+      
+      // TODO: Send email with temporary password if email is provided
+      // Note: sendEmailNotification doesn't support 'userCreated' type yet
+      // This will be implemented when the Resend integration is fully set up
+      if (email) {
+        // SECURITY: Do not log plaintext passwords
+        console.log(`New user account created for phone: ${phone}`);
+        // try {
+        //   await sendEmailNotification('userCreated', { 
+        //     email, 
+        //     name, 
+        //     phone,
+        //     tempPassword 
+        //   });
+        // } catch (emailError) {
+        //   console.error("Failed to send email:", emailError);
+        // }
+      }
+      
+      const updatedUser = await storage.getUser(user.id);
+      // Do not return tempPassword in response for security
+      // Admin should communicate the password out-of-band
+      res.json({
+        user: {
+          id: updatedUser.id,
+          phone: updatedUser.phone,
+          email: updatedUser.email,
+          name: updatedUser.name,
+          role: updatedUser.role,
+          permissions: updatedUser.permissions,
+          temporaryPassword: updatedUser.temporaryPassword,
+          createdAt: updatedUser.createdAt,
+          lastLogin: updatedUser.lastLogin
+        },
+        newAccount: true
+      });
+    } catch (error) {
+      console.error("Create user error:", error);
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
+  app.put("/api/users/:id", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const { phone, email, name, role, permissions } = req.body;
+      
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const updateData: any = {};
+      if (phone) updateData.phone = phone;
+      if (email !== undefined) updateData.email = email || null;
+      if (name) updateData.name = name;
+      if (role) updateData.role = role;
+      if (permissions !== undefined) updateData.permissions = permissions;
+      
+      await storage.updateUser(req.params.id, updateData);
+      const updatedUser = await storage.getUser(req.params.id);
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update user error:", error);
+      res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      if (user.role === 'superadmin') {
+        return res.status(403).json({ message: "Cannot delete superadmin user" });
+      }
+      
+      await db.delete(users).where(eq(users.id, req.params.id));
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
+  app.get("/api/employees", isSuperAdmin, async (req: any, res: any) => {
+    try {
+      const employees = await storage.getUsersByRole('employee');
+      res.json(employees);
+    } catch (error) {
+      console.error("Get employees error:", error);
+      res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
+  // Driver management routes
+  app.get("/api/drivers", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      const drivers = await storage.getDrivers();
+      res.json(drivers);
+    } catch (error) {
+      console.error("Get drivers error:", error);
+      res.status(500).json({ message: "Failed to fetch drivers" });
+    }
+  });
+
+  app.get("/api/drivers/active", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      const drivers = await storage.getActiveDrivers();
+      res.json(drivers);
+    } catch (error) {
+      console.error("Get active drivers error:", error);
+      res.status(500).json({ message: "Failed to fetch active drivers" });
+    }
+  });
+
+  app.get("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      const driver = await storage.getDriver(req.params.id);
+      if (!driver) {
+        return res.status(404).json({ message: "Driver not found" });
+      }
+      res.json(driver);
+    } catch (error) {
+      console.error("Get driver error:", error);
+      res.status(500).json({ message: "Failed to fetch driver" });
+    }
+  });
+
+  app.post("/api/drivers", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      const driverData = insertDriverSchema.parse(req.body);
+      const driver = await storage.createDriver(driverData);
+      res.json(driver);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid driver data", errors: error.errors });
+      } else {
+        console.error("Create driver error:", error);
+        res.status(500).json({ message: "Failed to create driver" });
+      }
+    }
+  });
+
+  app.put("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      const driverData = updateDriverSchema.parse({ ...req.body, id: req.params.id });
+      const driver = await storage.updateDriver(driverData);
+      res.json(driver);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid driver data", errors: error.errors });
+      } else {
+        console.error("Update driver error:", error);
+        res.status(500).json({ message: "Failed to update driver" });
+      }
+    }
+  });
+
+  app.delete("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+    try {
+      await storage.deleteDriver(req.params.id);
+      res.json({ message: "Driver deleted successfully" });
+    } catch (error) {
+      console.error("Delete driver error:", error);
+      res.status(500).json({ message: "Failed to delete driver" });
+    }
+  });
+
+  app.put("/api/rental-bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const { driverId } = req.body;
+      
+      if (!driverId) {
+        return res.status(400).json({ message: "Driver ID is required" });
+      }
+      
+      const driver = await storage.getDriver(driverId);
+      if (!driver) {
+        return res.status(404).json({ message: "Driver not found" });
+      }
+      
+      const booking = await storage.assignDriverToRental(req.params.id, driverId);
+      res.json(booking);
+    } catch (error) {
+      console.error("Assign driver error:", error);
+      res.status(500).json({ message: "Failed to assign driver" });
+    }
+  });
+
   // Corporate booking routes
   app.post("/api/corporate-bookings", validateCorporateBooking, async (req: any, res: any) => {
     try {
       const bookingData = insertCorporateBookingSchema.parse(req.body);
       const referenceId = generateReferenceId();
-      const booking = await storage.createCorporateBooking({ ...bookingData, referenceId } as any);
+      
+      // Auto-create or link user account by phone
+      let user = await storage.getUserByPhone(bookingData.phone);
+      let tempPassword: string | null = null;
+      
+      if (!user) {
+        // Create new customer account with temporary password
+        tempPassword = generateTemporaryPassword();
+        const hashedPassword = await hashPassword(tempPassword);
+        
+        user = await storage.createUser({
+          phone: bookingData.phone,
+          email: bookingData.email || null,
+          name: bookingData.customerName,
+          password: hashedPassword
+        });
+        
+        await storage.updateUser(user.id, {
+          role: 'customer',
+          temporaryPassword: true
+        } as any);
+        
+        // SECURITY: Do not log plaintext passwords
+        console.log(`New customer account auto-created for phone: ${bookingData.phone}`);
+      } else {
+        // Link existing bookings for this phone number
+        await storage.linkExistingBookingsToUser(user.id, bookingData.phone);
+      }
+      
+      const booking = await storage.createCorporateBooking({ 
+        ...bookingData, 
+        referenceId,
+        userId: user.id 
+      } as any);
       
       // Send email notifications (admin + customer) with reference ID
       await sendEmailNotification('corporateBooking', { ...bookingData, referenceId });
       
-      res.json(booking);
+      res.json({ 
+        booking,
+        newAccount: !!tempPassword
+        // Note: Temporary password is logged server-side only for security
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid booking data", errors: error.errors });
       } else {
+        console.error("Corporate booking error:", error);
         res.status(500).json({ message: "Failed to create corporate booking" });
       }
     }
   });
 
-  app.get("/api/corporate-bookings", async (req, res) => {
+  // Customer endpoint - only returns own bookings
+  app.get("/api/my/corporate-bookings", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const bookings = await storage.getCorporateBookingsByUser(req.session.userId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Get customer corporate bookings error:", error);
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin endpoint - returns all bookings (protected)
+  app.get("/api/corporate-bookings", isEmployeeOrAdmin, async (req, res) => {
     try {
       const bookings = await storage.getCorporateBookings();
       res.json(bookings);
@@ -146,22 +688,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const bookingData = insertRentalBookingSchema.parse(req.body);
       const referenceId = generateReferenceId();
-      const booking = await storage.createRentalBooking({ ...bookingData, referenceId } as any);
+      
+      // Auto-create or link user account by phone
+      let user = await storage.getUserByPhone(bookingData.phone);
+      let tempPassword: string | null = null;
+      
+      if (!user) {
+        // Create new customer account with temporary password
+        tempPassword = generateTemporaryPassword();
+        const hashedPassword = await hashPassword(tempPassword);
+        
+        user = await storage.createUser({
+          phone: bookingData.phone,
+          email: bookingData.email || null,
+          name: bookingData.customerName,
+          password: hashedPassword
+        });
+        
+        await storage.updateUser(user.id, {
+          role: 'customer',
+          temporaryPassword: true
+        } as any);
+        
+        // SECURITY: Do not log plaintext passwords
+        console.log(`New customer account auto-created for phone: ${bookingData.phone}`);
+      } else {
+        // Link existing bookings for this phone number
+        await storage.linkExistingBookingsToUser(user.id, bookingData.phone);
+      }
+      
+      const booking = await storage.createRentalBooking({ 
+        ...bookingData, 
+        referenceId,
+        userId: user.id 
+      } as any);
       
       // Send email notifications (admin + customer) with reference ID
       await sendEmailNotification('rentalBooking', { ...bookingData, referenceId });
       
-      res.json(booking);
+      res.json({ 
+        booking,
+        newAccount: !!tempPassword
+        // Note: Temporary password is logged server-side only for security
+      });
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({ message: "Invalid booking data", errors: error.errors });
       } else {
+        console.error("Rental booking error:", error);
         res.status(500).json({ message: "Failed to create rental booking" });
       }
     }
   });
 
-  app.get("/api/rental-bookings", async (req, res) => {
+  // Customer endpoint - only returns own bookings
+  app.get("/api/my/rental-bookings", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const bookings = await storage.getRentalBookingsByUser(req.session.userId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Get customer rental bookings error:", error);
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin endpoint - returns all bookings (protected)
+  app.get("/api/rental-bookings", isEmployeeOrAdmin, async (req, res) => {
     try {
       const bookings = await storage.getRentalBookings();
       res.json(bookings);
@@ -190,7 +782,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/vendor-registrations", async (req, res) => {
+  // Admin only - contains PII
+  app.get("/api/vendor-registrations", isEmployeeOrAdmin, async (req, res) => {
     try {
       const vendors = await storage.getVendorRegistrations();
       res.json(vendors);
@@ -219,7 +812,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/contact-messages", async (req, res) => {
+  // Admin only - contains PII
+  app.get("/api/contact-messages", isEmployeeOrAdmin, async (req, res) => {
     try {
       const messages = await storage.getContactMessages();
       res.json(messages);
@@ -229,7 +823,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Blog post routes
-  app.post("/api/blog-posts", async (req, res) => {
+  // Protected - only employees with blogPosts permission can create
+  app.post("/api/blog-posts", hasPermission('blogPosts'), async (req, res) => {
     try {
       const postData = insertBlogPostSchema.parse(req.body);
       const post = await storage.createBlogPost(postData);
@@ -266,7 +861,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Portfolio client routes
-  app.post("/api/portfolio-clients", async (req, res) => {
+  // Protected - only employees with portfolioClients permission can create
+  app.post("/api/portfolio-clients", hasPermission('portfolioClients'), async (req, res) => {
     try {
       const clientData = insertPortfolioClientSchema.parse(req.body);
       const client = await storage.createPortfolioClient(clientData);

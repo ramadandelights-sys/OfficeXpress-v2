@@ -18,6 +18,10 @@ import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
 import Admin from "@/pages/admin";
 import LegalPageView from "@/pages/legal-page";
+import LoginPage from "@/pages/login";
+import SetupSuperAdminPage from "@/pages/setup-superadmin";
+import ChangePasswordPage from "@/pages/change-password";
+import CustomerDashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -40,6 +44,10 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/admin" component={Admin} />
+      <Route path="/login" component={LoginPage} />
+      <Route path="/setup-superadmin" component={SetupSuperAdminPage} />
+      <Route path="/change-password" component={ChangePasswordPage} />
+      <Route path="/dashboard" component={CustomerDashboard} />
       <Route path="/terms-and-conditions" component={LegalPageView} />
       <Route path="/privacy-policy" component={LegalPageView} />
       <Route component={NotFound} />
@@ -47,10 +55,26 @@ function Router() {
   );
 }
 
+function ConditionalHeader() {
+  const [location] = useLocation();
+  const authPages = ["/login", "/setup-superadmin", "/change-password"];
+  
+  if (authPages.includes(location)) {
+    return null;
+  }
+  
+  return <Header />;
+}
+
 function ConditionalFooter() {
   const [location] = useLocation();
   const isAdminPage = location === "/admin";
   const isLegalPage = location === "/terms-and-conditions" || location === "/privacy-policy";
+  const authPages = ["/login", "/setup-superadmin", "/change-password"];
+  
+  if (authPages.includes(location)) {
+    return null;
+  }
   
   if (isAdminPage) {
     return (
@@ -81,7 +105,7 @@ function App() {
       <MarketingProvider>
         <TooltipProvider>
             <div className="min-h-screen bg-background">
-              <Header />
+              <ConditionalHeader />
               <main>
                 <Router />
               </main>
