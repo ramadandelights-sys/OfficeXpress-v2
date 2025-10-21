@@ -433,8 +433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedUser = await storage.getUser(user.id);
-      // Do not return tempPassword in response for security
-      // Admin should communicate the password out-of-band
+      // Return temporary password only to superadmin on user creation
+      // This is safe because only superadmins can create users
       res.json({
         user: {
           id: updatedUser.id,
@@ -447,6 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: updatedUser.createdAt,
           lastLogin: updatedUser.lastLogin
         },
+        temporaryPassword: tempPassword, // Return plaintext temp password for admin to share
         newAccount: true
       });
     } catch (error) {
@@ -521,7 +522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/drivers/active", hasPermission('drivers'), async (req: any, res: any) => {
+  app.get("/api/drivers/active", hasPermission('driverAssignment'), async (req: any, res: any) => {
     try {
       const drivers = await storage.getActiveDrivers();
       res.json(drivers);

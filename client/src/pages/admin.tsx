@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck } from "lucide-react";
 import { useLocation } from "wouter";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
@@ -42,9 +42,13 @@ import type {
   UpdateWebsiteSettings,
   LegalPage,
   InsertLegalPage,
-  UpdateLegalPage
+  UpdateLegalPage,
+  User,
+  Driver,
+  InsertDriver,
+  UpdateDriver
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema, insertDriverSchema, updateDriverSchema } from "@shared/schema";
 
 export default function Admin() {
   const { user, isLoading } = useAuth();
@@ -107,6 +111,14 @@ function AdminDashboard({ user }: { user: any }) {
   // Legal pages state
   const [editingLegalPage, setEditingLegalPage] = useState<string | null>(null);
   const [showLegalPageCreator, setShowLegalPageCreator] = useState(false);
+
+  // Employee management state
+  const [showEmployeeCreator, setShowEmployeeCreator] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
+
+  // Driver management state
+  const [showDriverCreator, setShowDriverCreator] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<string | null>(null);
 
   // CSV Export functionality
   const exportToCSV = (data: any[], filename: string) => {
@@ -261,6 +273,23 @@ function AdminDashboard({ user }: { user: any }) {
 
   const { data: legalPages = [], isLoading: loadingLegalPages } = useQuery<LegalPage[]>({
     queryKey: ["/api/admin/legal-pages"],
+  });
+
+  // User (Employee) Management queries - only for superadmin
+  const { data: allUsers = [], isLoading: loadingUsers } = useQuery<User[]>({
+    queryKey: ["/api/users"],
+    enabled: user.role === 'superadmin',
+  });
+
+  // Driver Management queries
+  const { data: allDrivers = [], isLoading: loadingDrivers } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers"],
+    enabled: user.role === 'superadmin' || (user.permissions && user.permissions.drivers),
+  });
+
+  const { data: activeDrivers = [], isLoading: loadingActiveDrivers } = useQuery<Driver[]>({
+    queryKey: ["/api/drivers/active"],
+    enabled: user.role === 'superadmin' || (user.permissions && user.permissions.driverAssignment),
   });
 
   const createBlogPostMutation = useMutation({
@@ -446,6 +475,107 @@ function AdminDashboard({ user }: { user: any }) {
     },
     onError: () => {
       toast({ title: "Failed to delete legal page", variant: "destructive" });
+    },
+  });
+
+  // Employee/User Management mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/users", data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Employee created successfully",
+        description: `Temporary password: ${data.temporaryPassword}. Share this with the employee.`
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: (error: any) => {
+      toast({ title: "Failed to create employee", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      return await apiRequest("PUT", `/api/users/${id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Employee updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update employee", variant: "destructive" });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/users/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Employee deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete employee", variant: "destructive" });
+    },
+  });
+
+  // Driver Management mutations
+  const createDriverMutation = useMutation({
+    mutationFn: async (data: InsertDriver) => {
+      return await apiRequest("POST", "/api/drivers", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Driver created successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers/active"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to create driver", variant: "destructive" });
+    },
+  });
+
+  const updateDriverMutation = useMutation({
+    mutationFn: async (data: UpdateDriver) => {
+      return await apiRequest("PUT", `/api/drivers/${data.id}`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Driver updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers/active"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to update driver", variant: "destructive" });
+    },
+  });
+
+  const deleteDriverMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest("DELETE", `/api/drivers/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Driver deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/drivers/active"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to delete driver", variant: "destructive" });
+    },
+  });
+
+  // Driver Assignment mutation
+  const assignDriverMutation = useMutation({
+    mutationFn: async ({ rentalId, driverId }: { rentalId: string; driverId: string }) => {
+      return await apiRequest("PUT", `/api/rental-bookings/${rentalId}/assign-driver`, { driverId });
+    },
+    onSuccess: () => {
+      toast({ title: "Driver assigned successfully" });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/rental-bookings"] });
+    },
+    onError: () => {
+      toast({ title: "Failed to assign driver", variant: "destructive" });
     },
   });
 
@@ -691,6 +821,9 @@ function AdminDashboard({ user }: { user: any }) {
                   loading={loadingRental}
                   type="rental"
                   exportToCSV={exportToCSV}
+                  activeDrivers={activeDrivers}
+                  assignDriverMutation={assignDriverMutation}
+                  showDriverAssignment={user.role === 'superadmin' || (user.permissions && user.permissions.driverAssignment)}
                 />
               </TabsContent>
 
@@ -872,6 +1005,66 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+
+        {/* Employee Management (Superadmin Only) */}
+        {user.role === 'superadmin' && (
+          <EmployeeManagementSection
+            allUsers={allUsers}
+            loadingUsers={loadingUsers}
+            showEmployeeCreator={showEmployeeCreator}
+            setShowEmployeeCreator={setShowEmployeeCreator}
+            editingEmployee={editingEmployee}
+            setEditingEmployee={setEditingEmployee}
+            createUserMutation={createUserMutation}
+            updateUserMutation={updateUserMutation}
+            deleteUserMutation={deleteUserMutation}
+          />
+        )}
+
+        {/* Driver Management (Drivers Permission) */}
+        {(user.role === 'superadmin' || user.permissions?.drivers) && (
+          <DriverManagementSection
+            allDrivers={allDrivers}
+            loadingDrivers={loadingDrivers}
+            showDriverCreator={showDriverCreator}
+            setShowDriverCreator={setShowDriverCreator}
+            editingDriver={editingDriver}
+            setEditingDriver={setEditingDriver}
+            createDriverMutation={createDriverMutation}
+            updateDriverMutation={updateDriverMutation}
+            deleteDriverMutation={deleteDriverMutation}
+          />
+        )}
+
+        {/* Employee Management Section - Superadmin Only */}
+        {user.role === 'superadmin' && (
+          <EmployeeManagementSection
+            allUsers={allUsers}
+            loadingUsers={loadingUsers}
+            showEmployeeCreator={showEmployeeCreator}
+            setShowEmployeeCreator={setShowEmployeeCreator}
+            editingEmployee={editingEmployee}
+            setEditingEmployee={setEditingEmployee}
+            createUserMutation={createUserMutation}
+            updateUserMutation={updateUserMutation}
+            deleteUserMutation={deleteUserMutation}
+          />
+        )}
+
+        {/* Driver Management Section - Drivers Permission */}
+        {(user.role === 'superadmin' || (user.permissions && user.permissions.drivers)) && (
+          <DriverManagementSection
+            allDrivers={allDrivers}
+            loadingDrivers={loadingDrivers}
+            showDriverCreator={showDriverCreator}
+            setShowDriverCreator={setShowDriverCreator}
+            editingDriver={editingDriver}
+            setEditingDriver={setEditingDriver}
+            createDriverMutation={createDriverMutation}
+            updateDriverMutation={updateDriverMutation}
+            deleteDriverMutation={deleteDriverMutation}
+          />
+        )}
 
         {/* Legal Pages Management */}
         <Card className="mb-8">
@@ -1450,6 +1643,9 @@ interface FormSectionTableProps {
   loading: boolean;
   type: 'corporate' | 'rental' | 'vendor' | 'contact';
   exportToCSV: (data: any[], filename: string) => void;
+  activeDrivers?: Driver[];
+  assignDriverMutation?: any;
+  showDriverAssignment?: boolean;
 }
 
 function FormSectionTable({
@@ -1463,7 +1659,10 @@ function FormSectionTable({
   setDateTo,
   loading,
   type,
-  exportToCSV
+  exportToCSV,
+  activeDrivers = [],
+  assignDriverMutation,
+  showDriverAssignment = false
 }: FormSectionTableProps) {
   
   // Helper function to get all fields for each form type
@@ -1482,7 +1681,7 @@ function FormSectionTable({
           { key: 'createdAt', label: 'Submitted' }
         ];
       case 'rental':
-        return [
+        const rentalFields = [
           { key: 'referenceId', label: 'Reference ID' },
           { key: 'customerName', label: 'Customer Name' },
           { key: 'email', label: 'Email' },
@@ -1502,6 +1701,10 @@ function FormSectionTable({
           { key: 'isReturnTrip', label: 'Return Trip' },
           { key: 'createdAt', label: 'Submitted' }
         ];
+        if (showDriverAssignment) {
+          rentalFields.push({ key: 'driver', label: 'Driver' });
+        }
+        return rentalFields;
       case 'vendor':
         return [
           { key: 'referenceId', label: 'Reference ID' },
@@ -1562,8 +1765,13 @@ function FormSectionTable({
   const filteredData = getFilteredData();
   
   // Format value for display
-  const formatValue = (value: any, key: string) => {
-    if (value === null || value === undefined) return '-';
+  const formatValue = (value: any, key: string, item?: any) => {
+    if (value === null || value === undefined) {
+      if (key === 'driver' && item) {
+        return '-';
+      }
+      return '-';
+    }
     
     if (key === 'referenceId') {
       return (
@@ -1598,6 +1806,38 @@ function FormSectionTable({
         <a href={`tel:${value}`} className="text-blue-600 hover:underline">
           {value}
         </a>
+      );
+    }
+    
+    if (key === 'driver' && item && showDriverAssignment) {
+      const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
+      return (
+        <div className="flex flex-col gap-1">
+          <div className="text-sm">
+            {assignedDriver ? assignedDriver.name : 'Unassigned'}
+          </div>
+          <Select
+            value={item.driverId || ''}
+            onValueChange={(driverId) => {
+              if (assignDriverMutation) {
+                assignDriverMutation.mutate({ rentalId: item.id, driverId });
+              }
+            }}
+            data-testid={`select-assign-driver-${item.id}`}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Assign driver" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Unassigned</SelectItem>
+              {activeDrivers.map((driver) => (
+                <SelectItem key={driver.id} value={driver.id}>
+                  {driver.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       );
     }
     
@@ -1730,7 +1970,7 @@ function FormSectionTable({
                   <TableRow key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     {fields.map((field) => (
                       <TableCell key={field.key} className="whitespace-nowrap px-4 py-2 max-w-[200px] truncate" title={String(item[field.key] || '')}>
-                        {formatValue(item[field.key], field.key)}
+                        {formatValue(item[field.key], field.key, item)}
                       </TableCell>
                     ))}
                   </TableRow>
@@ -1925,5 +2165,607 @@ function FormSubmissionsTable({
         {formTypeFilter !== "all" && ` (${formTypeFilter} only)`}
       </div>
     </div>
+  );
+}
+
+// Employee Management Section Component
+interface EmployeeManagementSectionProps {
+  allUsers: User[];
+  loadingUsers: boolean;
+  showEmployeeCreator: boolean;
+  setShowEmployeeCreator: (show: boolean) => void;
+  editingEmployee: string | null;
+  setEditingEmployee: (id: string | null) => void;
+  createUserMutation: any;
+  updateUserMutation: any;
+  deleteUserMutation: any;
+}
+
+function EmployeeManagementSection({
+  allUsers,
+  loadingUsers,
+  showEmployeeCreator,
+  setShowEmployeeCreator,
+  editingEmployee,
+  setEditingEmployee,
+  createUserMutation,
+  updateUserMutation,
+  deleteUserMutation,
+}: EmployeeManagementSectionProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    role: 'employee' as 'employee' | 'customer',
+    permissions: {
+      blogPosts: false,
+      portfolioClients: false,
+      corporateBookings: false,
+      rentalBookings: false,
+      vendorRegistrations: false,
+      contactMessages: false,
+      marketingSettings: false,
+      websiteSettings: false,
+      legalPages: false,
+      drivers: false,
+      driverAssignment: false,
+      employeeManagement: false,
+    }
+  });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      phone: '',
+      email: '',
+      role: 'employee',
+      permissions: {
+        blogPosts: false,
+        portfolioClients: false,
+        corporateBookings: false,
+        rentalBookings: false,
+        vendorRegistrations: false,
+        contactMessages: false,
+        marketingSettings: false,
+        websiteSettings: false,
+        legalPages: false,
+        drivers: false,
+        driverAssignment: false,
+        employeeManagement: false,
+      }
+    });
+    setShowEmployeeCreator(false);
+    setEditingEmployee(null);
+  };
+
+  const handleEditEmployee = (employee: User) => {
+    setFormData({
+      name: employee.name || '',
+      phone: employee.phone,
+      email: employee.email || '',
+      role: employee.role,
+      permissions: employee.permissions || {
+        blogPosts: false,
+        portfolioClients: false,
+        corporateBookings: false,
+        rentalBookings: false,
+        vendorRegistrations: false,
+        contactMessages: false,
+        marketingSettings: false,
+        websiteSettings: false,
+        legalPages: false,
+        drivers: false,
+        driverAssignment: false,
+        employeeManagement: false,
+      }
+    });
+    setEditingEmployee(employee.id);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingEmployee) {
+      updateUserMutation.mutate({ id: editingEmployee, data: { permissions: formData.permissions } }, {
+        onSuccess: () => resetForm()
+      });
+    } else {
+      createUserMutation.mutate(formData, {
+        onSuccess: () => resetForm()
+      });
+    }
+  };
+
+  const getPermissionsSummary = (permissions: any) => {
+    if (!permissions) return 'No permissions';
+    const activePerms = Object.entries(permissions).filter(([_, value]) => value).map(([key]) => key);
+    return activePerms.length > 0 ? activePerms.join(', ') : 'No permissions';
+  };
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center gap-2" data-testid="heading-employee-management">
+            <Shield className="h-5 w-5" />
+            Employee Management
+          </CardTitle>
+          {!showEmployeeCreator && !editingEmployee && (
+            <Button
+              onClick={() => setShowEmployeeCreator(true)}
+              className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+              data-testid="button-create-employee"
+            >
+              <Plus className="h-4 w-4" />
+              Create Employee
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {showEmployeeCreator || editingEmployee ? (
+          <form onSubmit={handleSubmit} className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+            <h3 className="font-semibold text-lg mb-4">
+              {editingEmployee ? 'Edit Employee Permissions' : 'Create New Employee'}
+            </h3>
+            
+            {!editingEmployee && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name *</label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Employee name"
+                    required
+                    data-testid="input-employee-name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Phone *</label>
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="Phone number"
+                    required
+                    data-testid="input-employee-phone"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <Input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="Email address (optional)"
+                    data-testid="input-employee-email"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">Role *</label>
+                  <Select
+                    value={formData.role}
+                    onValueChange={(value: 'employee' | 'customer') => setFormData({ ...formData, role: value })}
+                    data-testid="select-employee-role"
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="employee">Employee</SelectItem>
+                      <SelectItem value="customer">Customer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Permissions</label>
+              <div className="grid grid-cols-2 gap-3">
+                {Object.keys(formData.permissions).map((perm) => (
+                  <div key={perm} className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id={perm}
+                      checked={formData.permissions[perm as keyof typeof formData.permissions]}
+                      onChange={(e) => setFormData({
+                        ...formData,
+                        permissions: { ...formData.permissions, [perm]: e.target.checked }
+                      })}
+                      className="h-4 w-4 rounded border-gray-300"
+                      data-testid={`checkbox-permission-${perm}`}
+                    />
+                    <label htmlFor={perm} className="text-sm capitalize">
+                      {perm.replace(/([A-Z])/g, ' $1').trim()}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={createUserMutation.isPending || updateUserMutation.isPending}
+                data-testid="button-save-employee"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {editingEmployee ? 'Update Permissions' : 'Create Employee'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetForm}
+                data-testid="button-cancel-employee"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : loadingUsers ? (
+          <div className="text-center py-8" data-testid="loading-employees">Loading employees...</div>
+        ) : allUsers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No employees yet. Create your first employee!
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Permissions Summary</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allUsers.map((employee) => (
+                  <TableRow key={employee.id}>
+                    <TableCell className="font-medium">{employee.name || 'N/A'}</TableCell>
+                    <TableCell>{employee.phone}</TableCell>
+                    <TableCell className="capitalize">{employee.role}</TableCell>
+                    <TableCell className="max-w-[300px] truncate" title={getPermissionsSummary(employee.permissions)}>
+                      {getPermissionsSummary(employee.permissions)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditEmployee(employee)}
+                          data-testid={`button-edit-employee-${employee.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {showDeleteConfirm === employee.id ? (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                deleteUserMutation.mutate(employee.id);
+                                setShowDeleteConfirm(null);
+                              }}
+                            >
+                              Confirm
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowDeleteConfirm(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setShowDeleteConfirm(employee.id)}
+                            data-testid={`button-delete-employee-${employee.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Driver Management Section Component
+interface DriverManagementSectionProps {
+  allDrivers: Driver[];
+  loadingDrivers: boolean;
+  showDriverCreator: boolean;
+  setShowDriverCreator: (show: boolean) => void;
+  editingDriver: string | null;
+  setEditingDriver: (id: string | null) => void;
+  createDriverMutation: any;
+  updateDriverMutation: any;
+  deleteDriverMutation: any;
+}
+
+function DriverManagementSection({
+  allDrivers,
+  loadingDrivers,
+  showDriverCreator,
+  setShowDriverCreator,
+  editingDriver,
+  setEditingDriver,
+  createDriverMutation,
+  updateDriverMutation,
+  deleteDriverMutation,
+}: DriverManagementSectionProps) {
+  const [formData, setFormData] = useState<InsertDriver>({
+    name: '',
+    phone: '',
+    licensePlate: '',
+    vehicleMake: '',
+    vehicleModel: '',
+    vehicleYear: '',
+    isActive: true,
+  });
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      phone: '',
+      licensePlate: '',
+      vehicleMake: '',
+      vehicleModel: '',
+      vehicleYear: '',
+      isActive: true,
+    });
+    setShowDriverCreator(false);
+    setEditingDriver(null);
+  };
+
+  const handleEditDriver = (driver: Driver) => {
+    setFormData({
+      name: driver.name,
+      phone: driver.phone,
+      licensePlate: driver.licensePlate,
+      vehicleMake: driver.vehicleMake,
+      vehicleModel: driver.vehicleModel,
+      vehicleYear: driver.vehicleYear,
+      isActive: driver.isActive,
+    });
+    setEditingDriver(driver.id);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingDriver) {
+      updateDriverMutation.mutate({ id: editingDriver, ...formData }, {
+        onSuccess: () => resetForm()
+      });
+    } else {
+      createDriverMutation.mutate(formData, {
+        onSuccess: () => resetForm()
+      });
+    }
+  };
+
+  return (
+    <Card className="mb-8">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle className="flex items-center gap-2" data-testid="heading-driver-management">
+            <Truck className="h-5 w-5" />
+            Driver Management
+          </CardTitle>
+          {!showDriverCreator && !editingDriver && (
+            <Button
+              onClick={() => setShowDriverCreator(true)}
+              className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
+              data-testid="button-create-driver"
+            >
+              <Plus className="h-4 w-4" />
+              Create Driver
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {showDriverCreator || editingDriver ? (
+          <form onSubmit={handleSubmit} className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+            <h3 className="font-semibold text-lg mb-4">
+              {editingDriver ? 'Edit Driver' : 'Create New Driver'}
+            </h3>
+            
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Driver name"
+                required
+                data-testid="input-driver-name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Phone *</label>
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="Phone number"
+                required
+                data-testid="input-driver-phone"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">License Plate *</label>
+              <Input
+                value={formData.licensePlate}
+                onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
+                placeholder="License plate number"
+                required
+                data-testid="input-driver-license-plate"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Vehicle Make *</label>
+              <Input
+                value={formData.vehicleMake}
+                onChange={(e) => setFormData({ ...formData, vehicleMake: e.target.value })}
+                placeholder="e.g., Toyota"
+                required
+                data-testid="input-driver-make"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Vehicle Model *</label>
+              <Input
+                value={formData.vehicleModel}
+                onChange={(e) => setFormData({ ...formData, vehicleModel: e.target.value })}
+                placeholder="e.g., Corolla"
+                required
+                data-testid="input-driver-model"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Vehicle Year *</label>
+              <Input
+                value={formData.vehicleYear}
+                onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
+                placeholder="e.g., 2020"
+                required
+                data-testid="input-driver-year"
+              />
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                checked={formData.isActive}
+                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                data-testid="switch-driver-active"
+              />
+              <label className="text-sm font-medium">Active</label>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="submit"
+                disabled={createDriverMutation.isPending || updateDriverMutation.isPending}
+                data-testid="button-save-driver"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {editingDriver ? 'Update Driver' : 'Create Driver'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={resetForm}
+                data-testid="button-cancel-driver"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </div>
+          </form>
+        ) : loadingDrivers ? (
+          <div className="text-center py-8" data-testid="loading-drivers">Loading drivers...</div>
+        ) : allDrivers.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            No drivers yet. Create your first driver!
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>License Plate</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allDrivers.map((driver) => (
+                  <TableRow key={driver.id}>
+                    <TableCell className="font-medium">{driver.name}</TableCell>
+                    <TableCell>{driver.phone}</TableCell>
+                    <TableCell>{driver.licensePlate}</TableCell>
+                    <TableCell>{driver.vehicleMake} {driver.vehicleModel} ({driver.vehicleYear})</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${driver.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {driver.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditDriver(driver)}
+                          data-testid={`button-edit-driver-${driver.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {showDeleteConfirm === driver.id ? (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                deleteDriverMutation.mutate(driver.id);
+                                setShowDeleteConfirm(null);
+                              }}
+                            >
+                              Confirm
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowDeleteConfirm(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => setShowDeleteConfirm(driver.id)}
+                            data-testid={`button-delete-driver-${driver.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
