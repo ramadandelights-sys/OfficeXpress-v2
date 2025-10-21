@@ -76,6 +76,12 @@ function csrfProtection(req: any, res: any, next: any) {
     return next();
   }
   
+  // Skip CSRF check for unauthenticated auth endpoints only
+  const unauthenticatedAuthEndpoints = ['/api/auth/login', '/api/auth/register'];
+  if (unauthenticatedAuthEndpoints.some(endpoint => req.path === endpoint)) {
+    return next();
+  }
+  
   const origin = req.get('origin') || req.get('referer');
   const host = req.get('host');
   
