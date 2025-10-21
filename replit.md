@@ -30,14 +30,14 @@ Preferred communication style: Simple, everyday language.
 - **Schema Management**: Drizzle Kit for migrations.
 
 ### Data Models
-Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registrations, Contact Messages, Blog Posts, and Portfolio Clients.
+Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registrations, Contact Messages, Blog Posts, Portfolio Clients, and Drivers.
 
 ### Authentication & Security
 - **Authentication**: Phone-based with three roles (Customer, Employee, Superadmin) and role-based access control.
 - **Session Management**: Express sessions with PostgreSQL storage.
 - **Security Features**: bcrypt hashing, CSRF protection, rate limiting, HttpOnly/Secure/SameSite cookies.
 - **Input Validation**: Zod schemas and server-side validation.
-- **Driver Management**: Tracking and assignment.
+- **Granular Permissions**: 12 permission types controlling access to different admin panel sections.
 - **Reference ID Tracking**: Unique 6-character alphanumeric IDs for all form submissions.
 
 ### UI/UX Decisions
@@ -49,10 +49,15 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 ### System Design Choices
 - **Multi-User Authentication**: Phone-based authentication with Customer, Employee, and Superadmin roles.
 - **Automatic Account Creation**: Customer accounts created from bookings without requiring separate login.
-- **Admin Panel**: Granular permissions for managing various aspects of the platform.
+- **Admin Panel**: Comprehensive admin panel with three main management sections:
+  - **Employee Management** (Superadmin-only): Full CRUD for user accounts with role selection, 12 granular permission checkboxes, and temporary password generation
+  - **Driver Management**: Full CRUD for drivers with vehicle details (name, phone, license plate, make/model/year), active/inactive toggle
+  - **Driver Assignment**: Assign active drivers to rental bookings with permission-based access control
+- **Granular Permissions System**: 12 permission types (blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, drivers, driverAssignment, employeeManagement) controlling access to different admin sections
+- **Temporary Password System**: Auto-generated 12-character temporary passwords for new employee accounts, displayed once to superadmin at creation time
 - **Email Notifications**: Resend integration for transactional emails to both admin and customers with professional templates.
 - **Reference ID Tracking**: Unique IDs generated for all form submissions, integrated into database, emails, and admin panel.
-- **Security Enhancements**: Rate limiting, Helmet security headers, input validation, sanitization, and CSRF protection.
+- **Security Enhancements**: Rate limiting, Helmet security headers, input validation, sanitization, CSRF protection, and permission-based API middleware
 - **Analytics Integration**: Comprehensive event tracking with Google Analytics 4 (GA4) and Facebook Pixel, including value-based tracking and server-side conversion API.
 - **Deployment**: Environment-aware API base URL system, SSL certificate management, and production environment variables.
 - **ReCAPTCHA**: Optional spam protection for forms, configurable per environment.
