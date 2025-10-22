@@ -2111,10 +2111,35 @@ function FormSectionTable({
   
   // Format value for display
   const formatValue = (value: any, key: string, item?: any) => {
+    // Check for driver field FIRST, before null check, so button renders even when value is null
+    if (key === 'driver' && showDriverAssignment) {
+      const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
+      return (
+        <div className="flex flex-col gap-1">
+          <div className="text-sm mb-1">
+            {assignedDriver ? (
+              <span className="font-medium text-green-700 dark:text-green-400">
+                {assignedDriver.name}
+              </span>
+            ) : (
+              <span className="text-gray-500">Unassigned</span>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => setAssigningBooking(item as RentalBooking)}
+            data-testid={`button-assign-driver-${item.id}`}
+          >
+            <Truck className="h-3 w-3 mr-1" />
+            {assignedDriver ? 'Reassign' : 'Assign Driver'}
+          </Button>
+        </div>
+      );
+    }
+    
     if (value === null || value === undefined) {
-      if (key === 'driver' && item) {
-        return '-';
-      }
       return '-';
     }
     
@@ -2151,33 +2176,6 @@ function FormSectionTable({
         <a href={`tel:${value}`} className="text-blue-600 hover:underline">
           {value}
         </a>
-      );
-    }
-    
-    if (key === 'driver' && showDriverAssignment) {
-      const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
-      return (
-        <div className="flex flex-col gap-1">
-          <div className="text-sm mb-1">
-            {assignedDriver ? (
-              <span className="font-medium text-green-700 dark:text-green-400">
-                {assignedDriver.name}
-              </span>
-            ) : (
-              <span className="text-gray-500">Unassigned</span>
-            )}
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={() => setAssigningBooking(item as RentalBooking)}
-            data-testid={`button-assign-driver-${item.id}`}
-          >
-            <Truck className="h-3 w-3 mr-1" />
-            {assignedDriver ? 'Reassign' : 'Assign Driver'}
-          </Button>
-        </div>
       );
     }
     
