@@ -444,8 +444,8 @@ export const emailTemplates = {
     })
   },
   
-  employeeCreated: (data: any) => ({
-    subject: `Welcome to OfficeXpress - Your Account has been Created`,
+  employeeOnboarding: (data: any) => ({
+    subject: `Welcome to OfficeXpress - Complete Your Account Setup`,
     html: emailWrapper(`
       <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
         Welcome to OfficeXpress!
@@ -456,31 +456,13 @@ export const emailTemplates = {
       </p>
       
       <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
-        Your employee account has been successfully created on the OfficeXpress platform. You now have access to the admin panel with the permissions assigned to you.
+        Your employee account has been successfully created on the OfficeXpress platform. To get started, please click the button below to set your password and complete your account setup.
       </p>
       
-      <div style="margin: 30px 0; padding: 24px; background-color: #f3f4f6; border-radius: 8px; border: 2px solid #B2DFDB;">
-        <h3 style="margin: 0 0 16px 0; color: #374151; font-size: 18px; font-weight: 600;">
-          Your Login Credentials
-        </h3>
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500;">
-              Phone Number:
-            </td>
-            <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 600;">
-              ${data.phone}
-            </td>
-          </tr>
-          <tr>
-            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500;">
-              Temporary Password:
-            </td>
-            <td style="padding: 8px 0; color: #004d40; font-size: 16px; font-weight: 700; font-family: monospace; background-color: #ffffff; padding: 12px; border-radius: 4px;">
-              ${data.tempPassword}
-            </td>
-          </tr>
-        </table>
+      <div style="margin: 30px 0; text-align: center;">
+        <a href="${data.onboardingUrl}" style="display: inline-block; padding: 16px 40px; background-color: #4c9096; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          Set Up Your Account
+        </a>
       </div>
       
       <div style="margin: 30px 0; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
@@ -488,14 +470,17 @@ export const emailTemplates = {
           ⚠️ Important Security Notice
         </p>
         <p style="margin: 0; color: #856404; font-size: 13px; line-height: 1.6;">
-          You will be required to change this temporary password when you first log in. Please keep this password secure and do not share it with anyone.
+          This onboarding link will expire in ${data.expiresIn}. If the link expires, please contact your administrator to request a new one. For security reasons, this link can only be used once.
         </p>
       </div>
       
-      <div style="margin: 30px 0; text-align: center;">
-        <a href="${data.loginUrl || 'https://officexpress.org/login'}" style="display: inline-block; padding: 14px 32px; background-color: #B2DFDB; color: #004d40; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 16px;">
-          Login to OfficeXpress
-        </a>
+      <div style="margin: 30px 0; padding: 20px; background-color: #f3f4f6; border-radius: 8px;">
+        <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px; font-weight: 600;">
+          Can't click the button? Copy and paste this link into your browser:
+        </p>
+        <p style="margin: 0; color: #4c9096; font-size: 12px; word-break: break-all; font-family: monospace;">
+          ${data.onboardingUrl}
+        </p>
       </div>
       
       ${detailSection('Your Account Details', [
@@ -556,18 +541,18 @@ export async function sendEmailNotification(
   }
 }
 
-// Send employee creation email
-export async function sendEmployeeCreationEmail(data: {
+// Send employee onboarding email
+export async function sendEmployeeOnboardingEmail(data: {
   email: string;
   name: string;
   phone: string;
   role: string;
-  tempPassword: string;
-  loginUrl?: string;
+  onboardingUrl: string;
+  expiresIn: string;
 }) {
   try {
     const { client, fromEmail } = await getUncachableResendClient();
-    const template = emailTemplates.employeeCreated(data);
+    const template = emailTemplates.employeeOnboarding(data);
     
     await client.emails.send({
       from: `OfficeXpress <${fromEmail}>`,
@@ -576,9 +561,9 @@ export async function sendEmployeeCreationEmail(data: {
       html: template.html
     });
     
-    console.log(`Employee creation email sent to ${data.email}`);
+    console.log(`Employee onboarding email sent to ${data.email}`);
   } catch (error) {
-    console.error('Error sending employee creation email:', error);
+    console.error('Error sending employee onboarding email:', error);
     throw error; // Throw so we can inform the user if email fails
   }
 }

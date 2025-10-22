@@ -11,6 +11,7 @@ import {
   comparePassword,
   generateTemporaryPassword
 } from "./auth";
+import { randomBytes } from "crypto";
 import { 
   validateCorporateBooking,
   validateRentalBooking,
@@ -42,7 +43,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeCreationEmail } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail } from "./lib/resend";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
 
@@ -281,6 +282,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Onboarding endpoints (no authentication required)
+  app.get("/api/onboarding/verify", async (req: any, res: any) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Token is required" });
+      }
+      
+      const onboardingToken = await storage.getOnboardingToken(token as string);
+      
+      if (!onboardingToken) {
+        return res.status(404).json({ message: "Invalid onboarding token" });
+      }
+      
+      if (onboardingToken.used) {
+        return res.status(400).json({ message: "This onboarding link has already been used" });
+      }
+      
+      if (new Date() > onboardingToken.expiresAt) {
+        return res.status(400).json({ message: "This onboarding link has expired. Please contact your administrator." });
+      }
+      
+      // Get user details to show on onboarding page
+      const user = await storage.getUser(onboardingToken.userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.json({
+        valid: true,
+        user: {
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role
+        }
+      });
+    } catch (error) {
+      console.error("Verify onboarding token error:", error);
+      res.status(500).json({ message: "Failed to verify onboarding token" });
+    }
+  });
+
+  app.post("/api/onboarding/complete", async (req: any, res: any) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and password are required" });
+      }
+      
+      // Validate password strength
+      if (password.length < 8) {
+        return res.status(400).json({ message: "Password must be at least 8 characters long" });
+      }
+      
+      const onboardingToken = await storage.getOnboardingToken(token);
+      
+      if (!onboardingToken) {
+        return res.status(404).json({ message: "Invalid onboarding token" });
+      }
+      
+      if (onboardingToken.used) {
+        return res.status(400).json({ message: "This onboarding link has already been used" });
+      }
+      
+      if (new Date() > onboardingToken.expiresAt) {
+        return res.status(400).json({ message: "This onboarding link has expired. Please contact your administrator." });
+      }
+      
+      // Get user
+      const user = await storage.getUser(onboardingToken.userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Hash the new password
+      const hashedPassword = await hashPassword(password);
+      
+      // Update user's password and mark as no longer having temporary password
+      await storage.updateUser(user.id, {
+        password: hashedPassword,
+        temporaryPassword: false
+      });
+      
+      // Mark token as used
+      await storage.markOnboardingTokenAsUsed(token);
+      
+      // Log the user in automatically
+      req.login(user, (err: any) => {
+        if (err) {
+          console.error("Login after onboarding error:", err);
+          return res.status(500).json({ message: "Account created but login failed. Please try logging in manually." });
+        }
+        
+        res.json({
+          success: true,
+          message: "Account setup complete! Redirecting to admin panel...",
+          user: {
+            id: user.id,
+            phone: user.phone,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            permissions: user.permissions
+          }
+        });
+      });
+    } catch (error) {
+      console.error("Complete onboarding error:", error);
+      res.status(500).json({ message: "Failed to complete onboarding" });
+    }
+  });
+
   // Logo settings endpoint for frontend
   app.get("/api/logo", async (req, res) => {
     try {
@@ -411,8 +529,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User with this phone already exists" });
       }
       
-      const tempPassword = generateTemporaryPassword();
-      const hashedPassword = await hashPassword(tempPassword);
+      // Create user with a random placeholder password (will be set during onboarding)
+      const placeholderPassword = randomBytes(32).toString('hex');
+      const hashedPassword = await hashPassword(placeholderPassword);
       
       const user = await storage.createUser({
         phone,
@@ -424,34 +543,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(user.id, {
         role,
         permissions: permissions || {},
-        temporaryPassword: true
+        temporaryPassword: false  // No temporary password needed - using onboarding link
       } as any);
       
-      // Send email with temporary password and login link
+      // Generate secure onboarding token (64 characters)
+      const onboardingToken = randomBytes(32).toString('hex');
+      
+      // Token expires in 24 hours
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+      
+      // Store onboarding token in database
+      await storage.createOnboardingToken({
+        token: onboardingToken,
+        userId: user.id,
+        expiresAt
+      });
+      
+      // Send email with onboarding link
       try {
-        const loginUrl = process.env.NODE_ENV === 'production' 
-          ? 'https://officexpress.org/login' 
-          : `${req.protocol}://${req.get('host')}/login`;
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://officexpress.org' 
+          : `${req.protocol}://${req.get('host')}`;
         
-        await sendEmployeeCreationEmail({ 
+        const onboardingUrl = `${baseUrl}/onboarding?token=${onboardingToken}`;
+        
+        await sendEmployeeOnboardingEmail({ 
           email, 
           name, 
           phone,
           role,
-          tempPassword,
-          loginUrl
+          onboardingUrl,
+          expiresIn: '24 hours'
         });
         
-        console.log(`Employee account created and email sent to ${email}`);
+        console.log(`Employee account created and onboarding email sent to ${email}`);
       } catch (emailError) {
-        console.error("Failed to send employee creation email:", emailError);
-        // Clean up the created user if email fails
+        console.error("Failed to send employee onboarding email:", emailError);
+        // Clean up the created user and token if email fails
         await storage.deleteUser(user.id);
-        return res.status(500).json({ message: "Failed to send employee creation email. Please check the email address and try again." });
+        return res.status(500).json({ message: "Failed to send employee onboarding email. Please check the email address and try again." });
       }
       
       const updatedUser = await storage.getUser(user.id);
-      // Do not return temporary password - it's been sent via email
       res.json({
         user: {
           id: updatedUser.id,

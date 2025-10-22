@@ -11,6 +11,7 @@ import {
   marketingSettings,
   legalPages,
   websiteSettings,
+  onboardingTokens,
   type User, 
   type InsertUser,
   type Driver,
@@ -40,10 +41,12 @@ import {
   type UpdateLegalPage,
   type WebsiteSettings,
   type InsertWebsiteSettings,
-  type UpdateWebsiteSettings
+  type UpdateWebsiteSettings,
+  type OnboardingToken,
+  type InsertOnboardingToken
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, ilike } from "drizzle-orm";
+import { eq, desc, or, ilike, sql, lt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -52,8 +55,15 @@ export interface IStorage {
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: string, data: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User>;
+  deleteUser(id: string): Promise<void>;
   getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]>;
   linkExistingBookingsToUser(userId: string, phone: string): Promise<void>;
+  
+  // Onboarding token operations
+  createOnboardingToken(token: InsertOnboardingToken): Promise<OnboardingToken>;
+  getOnboardingToken(token: string): Promise<OnboardingToken | undefined>;
+  markOnboardingTokenAsUsed(token: string): Promise<void>;
+  deleteExpiredOnboardingTokens(): Promise<void>;
   
   // Driver operations
   getDrivers(): Promise<Driver[]>;
@@ -167,6 +177,10 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  async deleteUser(id: string): Promise<void> {
+    await db.delete(users).where(eq(users.id, id));
+  }
+
   async getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]> {
     return await db.select().from(users).where(eq(users.role, role));
   }
@@ -183,6 +197,37 @@ export class DatabaseStorage implements IStorage {
       .update(rentalBookings)
       .set({ userId })
       .where(eq(rentalBookings.phone, phone));
+  }
+
+  // Onboarding token operations
+  async createOnboardingToken(tokenData: InsertOnboardingToken): Promise<OnboardingToken> {
+    const [token] = await db
+      .insert(onboardingTokens)
+      .values(tokenData)
+      .returning();
+    return token;
+  }
+
+  async getOnboardingToken(token: string): Promise<OnboardingToken | undefined> {
+    const [onboardingToken] = await db
+      .select()
+      .from(onboardingTokens)
+      .where(eq(onboardingTokens.token, token));
+    return onboardingToken || undefined;
+  }
+
+  async markOnboardingTokenAsUsed(token: string): Promise<void> {
+    await db
+      .update(onboardingTokens)
+      .set({ used: true })
+      .where(eq(onboardingTokens.token, token));
+  }
+
+  async deleteExpiredOnboardingTokens(): Promise<void> {
+    const now = new Date();
+    await db
+      .delete(onboardingTokens)
+      .where(lt(onboardingTokens.expiresAt, now));
   }
 
   // Driver operations
