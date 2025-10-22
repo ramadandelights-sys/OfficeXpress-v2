@@ -1036,36 +1036,6 @@ function AdminDashboard({ user }: { user: any }) {
           />
         )}
 
-        {/* Employee Management Section - Superadmin Only */}
-        {user.role === 'superadmin' && (
-          <EmployeeManagementSection
-            allUsers={allUsers}
-            loadingUsers={loadingUsers}
-            showEmployeeCreator={showEmployeeCreator}
-            setShowEmployeeCreator={setShowEmployeeCreator}
-            editingEmployee={editingEmployee}
-            setEditingEmployee={setEditingEmployee}
-            createUserMutation={createUserMutation}
-            updateUserMutation={updateUserMutation}
-            deleteUserMutation={deleteUserMutation}
-          />
-        )}
-
-        {/* Driver Management Section - Drivers Permission */}
-        {(user.role === 'superadmin' || (user.permissions && user.permissions.drivers)) && (
-          <DriverManagementSection
-            allDrivers={allDrivers}
-            loadingDrivers={loadingDrivers}
-            showDriverCreator={showDriverCreator}
-            setShowDriverCreator={setShowDriverCreator}
-            editingDriver={editingDriver}
-            setEditingDriver={setEditingDriver}
-            createDriverMutation={createDriverMutation}
-            updateDriverMutation={updateDriverMutation}
-            deleteDriverMutation={deleteDriverMutation}
-          />
-        )}
-
         {/* Legal Pages Management */}
         <Card className="mb-8">
           <CardHeader>
