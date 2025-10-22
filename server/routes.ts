@@ -733,6 +733,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search driver by phone number (for driver assignment lookup)
+  app.get("/api/drivers/search", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const phone = req.query.phone as string;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      const driver = await storage.getDriverByPhone(phone);
+      if (!driver) {
+        return res.status(404).json({ message: "Driver not found" });
+      }
+      
+      res.json(driver);
+    } catch (error) {
+      console.error("Search driver by phone error:", error);
+      res.status(500).json({ message: "Failed to search driver" });
+    }
+  });
+
+  // Create driver and assign to rental booking in one operation
+  app.post("/api/rental-bookings/:id/create-and-assign-driver", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const driverData = insertDriverSchema.parse(req.body);
+      
+      // Check if driver with this phone already exists
+      const existingDriver = await storage.getDriverByPhone(driverData.phone);
+      if (existingDriver) {
+        return res.status(400).json({ message: "Driver with this phone number already exists" });
+      }
+      
+      // Create the driver
+      const driver = await storage.createDriver(driverData);
+      
+      // Assign to the rental booking
+      const booking = await storage.assignDriverToRental(req.params.id, driver.id);
+      
+      res.json({ driver, booking });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid driver data", errors: error.errors });
+      } else {
+        console.error("Create and assign driver error:", error);
+        res.status(500).json({ message: "Failed to create and assign driver" });
+      }
+    }
+  });
+
   app.put("/api/rental-bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req: any, res: any) => {
     try {
       const { driverId } = req.body;
