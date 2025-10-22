@@ -62,23 +62,57 @@ export const isEmployeeOrAdmin: RequestHandler = async (req, res, next) => {
   next();
 };
 
-// Middleware to check specific permission
-export function hasPermission(permission: string): RequestHandler {
+// Permission actions
+export type PermissionAction = 'view' | 'edit' | 'downloadCsv';
+
+// Middleware to check specific permission with action
+export function hasPermission(permission: string, action: PermissionAction = 'view'): RequestHandler {
   return async (req, res, next) => {
     if (!req.session.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
+    // Superadmin bypasses all permission checks
     if (req.session.role === 'superadmin') {
       return next();
     }
     
-    if (req.session.role === 'employee' && req.session.permissions?.[permission]) {
-      return next();
+    // For employees, check granular permissions
+    if (req.session.role === 'employee' && req.session.permissions) {
+      const perms = req.session.permissions;
+      const sectionPerm = perms[permission];
+      
+      // Special case: driverAssignment is a boolean (it's an action, not CRUD)
+      if (permission === 'driverAssignment') {
+        if (sectionPerm === true) {
+          return next();
+        }
+      }
+      // Check if permission exists and has the required action
+      else if (sectionPerm && typeof sectionPerm === 'object') {
+        if (sectionPerm[action] === true) {
+          return next();
+        }
+      }
     }
     
-    return res.status(403).json({ message: `Forbidden: ${permission} permission required` });
+    return res.status(403).json({ message: `Forbidden: ${permission} ${action} permission required` });
   };
+}
+
+// Helper: Check if user has view permission for a section
+export function canView(permission: string): RequestHandler {
+  return hasPermission(permission, 'view');
+}
+
+// Helper: Check if user has edit permission for a section
+export function canEdit(permission: string): RequestHandler {
+  return hasPermission(permission, 'edit');
+}
+
+// Helper: Check if user has CSV download permission for a section
+export function canDownloadCsv(permission: string): RequestHandler {
+  return hasPermission(permission, 'downloadCsv');
 }
 
 // Utility: Hash password
@@ -101,6 +135,6 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     role: string;
-    permissions?: Record<string, boolean>;
+    permissions?: Record<string, any>; // Can be boolean (driverAssignment) or PermissionLevel object
   }
 }
