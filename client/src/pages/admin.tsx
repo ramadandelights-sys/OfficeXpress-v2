@@ -79,6 +79,7 @@ export default function Admin() {
 }
 
 function AdminDashboard({ user }: { user: any }) {
+  const { hasPermission } = useAuth();
   const { toast } = useToast();
   const [editingBlogPost, setEditingBlogPost] = useState<string | null>(null);
   const [editingPortfolioClient, setEditingPortfolioClient] = useState<string | null>(null);
