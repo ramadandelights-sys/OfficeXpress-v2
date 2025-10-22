@@ -373,25 +373,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark token as used
       await storage.markOnboardingTokenAsUsed(token);
       
-      // Log the user in automatically
-      req.login(user, (err: any) => {
-        if (err) {
-          console.error("Login after onboarding error:", err);
-          return res.status(500).json({ message: "Account created but login failed. Please try logging in manually." });
+      // Log the user in automatically by setting session
+      req.session.userId = user.id.toString();
+      req.session.role = user.role;
+      req.session.permissions = user.permissions;
+      
+      res.json({
+        success: true,
+        message: "Account setup complete! Redirecting to admin panel...",
+        user: {
+          id: user.id,
+          phone: user.phone,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          permissions: user.permissions
         }
-        
-        res.json({
-          success: true,
-          message: "Account setup complete! Redirecting to admin panel...",
-          user: {
-            id: user.id,
-            phone: user.phone,
-            email: user.email,
-            name: user.name,
-            role: user.role,
-            permissions: user.permissions
-          }
-        });
       });
     } catch (error) {
       console.error("Complete onboarding error:", error);
