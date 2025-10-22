@@ -887,7 +887,7 @@ function AdminDashboard({ user }: { user: any }) {
                   exportToCSV={exportToCSV}
                   activeDrivers={activeDrivers}
                   assignDriverMutation={assignDriverMutation}
-                  showDriverAssignment={user.role === 'superadmin' || (user.permissions && user.permissions.driverAssignment)}
+                  showDriverAssignment={hasPermission('driverAssignment')}
                 />
                 </TabsContent>
               )}
