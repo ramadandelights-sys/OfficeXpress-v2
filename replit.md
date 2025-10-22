@@ -4,6 +4,13 @@
 
 OfficeXpress is a comprehensive transportation services platform for businesses and individuals in Bangladesh. It offers corporate employee transportation, vehicle rental services, vendor registration, and portfolio management. The platform features a modern web interface with booking forms, client portfolio display, blog functionality, and contact management, aiming to streamline transportation logistics and expand market reach.
 
+## Recent Changes
+
+### Permission System Bug Fixes (October 2025)
+- **Session Serialization Fix**: Fixed critical bug where session was casting permissions to `Record<string, boolean>` instead of preserving granular `UserPermissions` structure. Sessions now correctly persist three-level permissions end-to-end.
+- **Driver Assignment Visibility Fix**: Fixed bug where driver assignment controls weren't appearing for employees with `driverAssignment` permission enabled. Changed from direct permission check to using centralized `hasPermission` helper for consistency (line 890 in admin.tsx).
+- **Important Note**: After permission changes, employees must log out and log back in for the new permissions to take effect due to session caching.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
