@@ -241,38 +241,47 @@ function AdminDashboard({ user }: { user: any }) {
 
   const { data: blogPosts = [], isLoading: loadingPosts } = useQuery<BlogPost[]>({
     queryKey: ["/api/admin/blog-posts"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.blogPosts),
   });
 
   const { data: portfolioClients = [], isLoading: loadingClients } = useQuery<PortfolioClient[]>({
     queryKey: ["/api/portfolio-clients"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.portfolioClients),
   });
 
   const { data: corporateBookings = [], isLoading: loadingCorporate } = useQuery<CorporateBooking[]>({
     queryKey: ["/api/admin/corporate-bookings"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.corporateBookings),
   });
 
   const { data: rentalBookings = [], isLoading: loadingRental } = useQuery<RentalBooking[]>({
     queryKey: ["/api/admin/rental-bookings"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.rentalBookings),
   });
 
   const { data: vendorRegistrations = [], isLoading: loadingVendors } = useQuery<VendorRegistration[]>({
     queryKey: ["/api/admin/vendor-registrations"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.vendorRegistrations),
   });
 
   const { data: contactMessages = [], isLoading: loadingMessages } = useQuery<ContactMessage[]>({
     queryKey: ["/api/admin/contact-messages"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.contactMessages),
   });
 
   const { data: marketingSettings = null, isLoading: loadingMarketingSettings } = useQuery<MarketingSettings | null>({
     queryKey: ["/api/admin/marketing-settings"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.marketingSettings),
   });
 
   const { data: websiteSettings = null, isLoading: loadingWebsiteSettings } = useQuery<WebsiteSettings | null>({
     queryKey: ["/api/admin/website-settings"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.websiteSettings),
   });
 
   const { data: legalPages = [], isLoading: loadingLegalPages } = useQuery<LegalPage[]>({
     queryKey: ["/api/admin/legal-pages"],
+    enabled: user.role === 'superadmin' || !!(user.permissions?.legalPages),
   });
 
   // User (Employee) Management queries - only for superadmin
@@ -284,12 +293,12 @@ function AdminDashboard({ user }: { user: any }) {
   // Driver Management queries
   const { data: allDrivers = [], isLoading: loadingDrivers } = useQuery<Driver[]>({
     queryKey: ["/api/drivers"],
-    enabled: user.role === 'superadmin' || (user.permissions && user.permissions.drivers),
+    enabled: user.role === 'superadmin' || !!(user.permissions?.drivers),
   });
 
   const { data: activeDrivers = [], isLoading: loadingActiveDrivers } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/active"],
-    enabled: user.role === 'superadmin' || (user.permissions && user.permissions.driverAssignment),
+    enabled: user.role === 'superadmin' || !!(user.permissions?.driverAssignment),
   });
 
   const createBlogPostMutation = useMutation({
