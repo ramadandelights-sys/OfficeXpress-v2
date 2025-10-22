@@ -485,10 +485,16 @@ function AdminDashboard({ user }: { user: any }) {
       return await response.json();
     },
     onSuccess: (data) => {
-      toast({ 
-        title: "Employee created successfully",
-        description: `Temporary password: ${data.temporaryPassword}. Share this with the employee.`
-      });
+      if (data.emailSent) {
+        toast({ 
+          title: "Employee created successfully",
+          description: `Login credentials have been sent to ${data.user?.email}. The employee can now log in using the provided temporary password.`
+        });
+      } else {
+        toast({ 
+          title: "Employee created successfully"
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ["/api/users"] });
     },
     onError: (error: any) => {
@@ -2297,22 +2303,37 @@ function EmployeeManagementSection({
                   <label className="block text-sm font-medium mb-1">Phone *</label>
                   <Input
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    placeholder="Phone number"
+                    onChange={(e) => {
+                      // Only allow digits and limit to 11 characters
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                      setFormData({ ...formData, phone: value });
+                    }}
+                    placeholder="01XXXXXXXXX (11 digits)"
                     required
+                    pattern="^01\d{9}$"
+                    title="Phone number must start with 01 and be exactly 11 digits"
                     data-testid="input-employee-phone"
                   />
+                  {formData.phone && !/^01\d{9}$/.test(formData.phone) && formData.phone.length > 0 && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Phone must start with 01 and be exactly 11 digits
+                    </p>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email</label>
+                  <label className="block text-sm font-medium mb-1">Email *</label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="Email address (optional)"
+                    placeholder="employee@example.com"
+                    required
                     data-testid="input-employee-email"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Login credentials will be sent to this email address
+                  </p>
                 </div>
 
                 <div>

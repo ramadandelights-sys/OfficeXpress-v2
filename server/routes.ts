@@ -42,7 +42,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeCreationEmail } from "./lib/resend";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
 
@@ -389,8 +389,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { phone, email, name, role, permissions } = req.body;
       
-      if (!phone || !name || !role) {
-        return res.status(400).json({ message: "Phone, name, and role are required" });
+      // Validate required fields - email is now mandatory for employee accounts
+      if (!phone || !name || !role || !email) {
+        return res.status(400).json({ message: "Phone, name, email, and role are required" });
+      }
+      
+      // Validate Bangladesh phone number format (must start with 01 and be 11 digits)
+      const phoneRegex = /^01\d{9}$/;
+      if (!phoneRegex.test(phone)) {
+        return res.status(400).json({ message: "Phone number must be in Bangladesh format (01XXXXXXXXX - 11 digits starting with 01)" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address format" });
       }
       
       const existingUser = await storage.getUserByPhone(phone);
@@ -403,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const user = await storage.createUser({
         phone,
-        email: email || null,
+        email,
         name,
         password: hashedPassword
       });
@@ -414,27 +427,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         temporaryPassword: true
       } as any);
       
-      // TODO: Send email with temporary password if email is provided
-      // Note: sendEmailNotification doesn't support 'userCreated' type yet
-      // This will be implemented when the Resend integration is fully set up
-      if (email) {
-        // SECURITY: Do not log plaintext passwords
-        console.log(`New user account created for phone: ${phone}`);
-        // try {
-        //   await sendEmailNotification('userCreated', { 
-        //     email, 
-        //     name, 
-        //     phone,
-        //     tempPassword 
-        //   });
-        // } catch (emailError) {
-        //   console.error("Failed to send email:", emailError);
-        // }
+      // Send email with temporary password and login link
+      try {
+        const loginUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://officexpress.org/login' 
+          : `${req.protocol}://${req.get('host')}/login`;
+        
+        await sendEmployeeCreationEmail({ 
+          email, 
+          name, 
+          phone,
+          role,
+          tempPassword,
+          loginUrl
+        });
+        
+        console.log(`Employee account created and email sent to ${email}`);
+      } catch (emailError) {
+        console.error("Failed to send employee creation email:", emailError);
+        // Clean up the created user if email fails
+        await storage.deleteUser(user.id);
+        return res.status(500).json({ message: "Failed to send employee creation email. Please check the email address and try again." });
       }
       
       const updatedUser = await storage.getUser(user.id);
-      // Return temporary password only to superadmin on user creation
-      // This is safe because only superadmins can create users
+      // Do not return temporary password - it's been sent via email
       res.json({
         user: {
           id: updatedUser.id,
@@ -447,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdAt: updatedUser.createdAt,
           lastLogin: updatedUser.lastLogin
         },
-        temporaryPassword: tempPassword, // Return plaintext temp password for admin to share
+        emailSent: true,
         newAccount: true
       });
     } catch (error) {
