@@ -21,6 +21,7 @@ import LegalPageView from "@/pages/legal-page";
 import LoginPage from "@/pages/login";
 import SetupSuperAdminPage from "@/pages/setup-superadmin";
 import ChangePasswordPage from "@/pages/change-password";
+import OnboardingPage from "@/pages/onboarding";
 import CustomerDashboard from "@/pages/dashboard";
 import NotFound from "@/pages/not-found";
 
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/login" component={LoginPage} />
       <Route path="/setup-superadmin" component={SetupSuperAdminPage} />
       <Route path="/change-password" component={ChangePasswordPage} />
+      <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/dashboard" component={CustomerDashboard} />
       <Route path="/terms-and-conditions" component={LegalPageView} />
       <Route path="/privacy-policy" component={LegalPageView} />
@@ -57,7 +59,7 @@ function Router() {
 
 function ConditionalHeader() {
   const [location] = useLocation();
-  const authPages = ["/login", "/setup-superadmin", "/change-password"];
+  const authPages = ["/login", "/setup-superadmin", "/change-password", "/onboarding"];
   
   if (authPages.includes(location)) {
     return null;
@@ -70,7 +72,7 @@ function ConditionalFooter() {
   const [location] = useLocation();
   const isAdminPage = location === "/admin";
   const isLegalPage = location === "/terms-and-conditions" || location === "/privacy-policy";
-  const authPages = ["/login", "/setup-superadmin", "/change-password"];
+  const authPages = ["/login", "/setup-superadmin", "/change-password", "/onboarding"];
   
   if (authPages.includes(location)) {
     return null;
