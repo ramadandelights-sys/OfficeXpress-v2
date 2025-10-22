@@ -888,11 +888,7 @@ function AdminDashboard({ user }: { user: any }) {
                   exportToCSV={exportToCSV}
                   activeDrivers={activeDrivers}
                   assignDriverMutation={assignDriverMutation}
-                  showDriverAssignment={(() => {
-                    const result = hasPermission('driverAssignment');
-                    console.log('[DEBUG] showDriverAssignment:', result, 'user:', user);
-                    return result;
-                  })()}
+                  showDriverAssignment={hasPermission('driverAssignment')}
                 />
                 </TabsContent>
               )}
@@ -2159,7 +2155,6 @@ function FormSectionTable({
     }
     
     if (key === 'driver' && showDriverAssignment) {
-      console.log('[DEBUG formatValue] Rendering driver button! key:', key, 'showDriverAssignment:', showDriverAssignment, 'item:', item.id);
       const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
       return (
         <div className="flex flex-col gap-1">
