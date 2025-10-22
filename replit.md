@@ -37,7 +37,11 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 - **Session Management**: Express sessions with PostgreSQL storage.
 - **Security Features**: bcrypt hashing, CSRF protection, rate limiting, HttpOnly/Secure/SameSite cookies.
 - **Input Validation**: Zod schemas and server-side validation.
-- **Granular Permissions**: 12 permission types controlling access to different admin panel sections.
+- **Granular Permissions**: 12 permission types controlling access to different admin panel sections with comprehensive enforcement at both frontend and backend layers.
+- **Permission Enforcement**: Three-layer security approach:
+  1. **UI Layer**: Conditional rendering - sections only displayed when user has permission or is superadmin
+  2. **Query Layer**: `enabled` flags on all data-fetching queries prevent unauthorized API calls
+  3. **API Layer**: `hasPermission` middleware on all admin routes enforces backend access control (403 Forbidden for unauthorized requests)
 - **Reference ID Tracking**: Unique 6-character alphanumeric IDs for all form submissions.
 
 ### UI/UX Decisions
@@ -53,8 +57,8 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
   - **Employee Management** (Superadmin-only): Full CRUD for user accounts with role selection, 12 granular permission checkboxes, and temporary password generation
   - **Driver Management**: Full CRUD for drivers with vehicle details (name, phone, license plate, make/model/year), active/inactive toggle
   - **Driver Assignment**: Assign active drivers to rental bookings with permission-based access control
-- **Granular Permissions System**: 12 permission types (blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, drivers, driverAssignment, employeeManagement) controlling access to different admin sections
-- **Temporary Password System**: Auto-generated 12-character temporary passwords for new employee accounts, displayed once to superadmin at creation time
+- **Granular Permissions System**: 12 permission types (blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, drivers, driverAssignment, employeeManagement) with complete frontend and backend enforcement
+- **Secure Onboarding System**: One-time 24-hour onboarding links sent via email for new employee accounts, replacing temporary passwords for enhanced security
 - **Email Notifications**: Resend integration for transactional emails to both admin and customers with professional templates.
 - **Reference ID Tracking**: Unique IDs generated for all form submissions, integrated into database, emails, and admin panel.
 - **Security Enhancements**: Rate limiting, Helmet security headers, input validation, sanitization, CSRF protection, and permission-based API middleware
