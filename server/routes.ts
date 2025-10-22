@@ -660,7 +660,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Driver management routes
-  app.get("/api/drivers", hasPermission('drivers'), async (req: any, res: any) => {
+  app.get("/api/drivers", hasPermission('driverManagement', 'view'), async (req: any, res: any) => {
     try {
       const drivers = await storage.getDrivers();
       res.json(drivers);
@@ -680,7 +680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+  app.get("/api/drivers/:id", hasPermission('driverManagement', 'view'), async (req: any, res: any) => {
     try {
       const driver = await storage.getDriver(req.params.id);
       if (!driver) {
@@ -693,7 +693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/drivers", hasPermission('drivers'), async (req: any, res: any) => {
+  app.post("/api/drivers", hasPermission('driverManagement', 'edit'), async (req: any, res: any) => {
     try {
       const driverData = insertDriverSchema.parse(req.body);
       const driver = await storage.createDriver(driverData);
@@ -708,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+  app.put("/api/drivers/:id", hasPermission('driverManagement', 'edit'), async (req: any, res: any) => {
     try {
       const driverData = updateDriverSchema.parse({ ...req.body, id: req.params.id });
       const driver = await storage.updateDriver(driverData);
@@ -723,7 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/drivers/:id", hasPermission('drivers'), async (req: any, res: any) => {
+  app.delete("/api/drivers/:id", hasPermission('driverManagement', 'edit'), async (req: any, res: any) => {
     try {
       await storage.deleteDriver(req.params.id);
       res.json({ message: "Driver deleted successfully" });
@@ -1025,7 +1025,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Portfolio client routes
   // Protected - only employees with portfolioClients permission can create
-  app.post("/api/portfolio-clients", hasPermission('portfolioClients'), async (req, res) => {
+  app.post("/api/portfolio-clients", hasPermission('portfolioClients', 'edit'), async (req, res) => {
     try {
       const clientData = insertPortfolioClientSchema.parse(req.body);
       const client = await storage.createPortfolioClient(clientData);
@@ -1039,7 +1039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/portfolio-clients", hasPermission('portfolioClients'), async (req, res) => {
+  app.get("/api/portfolio-clients", hasPermission('portfolioClients', 'view'), async (req, res) => {
     try {
       const clients = await storage.getPortfolioClients();
       res.json(clients);
@@ -1049,7 +1049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin routes
-  app.get("/api/admin/blog-posts", hasPermission('blogPosts'), async (req, res) => {
+  app.get("/api/admin/blog-posts", hasPermission('blogPosts', 'view'), async (req, res) => {
     try {
       const posts = await storage.getAllBlogPosts();
       res.json(posts);
@@ -1058,7 +1058,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/blog-posts", hasPermission('blogPosts'), async (req, res) => {
+  app.post("/api/admin/blog-posts", hasPermission('blogPosts', 'edit'), async (req, res) => {
     try {
       console.log("Received blog post data, processing images...");
       
@@ -1145,7 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/corporate-bookings", hasPermission('corporateBookings'), async (req, res) => {
+  app.get("/api/admin/corporate-bookings", hasPermission('corporateBookings', 'view'), async (req, res) => {
     try {
       const bookings = await storage.getCorporateBookings();
       res.json(bookings);
@@ -1154,7 +1154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/rental-bookings", hasPermission('rentalBookings'), async (req, res) => {
+  app.get("/api/admin/rental-bookings", hasPermission('rentalBookings', 'view'), async (req, res) => {
     try {
       const bookings = await storage.getRentalBookings();
       res.json(bookings);
@@ -1163,7 +1163,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/vendor-registrations", hasPermission('vendorRegistrations'), async (req, res) => {
+  app.get("/api/admin/vendor-registrations", hasPermission('vendorRegistrations', 'view'), async (req, res) => {
     try {
       const vendors = await storage.getVendorRegistrations();
       res.json(vendors);
@@ -1172,7 +1172,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/contact-messages", hasPermission('contactMessages'), async (req, res) => {
+  app.get("/api/admin/contact-messages", hasPermission('contactMessages', 'view'), async (req, res) => {
     try {
       const messages = await storage.getContactMessages();
       res.json(messages);
@@ -1181,7 +1181,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/blog-posts/:id", hasPermission('blogPosts'), async (req, res) => {
+  app.put("/api/admin/blog-posts/:id", hasPermission('blogPosts', 'edit'), async (req, res) => {
     try {
       console.log("Updating blog post:", req.params.id, JSON.stringify(req.body, null, 2));
       const postData = updateBlogPostSchema.parse({ ...req.body, id: req.params.id });
@@ -1199,7 +1199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/blog-posts/:id", hasPermission('blogPosts'), async (req, res) => {
+  app.delete("/api/admin/blog-posts/:id", hasPermission('blogPosts', 'edit'), async (req, res) => {
     try {
       await storage.deleteBlogPost(req.params.id);
       res.json({ message: "Blog post deleted successfully" });
@@ -1311,7 +1311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/portfolio-clients", hasPermission('portfolioClients'), async (req, res) => {
+  app.post("/api/admin/portfolio-clients", hasPermission('portfolioClients', 'edit'), async (req, res) => {
     try {
       const clientData = insertPortfolioClientSchema.parse(req.body);
       const client = await storage.createPortfolioClient(clientData);
@@ -1325,7 +1325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/portfolio-clients/:id", hasPermission('portfolioClients'), async (req, res) => {
+  app.put("/api/admin/portfolio-clients/:id", hasPermission('portfolioClients', 'edit'), async (req, res) => {
     try {
       const clientData = updatePortfolioClientSchema.parse({ ...req.body, id: req.params.id });
       const client = await storage.updatePortfolioClient(clientData);
@@ -1339,7 +1339,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/portfolio-clients/:id", hasPermission('portfolioClients'), async (req, res) => {
+  app.delete("/api/admin/portfolio-clients/:id", hasPermission('portfolioClients', 'edit'), async (req, res) => {
     try {
       await storage.deletePortfolioClient(req.params.id);
       res.json({ message: "Portfolio client deleted successfully" });
@@ -1458,7 +1458,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Marketing Settings API endpoints
-  app.get("/api/admin/marketing-settings", hasPermission('marketingSettings'), async (req, res) => {
+  app.get("/api/admin/marketing-settings", hasPermission('marketingSettings', 'view'), async (req, res) => {
     try {
       const settings = await storage.getMarketingSettings();
       res.json(settings);
@@ -1468,7 +1468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/marketing-settings", hasPermission('marketingSettings'), async (req, res) => {
+  app.post("/api/admin/marketing-settings", hasPermission('marketingSettings', 'edit'), async (req, res) => {
     try {
       const settingsData = insertMarketingSettingsSchema.parse(req.body);
       
@@ -1499,7 +1499,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/marketing-settings/:id", hasPermission('marketingSettings'), async (req, res) => {
+  app.put("/api/admin/marketing-settings/:id", hasPermission('marketingSettings', 'edit'), async (req, res) => {
     try {
       const settingsData = updateMarketingSettingsSchema.parse({
         id: req.params.id,
@@ -1520,7 +1520,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/marketing-settings/:id", hasPermission('marketingSettings'), async (req, res) => {
+  app.delete("/api/admin/marketing-settings/:id", hasPermission('marketingSettings', 'edit'), async (req, res) => {
     try {
       const deleted = await storage.deleteMarketingSettings(req.params.id);
       if (!deleted) {
@@ -1545,7 +1545,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/website-settings", hasPermission('websiteSettings'), async (req, res) => {
+  app.get("/api/admin/website-settings", hasPermission('websiteSettings', 'view'), async (req, res) => {
     try {
       const settings = await storage.getWebsiteSettings();
       res.json(settings);
@@ -1555,7 +1555,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/website-settings", hasPermission('websiteSettings'), async (req, res) => {
+  app.post("/api/admin/website-settings", hasPermission('websiteSettings', 'edit'), async (req, res) => {
     try {
       const settingsData = insertWebsiteSettingsSchema.parse(req.body);
       const settings = await storage.createWebsiteSettings(settingsData);
@@ -1570,7 +1570,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/website-settings/:id", hasPermission('websiteSettings'), async (req, res) => {
+  app.put("/api/admin/website-settings/:id", hasPermission('websiteSettings', 'edit'), async (req, res) => {
     try {
       const settingsData = updateWebsiteSettingsSchema.parse({
         id: req.params.id,
@@ -1591,7 +1591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/website-settings/:id", hasPermission('websiteSettings'), async (req, res) => {
+  app.delete("/api/admin/website-settings/:id", hasPermission('websiteSettings', 'edit'), async (req, res) => {
     try {
       const deleted = await storage.deleteWebsiteSettings(req.params.id);
       if (!deleted) {
@@ -1605,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Legal Pages API endpoints
-  app.get("/api/admin/legal-pages", hasPermission('legalPages'), async (req, res) => {
+  app.get("/api/admin/legal-pages", hasPermission('legalPages', 'view'), async (req, res) => {
     try {
       const pages = await storage.getLegalPages();
       res.json(pages);
@@ -1615,7 +1615,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/legal-pages/:id", hasPermission('legalPages'), async (req, res) => {
+  app.get("/api/admin/legal-pages/:id", hasPermission('legalPages', 'view'), async (req, res) => {
     try {
       const page = await storage.getLegalPage(req.params.id);
       if (!page) {
@@ -1644,7 +1644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/legal-pages", hasPermission('legalPages'), async (req, res) => {
+  app.post("/api/admin/legal-pages", hasPermission('legalPages', 'edit'), async (req, res) => {
     try {
       const pageData = insertLegalPageSchema.parse(req.body);
       const page = await storage.createLegalPage(pageData);
@@ -1659,7 +1659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put("/api/admin/legal-pages/:id", hasPermission('legalPages'), async (req, res) => {
+  app.put("/api/admin/legal-pages/:id", hasPermission('legalPages', 'edit'), async (req, res) => {
     try {
       const pageData = updateLegalPageSchema.parse({
         id: req.params.id,
@@ -1680,7 +1680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/admin/legal-pages/:id", hasPermission('legalPages'), async (req, res) => {
+  app.delete("/api/admin/legal-pages/:id", hasPermission('legalPages', 'edit'), async (req, res) => {
     try {
       const deleted = await storage.deleteLegalPage(req.params.id);
       if (!deleted) {
