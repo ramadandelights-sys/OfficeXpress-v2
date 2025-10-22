@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { generateSlug } from "@/lib/slugUtils";
+import { PermissionMatrix, type UserPermissions } from "@/components/permission-matrix";
 import type { 
   BlogPost, 
   PortfolioClient, 
@@ -2230,19 +2231,19 @@ function EmployeeManagementSection({
     email: '',
     role: 'employee' as 'employee' | 'customer',
     permissions: {
-      blogPosts: false,
-      portfolioClients: false,
-      corporateBookings: false,
-      rentalBookings: false,
-      vendorRegistrations: false,
-      contactMessages: false,
-      marketingSettings: false,
-      websiteSettings: false,
-      legalPages: false,
-      drivers: false,
+      blogPosts: { view: false, edit: false },
+      portfolioClients: { view: false, edit: false },
+      corporateBookings: { view: false, edit: false, downloadCsv: false },
+      rentalBookings: { view: false, edit: false, downloadCsv: false },
+      vendorRegistrations: { view: false, edit: false, downloadCsv: false },
+      contactMessages: { view: false, edit: false, downloadCsv: false },
+      marketingSettings: { view: false, edit: false },
+      websiteSettings: { view: false, edit: false },
+      legalPages: { view: false, edit: false },
+      driverManagement: { view: false, edit: false, downloadCsv: false },
       driverAssignment: false,
-      employeeManagement: false,
-    }
+      employeeManagement: { view: false, edit: false },
+    } as UserPermissions
   });
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
@@ -2254,19 +2255,19 @@ function EmployeeManagementSection({
       email: '',
       role: 'employee',
       permissions: {
-        blogPosts: false,
-        portfolioClients: false,
-        corporateBookings: false,
-        rentalBookings: false,
-        vendorRegistrations: false,
-        contactMessages: false,
-        marketingSettings: false,
-        websiteSettings: false,
-        legalPages: false,
-        drivers: false,
+        blogPosts: { view: false, edit: false },
+        portfolioClients: { view: false, edit: false },
+        corporateBookings: { view: false, edit: false, downloadCsv: false },
+        rentalBookings: { view: false, edit: false, downloadCsv: false },
+        vendorRegistrations: { view: false, edit: false, downloadCsv: false },
+        contactMessages: { view: false, edit: false, downloadCsv: false },
+        marketingSettings: { view: false, edit: false },
+        websiteSettings: { view: false, edit: false },
+        legalPages: { view: false, edit: false },
+        driverManagement: { view: false, edit: false, downloadCsv: false },
         driverAssignment: false,
-        employeeManagement: false,
-      }
+        employeeManagement: { view: false, edit: false },
+      } as UserPermissions
     });
     setShowEmployeeCreator(false);
     setEditingEmployee(null);
@@ -2278,20 +2279,20 @@ function EmployeeManagementSection({
       phone: employee.phone,
       email: employee.email || '',
       role: employee.role,
-      permissions: employee.permissions || {
-        blogPosts: false,
-        portfolioClients: false,
-        corporateBookings: false,
-        rentalBookings: false,
-        vendorRegistrations: false,
-        contactMessages: false,
-        marketingSettings: false,
-        websiteSettings: false,
-        legalPages: false,
-        drivers: false,
+      permissions: (employee.permissions as UserPermissions) || {
+        blogPosts: { view: false, edit: false },
+        portfolioClients: { view: false, edit: false },
+        corporateBookings: { view: false, edit: false, downloadCsv: false },
+        rentalBookings: { view: false, edit: false, downloadCsv: false },
+        vendorRegistrations: { view: false, edit: false, downloadCsv: false },
+        contactMessages: { view: false, edit: false, downloadCsv: false },
+        marketingSettings: { view: false, edit: false },
+        websiteSettings: { view: false, edit: false },
+        legalPages: { view: false, edit: false },
+        driverManagement: { view: false, edit: false, downloadCsv: false },
         driverAssignment: false,
-        employeeManagement: false,
-      }
+        employeeManagement: { view: false, edit: false },
+      } as UserPermissions
     });
     setEditingEmployee(employee.id);
   };
@@ -2311,8 +2312,25 @@ function EmployeeManagementSection({
 
   const getPermissionsSummary = (permissions: any) => {
     if (!permissions) return 'No permissions';
-    const activePerms = Object.entries(permissions).filter(([_, value]) => value).map(([key]) => key);
-    return activePerms.length > 0 ? activePerms.join(', ') : 'No permissions';
+    
+    const activePerms: string[] = [];
+    Object.entries(permissions).forEach(([key, value]) => {
+      if (key === 'driverAssignment' && value === true) {
+        activePerms.push('Driver Assignment');
+      } else if (typeof value === 'object' && value !== null) {
+        const perm = value as any;
+        if (perm.view || perm.edit || perm.downloadCsv) {
+          const actions = [];
+          if (perm.view) actions.push('view');
+          if (perm.edit) actions.push('edit');
+          if (perm.downloadCsv) actions.push('csv');
+          const formattedKey = key.replace(/([A-Z])/g, ' $1').trim();
+          activePerms.push(`${formattedKey} (${actions.join(', ')})`);
+        }
+      }
+    });
+    
+    return activePerms.length > 0 ? activePerms.join(' | ') : 'No permissions';
   };
 
   return (
@@ -2412,27 +2430,11 @@ function EmployeeManagementSection({
             )}
 
             <div>
-              <label className="block text-sm font-medium mb-2">Permissions</label>
-              <div className="grid grid-cols-2 gap-3">
-                {Object.keys(formData.permissions).map((perm) => (
-                  <div key={perm} className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      id={perm}
-                      checked={formData.permissions[perm as keyof typeof formData.permissions]}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        permissions: { ...formData.permissions, [perm]: e.target.checked }
-                      })}
-                      className="h-4 w-4 rounded border-gray-300"
-                      data-testid={`checkbox-permission-${perm}`}
-                    />
-                    <label htmlFor={perm} className="text-sm capitalize">
-                      {perm.replace(/([A-Z])/g, ' $1').trim()}
-                    </label>
-                  </div>
-                ))}
-              </div>
+              <label className="block text-sm font-medium mb-4">Permissions</label>
+              <PermissionMatrix
+                permissions={formData.permissions}
+                onChange={(newPermissions) => setFormData({ ...formData, permissions: newPermissions })}
+              />
             </div>
 
             <div className="flex gap-2">
