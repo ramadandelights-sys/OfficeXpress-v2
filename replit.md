@@ -6,6 +6,18 @@ OfficeXpress is a comprehensive transportation services platform for businesses 
 
 ## Recent Changes
 
+### Phone-Based Driver Assignment Workflow (October 2025)
+- **Streamlined UX**: Replaced dropdown Select with "Assign Driver" button that opens a dedicated dialog for driver assignment
+- **Phone-Based Lookup**: Enter phone number to search for existing drivers; auto-populates driver details if found
+- **On-the-Fly Driver Creation**: If phone not found, seamlessly transition to create driver form and assign in one operation
+- **Two Workflows**:
+  1. **Existing Driver**: Phone found → Show driver details (green card) → Assign to booking
+  2. **New Driver**: Phone not found → Show create form (blue card) → Create driver & assign to booking
+- **Backend APIs**: 
+  - `GET /api/drivers/search?phone=xxx` - Search driver by phone
+  - `POST /api/rental-bookings/:id/create-and-assign-driver` - Create driver and assign in one operation
+- **Mobile-Friendly**: Dialog-based approach works better on all screen sizes than inline dropdowns
+
 ### Permission System Bug Fixes (October 2025)
 - **Session Serialization Fix**: Fixed critical bug where session was casting permissions to `Record<string, boolean>` instead of preserving granular `UserPermissions` structure. Sessions now correctly persist three-level permissions end-to-end.
 - **Driver Assignment Visibility Fix**: Fixed bug where driver assignment controls weren't appearing for employees with `driverAssignment` permission enabled. Changed from direct permission check to using centralized `hasPermission` helper for consistency (line 890 in admin.tsx).
