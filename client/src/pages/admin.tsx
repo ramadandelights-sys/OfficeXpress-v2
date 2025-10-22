@@ -14,6 +14,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -1683,6 +1684,296 @@ function PortfolioClientCreateForm({ onSave, onCancel, isLoading }: PortfolioCli
   );
 }
 
+interface DriverAssignmentDialogProps {
+  booking: RentalBooking | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess: () => void;
+}
+
+function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: DriverAssignmentDialogProps) {
+  const { toast } = useToast();
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [searchedDriver, setSearchedDriver] = useState<Driver | null>(null);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      setPhoneNumber('');
+      setSearchedDriver(null);
+      setSearchError(null);
+      setShowCreateForm(false);
+    }
+  }, [open]);
+
+  // Driver creation form
+  const driverForm = useForm<InsertDriver>({
+    resolver: zodResolver(insertDriverSchema),
+    defaultValues: {
+      name: '',
+      phone: phoneNumber,
+      licensePlate: '',
+      vehicleMake: '',
+      vehicleModel: '',
+      vehicleYear: '',
+      isActive: true,
+    },
+  });
+
+  // Update phone in form when phone number changes
+  useEffect(() => {
+    if (phoneNumber && showCreateForm) {
+      driverForm.setValue('phone', phoneNumber);
+    }
+  }, [phoneNumber, showCreateForm]);
+
+  // Search for driver by phone
+  const handleSearchDriver = async () => {
+    if (!phoneNumber.trim()) {
+      setSearchError('Please enter a phone number');
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+    setSearchedDriver(null);
+
+    try {
+      const response = await apiRequest('GET', `/api/drivers/search?phone=${encodeURIComponent(phoneNumber)}`);
+      const driver = await response.json();
+      setSearchedDriver(driver);
+      setShowCreateForm(false);
+    } catch (error: any) {
+      if (error.status === 404) {
+        // Driver not found, show create form
+        setShowCreateForm(true);
+        setSearchError('Driver not found. Please enter driver details below to create and assign.');
+      } else {
+        setSearchError('Failed to search for driver. Please try again.');
+      }
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Assign existing driver to booking
+  const assignExistingDriverMutation = useMutation({
+    mutationFn: async (driverId: string) => {
+      if (!booking) throw new Error('No booking selected');
+      return await apiRequest('PUT', `/api/rental-bookings/${booking.id}/assign-driver`, { driverId });
+    },
+    onSuccess: () => {
+      toast({ title: 'Driver assigned successfully!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+      onSuccess();
+      onOpenChange(false);
+    },
+    onError: () => {
+      toast({ title: 'Failed to assign driver', variant: 'destructive' });
+    },
+  });
+
+  // Create new driver and assign to booking
+  const createAndAssignDriverMutation = useMutation({
+    mutationFn: async (driverData: InsertDriver) => {
+      if (!booking) throw new Error('No booking selected');
+      return await apiRequest('POST', `/api/rental-bookings/${booking.id}/create-and-assign-driver`, driverData);
+    },
+    onSuccess: () => {
+      toast({ title: 'Driver created and assigned successfully!' });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/drivers'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/drivers/active'] });
+      onSuccess();
+      onOpenChange(false);
+    },
+    onError: (error: any) => {
+      const message = error.message || 'Failed to create and assign driver';
+      toast({ title: message, variant: 'destructive' });
+    },
+  });
+
+  const onSubmitCreateDriver = (data: InsertDriver) => {
+    createAndAssignDriverMutation.mutate(data);
+  };
+
+  if (!booking) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Assign Driver to Booking</DialogTitle>
+          <DialogDescription>
+            Booking Ref: <span className="font-semibold">{booking.referenceId}</span> - {booking.customerName}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          {/* Phone number search */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Driver Phone Number</label>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Enter phone number (e.g., 01XXXXXXXXX)"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSearchDriver();
+                  }
+                }}
+                data-testid="input-driver-phone"
+              />
+              <Button
+                onClick={handleSearchDriver}
+                disabled={isSearching || !phoneNumber.trim()}
+                data-testid="button-search-driver"
+              >
+                {isSearching ? 'Searching...' : 'Search'}
+              </Button>
+            </div>
+            {searchError && (
+              <p className="text-sm text-orange-600 dark:text-orange-400">{searchError}</p>
+            )}
+          </div>
+
+          {/* Existing driver found */}
+          {searchedDriver && (
+            <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+              <CardContent className="pt-4">
+                <h3 className="font-semibold text-green-900 dark:text-green-100 mb-3">Driver Found!</h3>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Name:</span>
+                    <p className="font-medium">{searchedDriver.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Phone:</span>
+                    <p className="font-medium">{searchedDriver.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">License Plate:</span>
+                    <p className="font-medium">{searchedDriver.licensePlate}</p>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 dark:text-gray-400">Vehicle:</span>
+                    <p className="font-medium">{searchedDriver.vehicleMake} {searchedDriver.vehicleModel} ({searchedDriver.vehicleYear})</p>
+                  </div>
+                </div>
+                <Button
+                  className="w-full mt-4"
+                  onClick={() => assignExistingDriverMutation.mutate(searchedDriver.id)}
+                  disabled={assignExistingDriverMutation.isPending}
+                  data-testid="button-assign-existing-driver"
+                >
+                  {assignExistingDriverMutation.isPending ? 'Assigning...' : 'Assign to Booking'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Create new driver form */}
+          {showCreateForm && (
+            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+              <CardContent className="pt-4">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-3">Create New Driver</h3>
+                <Form {...driverForm}>
+                  <form onSubmit={driverForm.handleSubmit(onSubmitCreateDriver)} className="space-y-4">
+                    <FormField
+                      control={driverForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Driver Name *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="Full name" data-testid="input-driver-name" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={driverForm.control}
+                      name="licensePlate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>License Plate *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., LA 22-1122" data-testid="input-license-plate" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={driverForm.control}
+                        name="vehicleMake"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Vehicle Make *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., Toyota" data-testid="input-vehicle-make" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={driverForm.control}
+                        name="vehicleModel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Vehicle Model *</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="e.g., Hiace" data-testid="input-vehicle-model" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={driverForm.control}
+                      name="vehicleYear"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vehicle Year *</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g., 2022" data-testid="input-vehicle-year" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      disabled={createAndAssignDriverMutation.isPending}
+                      data-testid="button-create-and-assign-driver"
+                    >
+                      {createAndAssignDriverMutation.isPending ? 'Creating...' : 'Create Driver & Assign to Booking'}
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface FormSectionTableProps {
   title: string;
   data: any[];
@@ -1716,6 +2007,8 @@ function FormSectionTable({
   assignDriverMutation,
   showDriverAssignment = false
 }: FormSectionTableProps) {
+  // State for driver assignment dialog
+  const [assigningBooking, setAssigningBooking] = useState<RentalBooking | null>(null);
   
   // Helper function to get all fields for each form type
   const getFormFields = (type: string) => {
@@ -1865,30 +2158,25 @@ function FormSectionTable({
       const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
       return (
         <div className="flex flex-col gap-1">
-          <div className="text-sm">
-            {assignedDriver ? assignedDriver.name : 'Unassigned'}
+          <div className="text-sm mb-1">
+            {assignedDriver ? (
+              <span className="font-medium text-green-700 dark:text-green-400">
+                {assignedDriver.name}
+              </span>
+            ) : (
+              <span className="text-gray-500">Unassigned</span>
+            )}
           </div>
-          <Select
-            value={item.driverId || ''}
-            onValueChange={(driverId) => {
-              if (assignDriverMutation) {
-                assignDriverMutation.mutate({ rentalId: item.id, driverId });
-              }
-            }}
-            data-testid={`select-assign-driver-${item.id}`}
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => setAssigningBooking(item as RentalBooking)}
+            data-testid={`button-assign-driver-${item.id}`}
           >
-            <SelectTrigger className="h-8 text-xs">
-              <SelectValue placeholder="Assign driver" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">Unassigned</SelectItem>
-              {activeDrivers.map((driver) => (
-                <SelectItem key={driver.id} value={driver.id}>
-                  {driver.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Truck className="h-3 w-3 mr-1" />
+            {assignedDriver ? 'Reassign' : 'Assign Driver'}
+          </Button>
         </div>
       );
     }
@@ -2038,6 +2326,19 @@ function FormSectionTable({
         {searchQuery && ` matching "${searchQuery}"`}
         {(dateFrom || dateTo) && ` within date range`}
       </div>
+
+      {/* Driver Assignment Dialog */}
+      {showDriverAssignment && (
+        <DriverAssignmentDialog
+          booking={assigningBooking}
+          open={!!assigningBooking}
+          onOpenChange={(open) => !open && setAssigningBooking(null)}
+          onSuccess={() => {
+            // Refresh data after successful assignment
+            queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+          }}
+        />
+      )}
     </div>
   );
 }
