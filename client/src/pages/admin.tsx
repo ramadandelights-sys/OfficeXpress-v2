@@ -598,6 +598,7 @@ function AdminDashboard({ user }: { user: any }) {
         </div>
 
         {/* Blog Posts Management */}
+        {(user.role === 'superadmin' || user.permissions?.blogPosts) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -682,8 +683,10 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Portfolio Clients Management */}
+        {(user.role === 'superadmin' || user.permissions?.portfolioClients) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -768,8 +771,10 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Form Submissions Management */}
+        {(user.role === 'superadmin' || user.permissions?.corporateBookings || user.permissions?.rentalBookings || user.permissions?.vendorRegistrations || user.permissions?.contactMessages) && (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" data-testid="heading-form-submissions">
@@ -778,43 +783,73 @@ function AdminDashboard({ user }: { user: any }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="corporate" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="corporate" className="flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Corporate ({corporateBookings.length})
-                </TabsTrigger>
-                <TabsTrigger value="rental" className="flex items-center gap-2">
-                  <Car className="h-4 w-4" />
-                  Rental ({rentalBookings.length})
-                </TabsTrigger>
-                <TabsTrigger value="vendor" className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Vendor ({vendorRegistrations.length})
-                </TabsTrigger>
-                <TabsTrigger value="contact" className="flex items-center gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Contact ({contactMessages.length})
-                </TabsTrigger>
+            <Tabs defaultValue={(user.role === 'superadmin' || user.permissions?.corporateBookings) ? "corporate" : (user.permissions?.rentalBookings) ? "rental" : (user.permissions?.vendorRegistrations) ? "vendor" : "contact"} className="w-full">
+              <TabsList className={`grid w-full ${
+                [
+                  user.role === 'superadmin' || user.permissions?.corporateBookings,
+                  user.role === 'superadmin' || user.permissions?.rentalBookings,
+                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
+                  user.role === 'superadmin' || user.permissions?.contactMessages
+                ].filter(Boolean).length === 4 ? 'grid-cols-4' :
+                [
+                  user.role === 'superadmin' || user.permissions?.corporateBookings,
+                  user.role === 'superadmin' || user.permissions?.rentalBookings,
+                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
+                  user.role === 'superadmin' || user.permissions?.contactMessages
+                ].filter(Boolean).length === 3 ? 'grid-cols-3' :
+                [
+                  user.role === 'superadmin' || user.permissions?.corporateBookings,
+                  user.role === 'superadmin' || user.permissions?.rentalBookings,
+                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
+                  user.role === 'superadmin' || user.permissions?.contactMessages
+                ].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-1'
+              }`}>
+                {(user.role === 'superadmin' || user.permissions?.corporateBookings) && (
+                  <TabsTrigger value="corporate" className="flex items-center gap-2">
+                    <Building className="h-4 w-4" />
+                    Corporate ({corporateBookings.length})
+                  </TabsTrigger>
+                )}
+                {(user.role === 'superadmin' || user.permissions?.rentalBookings) && (
+                  <TabsTrigger value="rental" className="flex items-center gap-2">
+                    <Car className="h-4 w-4" />
+                    Rental ({rentalBookings.length})
+                  </TabsTrigger>
+                )}
+                {(user.role === 'superadmin' || user.permissions?.vendorRegistrations) && (
+                  <TabsTrigger value="vendor" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Vendor ({vendorRegistrations.length})
+                  </TabsTrigger>
+                )}
+                {(user.role === 'superadmin' || user.permissions?.contactMessages) && (
+                  <TabsTrigger value="contact" className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Contact ({contactMessages.length})
+                  </TabsTrigger>
+                )}
               </TabsList>
 
-              <TabsContent value="corporate" className="mt-6">
-                <FormSectionTable
-                  title="Corporate Bookings"
-                  data={corporateBookings}
-                  searchQuery={corporateSearchQuery}
-                  setSearchQuery={setCorporateSearchQuery}
-                  dateFrom={corporateDateFrom}
-                  setDateFrom={setCorporateDateFrom}
-                  dateTo={corporateDateTo}
-                  setDateTo={setCorporateDateTo}
-                  loading={loadingCorporate}
-                  type="corporate"
-                  exportToCSV={exportToCSV}
-                />
-              </TabsContent>
+              {(user.role === 'superadmin' || user.permissions?.corporateBookings) && (
+                <TabsContent value="corporate" className="mt-6">
+                  <FormSectionTable
+                    title="Corporate Bookings"
+                    data={corporateBookings}
+                    searchQuery={corporateSearchQuery}
+                    setSearchQuery={setCorporateSearchQuery}
+                    dateFrom={corporateDateFrom}
+                    setDateFrom={setCorporateDateFrom}
+                    dateTo={corporateDateTo}
+                    setDateTo={setCorporateDateTo}
+                    loading={loadingCorporate}
+                    type="corporate"
+                    exportToCSV={exportToCSV}
+                  />
+                </TabsContent>
+              )}
 
-              <TabsContent value="rental" className="mt-6">
+              {(user.role === 'superadmin' || user.permissions?.rentalBookings) && (
+                <TabsContent value="rental" className="mt-6">
                 <FormSectionTable
                   title="Rental Bookings"
                   data={rentalBookings}
@@ -831,9 +866,11 @@ function AdminDashboard({ user }: { user: any }) {
                   assignDriverMutation={assignDriverMutation}
                   showDriverAssignment={user.role === 'superadmin' || (user.permissions && user.permissions.driverAssignment)}
                 />
-              </TabsContent>
+                </TabsContent>
+              )}
 
-              <TabsContent value="vendor" className="mt-6">
+              {(user.role === 'superadmin' || user.permissions?.vendorRegistrations) && (
+                <TabsContent value="vendor" className="mt-6">
                 <FormSectionTable
                   title="Vendor Registrations"
                   data={vendorRegistrations}
@@ -847,9 +884,11 @@ function AdminDashboard({ user }: { user: any }) {
                   type="vendor"
                   exportToCSV={exportToCSV}
                 />
-              </TabsContent>
+                </TabsContent>
+              )}
 
-              <TabsContent value="contact" className="mt-6">
+              {(user.role === 'superadmin' || user.permissions?.contactMessages) && (
+                <TabsContent value="contact" className="mt-6">
                 <FormSectionTable
                   title="Contact Messages"
                   data={contactMessages}
@@ -863,12 +902,15 @@ function AdminDashboard({ user }: { user: any }) {
                   type="contact"
                   exportToCSV={exportToCSV}
                 />
-              </TabsContent>
+                </TabsContent>
+              )}
             </Tabs>
           </CardContent>
         </Card>
+        )}
 
         {/* Marketing Settings Management */}
+        {(user.role === 'superadmin' || user.permissions?.marketingSettings) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -939,8 +981,10 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Website Settings Management */}
+        {(user.role === 'superadmin' || user.permissions?.websiteSettings) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -1011,6 +1055,7 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Employee Management (Superadmin Only) */}
         {user.role === 'superadmin' && (
@@ -1043,6 +1088,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Legal Pages Management */}
+        {(user.role === 'superadmin' || user.permissions?.legalPages) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -1124,9 +1170,10 @@ function AdminDashboard({ user }: { user: any }) {
             )}
           </CardContent>
         </Card>
+        )}
 
         {/* Legal Page Creator Modal */}
-        {showLegalPageCreator && (
+        {(user.role === 'superadmin' || user.permissions?.legalPages) && showLegalPageCreator && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white dark:bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <LegalPageCreator
@@ -1139,7 +1186,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Legal Page Editor Modal */}
-        {editingLegalPage && (
+        {(user.role === 'superadmin' || user.permissions?.legalPages) && editingLegalPage && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white dark:bg-gray-900 rounded-lg max-w-6xl w-full max-h-[90vh] overflow-y-auto">
               <LegalPageCreator
