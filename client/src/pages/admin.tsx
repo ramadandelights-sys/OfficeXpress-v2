@@ -2154,7 +2154,7 @@ function FormSectionTable({
       );
     }
     
-    if (key === 'driver' && item && showDriverAssignment) {
+    if (key === 'driver' && showDriverAssignment) {
       const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
       return (
         <div className="flex flex-col gap-1">
@@ -2181,7 +2181,7 @@ function FormSectionTable({
       );
     }
     
-    return String(value);
+    return String(value || '');
   };
   
   // Export current filtered data
