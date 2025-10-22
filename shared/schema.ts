@@ -15,6 +15,28 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
+// Permission level types
+export type PermissionLevel = {
+  view: boolean;
+  edit: boolean;
+  downloadCsv?: boolean; // Only for sections with CSV export
+};
+
+export type UserPermissions = {
+  blogPosts?: PermissionLevel;
+  portfolioClients?: PermissionLevel;
+  corporateBookings?: PermissionLevel;
+  rentalBookings?: PermissionLevel;
+  vendorRegistrations?: PermissionLevel;
+  contactMessages?: PermissionLevel;
+  marketingSettings?: PermissionLevel;
+  websiteSettings?: PermissionLevel;
+  legalPages?: PermissionLevel;
+  driverManagement?: PermissionLevel; // Renamed from "drivers"
+  driverAssignment?: boolean; // Special: stays as boolean (it's an action, not CRUD)
+  employeeManagement?: PermissionLevel;
+};
+
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   phone: text("phone").notNull().unique(),
@@ -22,20 +44,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   password: text("password").notNull(),
   role: text("role").notNull().default("customer"), // customer, employee, superadmin
-  permissions: json("permissions").$type<{
-    blogPosts?: boolean;
-    portfolioClients?: boolean;
-    corporateBookings?: boolean;
-    rentalBookings?: boolean;
-    vendorRegistrations?: boolean;
-    contactMessages?: boolean;
-    marketingSettings?: boolean;
-    websiteSettings?: boolean;
-    legalPages?: boolean;
-    drivers?: boolean;
-    driverAssignment?: boolean;
-    employeeManagement?: boolean;
-  }>().default({}),
+  permissions: json("permissions").$type<UserPermissions>().default({}),
   temporaryPassword: boolean("temporary_password").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
