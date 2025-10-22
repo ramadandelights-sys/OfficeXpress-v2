@@ -135,6 +135,6 @@ declare module "express-session" {
   interface SessionData {
     userId: string;
     role: string;
-    permissions?: Record<string, any>; // Can be boolean (driverAssignment) or PermissionLevel object
+    permissions?: UserPermissions;
   }
 }

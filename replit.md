@@ -37,11 +37,18 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 - **Session Management**: Express sessions with PostgreSQL storage.
 - **Security Features**: bcrypt hashing, CSRF protection, rate limiting, HttpOnly/Secure/SameSite cookies.
 - **Input Validation**: Zod schemas and server-side validation.
-- **Granular Permissions**: 12 permission types controlling access to different admin panel sections with comprehensive enforcement at both frontend and backend layers.
-- **Permission Enforcement**: Three-layer security approach:
-  1. **UI Layer**: Conditional rendering - sections only displayed when user has permission or is superadmin
-  2. **Query Layer**: `enabled` flags on all data-fetching queries prevent unauthorized API calls
-  3. **API Layer**: `hasPermission` middleware on all admin routes enforces backend access control (403 Forbidden for unauthorized requests)
+- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections:
+  - **Permission Structure**: Each permission (except driverAssignment) has three levels:
+    - `view`: Can see and read data in the section
+    - `edit`: Can create, update, and delete data in the section  
+    - `downloadCsv`: Can export data to CSV files (only for data-heavy sections)
+  - **12 Permission Types**: blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, driverManagement, driverAssignment (boolean), employeeManagement
+  - **Modern Permission UI**: Table-based permission matrix with toggle switches for intuitive permission management
+- **Permission Enforcement**: Four-layer security approach:
+  1. **Database Layer**: Permissions stored as JSON objects with {view, edit, downloadCsv} structure
+  2. **API Layer**: `hasPermission(permission, action)` middleware checks specific actions (view for GET, edit for POST/PUT/DELETE, downloadCsv for exports)
+  3. **Query Layer**: `enabled` flags check `.view` permission before data-fetching queries
+  4. **UI Layer**: Conditional rendering checks `.view` for sections, `.edit` for create/edit/delete buttons, `.downloadCsv` for export buttons
 - **Reference ID Tracking**: Unique 6-character alphanumeric IDs for all form submissions.
 
 ### UI/UX Decisions
@@ -54,10 +61,10 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 - **Multi-User Authentication**: Phone-based authentication with Customer, Employee, and Superadmin roles.
 - **Automatic Account Creation**: Customer accounts created from bookings without requiring separate login.
 - **Admin Panel**: Comprehensive admin panel with three main management sections:
-  - **Employee Management** (Superadmin-only): Full CRUD for user accounts with role selection, 12 granular permission checkboxes, and temporary password generation
+  - **Employee Management** (Superadmin-only): Full CRUD for user accounts with role selection, granular permission matrix UI, and secure onboarding via email
   - **Driver Management**: Full CRUD for drivers with vehicle details (name, phone, license plate, make/model/year), active/inactive toggle
   - **Driver Assignment**: Assign active drivers to rental bookings with permission-based access control
-- **Granular Permissions System**: 12 permission types (blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, drivers, driverAssignment, employeeManagement) with complete frontend and backend enforcement
+- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections (blogPosts, portfolioClients, corporateBookings, rentalBookings, vendorRegistrations, contactMessages, marketingSettings, websiteSettings, legalPages, driverManagement, driverAssignment, employeeManagement) with complete frontend and backend enforcement
 - **Secure Onboarding System**: One-time 24-hour onboarding links sent via email for new employee accounts, replacing temporary passwords for enhanced security
 - **Email Notifications**: Resend integration for transactional emails to both admin and customers with professional templates.
 - **Reference ID Tracking**: Unique IDs generated for all form submissions, integrated into database, emails, and admin panel.

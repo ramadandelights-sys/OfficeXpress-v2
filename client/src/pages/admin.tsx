@@ -52,7 +52,7 @@ import type {
 import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema, insertDriverSchema, updateDriverSchema } from "@shared/schema";
 
 export default function Admin() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, hasPermission } = useAuth();
   const [, navigate] = useLocation();
 
   useEffect(() => {
@@ -242,47 +242,47 @@ function AdminDashboard({ user }: { user: any }) {
 
   const { data: blogPosts = [], isLoading: loadingPosts } = useQuery<BlogPost[]>({
     queryKey: ["/api/admin/blog-posts"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.blogPosts),
+    enabled: user ? hasPermission('blogPosts', 'view') : false,
   });
 
   const { data: portfolioClients = [], isLoading: loadingClients } = useQuery<PortfolioClient[]>({
     queryKey: ["/api/portfolio-clients"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.portfolioClients),
+    enabled: user ? hasPermission('portfolioClients', 'view') : false,
   });
 
   const { data: corporateBookings = [], isLoading: loadingCorporate } = useQuery<CorporateBooking[]>({
     queryKey: ["/api/admin/corporate-bookings"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.corporateBookings),
+    enabled: user ? hasPermission('corporateBookings', 'view') : false,
   });
 
   const { data: rentalBookings = [], isLoading: loadingRental } = useQuery<RentalBooking[]>({
     queryKey: ["/api/admin/rental-bookings"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.rentalBookings),
+    enabled: user ? hasPermission('rentalBookings', 'view') : false,
   });
 
   const { data: vendorRegistrations = [], isLoading: loadingVendors } = useQuery<VendorRegistration[]>({
     queryKey: ["/api/admin/vendor-registrations"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.vendorRegistrations),
+    enabled: user ? hasPermission('vendorRegistrations', 'view') : false,
   });
 
   const { data: contactMessages = [], isLoading: loadingMessages } = useQuery<ContactMessage[]>({
     queryKey: ["/api/admin/contact-messages"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.contactMessages),
+    enabled: user ? hasPermission('contactMessages', 'view') : false,
   });
 
   const { data: marketingSettings = null, isLoading: loadingMarketingSettings } = useQuery<MarketingSettings | null>({
     queryKey: ["/api/admin/marketing-settings"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.marketingSettings),
+    enabled: user ? hasPermission('marketingSettings', 'view') : false,
   });
 
   const { data: websiteSettings = null, isLoading: loadingWebsiteSettings } = useQuery<WebsiteSettings | null>({
     queryKey: ["/api/admin/website-settings"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.websiteSettings),
+    enabled: user ? hasPermission('websiteSettings', 'view') : false,
   });
 
   const { data: legalPages = [], isLoading: loadingLegalPages } = useQuery<LegalPage[]>({
     queryKey: ["/api/admin/legal-pages"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.legalPages),
+    enabled: user ? hasPermission('legalPages', 'view') : false,
   });
 
   // User (Employee) Management queries - only for superadmin
@@ -294,12 +294,12 @@ function AdminDashboard({ user }: { user: any }) {
   // Driver Management queries
   const { data: allDrivers = [], isLoading: loadingDrivers } = useQuery<Driver[]>({
     queryKey: ["/api/drivers"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.drivers),
+    enabled: user ? hasPermission('driverManagement', 'view') : false,
   });
 
   const { data: activeDrivers = [], isLoading: loadingActiveDrivers } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/active"],
-    enabled: user.role === 'superadmin' || !!(user.permissions?.driverAssignment),
+    enabled: hasPermission('driverAssignment'),
   });
 
   const createBlogPostMutation = useMutation({
@@ -608,7 +608,7 @@ function AdminDashboard({ user }: { user: any }) {
         </div>
 
         {/* Blog Posts Management */}
-        {(user.role === 'superadmin' || user.permissions?.blogPosts) && (
+        {(hasPermission('blogPosts', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -616,6 +616,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Edit className="h-5 w-5" />
                 Blog Posts Management
               </CardTitle>
+              {(hasPermission('blogPosts', 'edit')) && (
               <Button 
                 onClick={() => setShowBlogCreator(true)}
                 className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
@@ -624,6 +625,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Plus className="h-4 w-4" />
                 Create New Post
               </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -667,6 +669,8 @@ function AdminDashboard({ user }: { user: any }) {
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4">
+                          {hasPermission('blogPosts', 'edit') && (
+                          <>
                           <Button
                             variant="outline"
                             size="sm"
@@ -684,6 +688,8 @@ function AdminDashboard({ user }: { user: any }) {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -696,7 +702,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Portfolio Clients Management */}
-        {(user.role === 'superadmin' || user.permissions?.portfolioClients) && (
+        {(hasPermission('portfolioClients', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -704,6 +710,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Edit className="h-5 w-5" />
                 Portfolio Clients Management
               </CardTitle>
+              {(hasPermission('portfolioClients', 'edit')) && (
               <Button 
                 onClick={() => setShowPortfolioCreator(true)}
                 className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
@@ -712,6 +719,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Plus className="h-4 w-4" />
                 Add New Client
               </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -755,6 +763,8 @@ function AdminDashboard({ user }: { user: any }) {
                           </div>
                         </div>
                         <div className="flex gap-2 ml-4">
+                          {hasPermission('portfolioClients', 'edit') && (
+                          <>
                           <Button
                             variant="outline"
                             size="sm"
@@ -772,6 +782,8 @@ function AdminDashboard({ user }: { user: any }) {
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
+                          </>
+                          )}
                         </div>
                       </div>
                     )}
@@ -784,7 +796,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Form Submissions Management */}
-        {(user.role === 'superadmin' || user.permissions?.corporateBookings || user.permissions?.rentalBookings || user.permissions?.vendorRegistrations || user.permissions?.contactMessages) && (
+        {(hasPermission('corporateBookings', 'view') || hasPermission('rentalBookings', 'view') || hasPermission('vendorRegistrations', 'view') || hasPermission('contactMessages', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2" data-testid="heading-form-submissions">
@@ -793,46 +805,46 @@ function AdminDashboard({ user }: { user: any }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue={(user.role === 'superadmin' || user.permissions?.corporateBookings) ? "corporate" : (user.permissions?.rentalBookings) ? "rental" : (user.permissions?.vendorRegistrations) ? "vendor" : "contact"} className="w-full">
+            <Tabs defaultValue={(hasPermission('corporateBookings', 'view')) ? "corporate" : (hasPermission('rentalBookings', 'view')) ? "rental" : (hasPermission('vendorRegistrations', 'view')) ? "vendor" : "contact"} className="w-full">
               <TabsList className={`grid w-full ${
                 [
-                  user.role === 'superadmin' || user.permissions?.corporateBookings,
-                  user.role === 'superadmin' || user.permissions?.rentalBookings,
-                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
-                  user.role === 'superadmin' || user.permissions?.contactMessages
+                  hasPermission('corporateBookings', 'view'),
+                  hasPermission('rentalBookings', 'view'),
+                  hasPermission('vendorRegistrations', 'view'),
+                  hasPermission('contactMessages', 'view')
                 ].filter(Boolean).length === 4 ? 'grid-cols-4' :
                 [
-                  user.role === 'superadmin' || user.permissions?.corporateBookings,
-                  user.role === 'superadmin' || user.permissions?.rentalBookings,
-                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
-                  user.role === 'superadmin' || user.permissions?.contactMessages
+                  hasPermission('corporateBookings', 'view'),
+                  hasPermission('rentalBookings', 'view'),
+                  hasPermission('vendorRegistrations', 'view'),
+                  hasPermission('contactMessages', 'view')
                 ].filter(Boolean).length === 3 ? 'grid-cols-3' :
                 [
-                  user.role === 'superadmin' || user.permissions?.corporateBookings,
-                  user.role === 'superadmin' || user.permissions?.rentalBookings,
-                  user.role === 'superadmin' || user.permissions?.vendorRegistrations,
-                  user.role === 'superadmin' || user.permissions?.contactMessages
+                  hasPermission('corporateBookings', 'view'),
+                  hasPermission('rentalBookings', 'view'),
+                  hasPermission('vendorRegistrations', 'view'),
+                  hasPermission('contactMessages', 'view')
                 ].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-1'
               }`}>
-                {(user.role === 'superadmin' || user.permissions?.corporateBookings) && (
+                {hasPermission('corporateBookings', 'view') && (
                   <TabsTrigger value="corporate" className="flex items-center gap-2">
                     <Building className="h-4 w-4" />
                     Corporate ({corporateBookings.length})
                   </TabsTrigger>
                 )}
-                {(user.role === 'superadmin' || user.permissions?.rentalBookings) && (
+                {hasPermission('rentalBookings', 'view') && (
                   <TabsTrigger value="rental" className="flex items-center gap-2">
                     <Car className="h-4 w-4" />
                     Rental ({rentalBookings.length})
                   </TabsTrigger>
                 )}
-                {(user.role === 'superadmin' || user.permissions?.vendorRegistrations) && (
+                {hasPermission('vendorRegistrations', 'view') && (
                   <TabsTrigger value="vendor" className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
                     Vendor ({vendorRegistrations.length})
                   </TabsTrigger>
                 )}
-                {(user.role === 'superadmin' || user.permissions?.contactMessages) && (
+                {hasPermission('contactMessages', 'view') && (
                   <TabsTrigger value="contact" className="flex items-center gap-2">
                     <MessageSquare className="h-4 w-4" />
                     Contact ({contactMessages.length})
@@ -840,7 +852,7 @@ function AdminDashboard({ user }: { user: any }) {
                 )}
               </TabsList>
 
-              {(user.role === 'superadmin' || user.permissions?.corporateBookings) && (
+              {hasPermission('corporateBookings', 'view') && (
                 <TabsContent value="corporate" className="mt-6">
                   <FormSectionTable
                     title="Corporate Bookings"
@@ -858,7 +870,7 @@ function AdminDashboard({ user }: { user: any }) {
                 </TabsContent>
               )}
 
-              {(user.role === 'superadmin' || user.permissions?.rentalBookings) && (
+              {hasPermission('rentalBookings', 'view') && (
                 <TabsContent value="rental" className="mt-6">
                 <FormSectionTable
                   title="Rental Bookings"
@@ -879,7 +891,7 @@ function AdminDashboard({ user }: { user: any }) {
                 </TabsContent>
               )}
 
-              {(user.role === 'superadmin' || user.permissions?.vendorRegistrations) && (
+              {hasPermission('vendorRegistrations', 'view') && (
                 <TabsContent value="vendor" className="mt-6">
                 <FormSectionTable
                   title="Vendor Registrations"
@@ -897,7 +909,7 @@ function AdminDashboard({ user }: { user: any }) {
                 </TabsContent>
               )}
 
-              {(user.role === 'superadmin' || user.permissions?.contactMessages) && (
+              {hasPermission('contactMessages', 'view') && (
                 <TabsContent value="contact" className="mt-6">
                 <FormSectionTable
                   title="Contact Messages"
@@ -920,7 +932,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Marketing Settings Management */}
-        {(user.role === 'superadmin' || user.permissions?.marketingSettings) && (
+        {(hasPermission('marketingSettings', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -928,7 +940,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Target className="h-5 w-5" />
                 Marketing Settings
               </CardTitle>
-              {!marketingSettings && !editingMarketingSettings && (
+              {!marketingSettings && !editingMarketingSettings && (hasPermission('marketingSettings', 'edit')) && (
                 <Button 
                   onClick={() => setEditingMarketingSettings(true)}
                   className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
@@ -938,7 +950,7 @@ function AdminDashboard({ user }: { user: any }) {
                   Setup Marketing
                 </Button>
               )}
-              {marketingSettings && !editingMarketingSettings && (
+              {marketingSettings && !editingMarketingSettings && (hasPermission('marketingSettings', 'edit')) && (
                 <Button 
                   onClick={() => setEditingMarketingSettings(true)}
                   className="flex items-center gap-2"
@@ -994,7 +1006,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Website Settings Management */}
-        {(user.role === 'superadmin' || user.permissions?.websiteSettings) && (
+        {(hasPermission('websiteSettings', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -1002,7 +1014,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Palette className="h-5 w-5" />
                 Website Settings
               </CardTitle>
-              {!websiteSettings && !editingWebsiteSettings && (
+              {!websiteSettings && !editingWebsiteSettings && (hasPermission('websiteSettings', 'edit')) && (
                 <Button 
                   onClick={() => setEditingWebsiteSettings(true)}
                   className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
@@ -1012,7 +1024,7 @@ function AdminDashboard({ user }: { user: any }) {
                   Setup Website Customization
                 </Button>
               )}
-              {websiteSettings && !editingWebsiteSettings && (
+              {websiteSettings && !editingWebsiteSettings && (hasPermission('websiteSettings', 'edit')) && (
                 <Button 
                   onClick={() => setEditingWebsiteSettings(true)}
                   className="flex items-center gap-2"
@@ -1083,7 +1095,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Driver Management (Drivers Permission) */}
-        {(user.role === 'superadmin' || user.permissions?.drivers) && (
+        {(hasPermission('driverManagement', 'view')) && (
           <DriverManagementSection
             allDrivers={allDrivers}
             loadingDrivers={loadingDrivers}
@@ -1098,7 +1110,7 @@ function AdminDashboard({ user }: { user: any }) {
         )}
 
         {/* Legal Pages Management */}
-        {(user.role === 'superadmin' || user.permissions?.legalPages) && (
+        {(hasPermission('legalPages', 'view')) && (
         <Card className="mb-8">
           <CardHeader>
             <div className="flex justify-between items-center">
@@ -1106,6 +1118,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Scale className="h-5 w-5" />
                 Legal Pages
               </CardTitle>
+              {(hasPermission('legalPages', 'edit')) && (
               <Button 
                 onClick={() => setShowLegalPageCreator(true)}
                 className="flex items-center gap-2 bg-[#4c9096] hover:bg-[#4c9096]/90 text-white"
@@ -1114,6 +1127,7 @@ function AdminDashboard({ user }: { user: any }) {
                 <Plus className="h-4 w-4" />
                 Create Legal Page
               </Button>
+              )}
             </div>
           </CardHeader>
           <CardContent>
@@ -1155,6 +1169,8 @@ function AdminDashboard({ user }: { user: any }) {
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        {hasPermission('legalPages', 'edit') && (
+                        <>
                         <Button
                           variant="outline"
                           size="sm"
@@ -1172,6 +1188,8 @@ function AdminDashboard({ user }: { user: any }) {
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
+                        </>
+                        )}
                       </div>
                     </div>
                   </div>

@@ -1,6 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { User } from "@shared/schema";
+import type { UserPermissions } from "@/components/permission-matrix";
 
 export interface AuthUser {
   id: string;
@@ -8,7 +9,7 @@ export interface AuthUser {
   email: string | null;
   name: string;
   role: 'customer' | 'employee' | 'superadmin';
-  permissions?: Record<string, boolean>;
+  permissions?: UserPermissions;
   temporaryPassword?: boolean;
 }
 
@@ -28,10 +29,28 @@ export function useAuth() {
     isSuperAdmin: user?.role === 'superadmin',
     isEmployee: user?.role === 'employee',
     isCustomer: user?.role === 'customer',
-    hasPermission: (permission: string) => {
+    hasPermission: (permission: keyof UserPermissions, action?: 'view' | 'edit' | 'downloadCsv') => {
       if (!user) return false;
       if (user.role === 'superadmin') return true;
-      return user.permissions?.[permission] || false;
+      if (!user.permissions) return false;
+      
+      const perm = user.permissions[permission];
+      if (!perm) return false;
+      
+      // Handle boolean permissions (e.g., driverAssignment)
+      if (typeof perm === 'boolean') return perm;
+      
+      // Handle granular permissions - perm is now typed as PermissionLevel
+      if (action && typeof perm === 'object') {
+        return perm[action] || false;
+      }
+      
+      // Default: check if user has any permission (view, edit, or downloadCsv)
+      if (typeof perm === 'object') {
+        return !!perm.view || !!perm.edit || !!perm.downloadCsv;
+      }
+      
+      return false;
     },
     needsPasswordChange: user?.temporaryPassword || false
   };

@@ -142,7 +142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store user info in new session
         req.session.userId = user.id;
         req.session.role = user.role;
-        req.session.permissions = user.permissions as Record<string, boolean>;
+        req.session.permissions = user.permissions as UserPermissions | undefined;
         
         // Save session before responding
         req.session.save(async (saveErr: any) => {
@@ -987,7 +987,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Blog post routes
   // Protected - only employees with blogPosts permission can create
-  app.post("/api/blog-posts", hasPermission('blogPosts'), async (req, res) => {
+  app.post("/api/blog-posts", hasPermission('blogPosts', 'edit'), async (req, res) => {
     try {
       const postData = insertBlogPostSchema.parse(req.body);
       const post = await storage.createBlogPost(postData);
