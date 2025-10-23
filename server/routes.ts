@@ -1000,6 +1000,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Cancel/Delete rental booking
+  app.delete("/api/rental-bookings/:id", hasPermission('rentalBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const id = req.params.id;
+      
+      // Get booking before deletion
+      const booking = await storage.getRentalBooking(id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Create notification in database before deletion
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'rental',
+          type: 'booking_cancelled',
+          title: 'Booking Cancelled',
+          message: `Your booking #${booking.referenceId} has been cancelled.`,
+          isRead: false,
+          emailSent: !booking.email // Mark as sent if no email to send
+        });
+      }
+      
+      // Send email notification to customer (only if email exists)
+      if (booking.email) {
+        try {
+          await sendBookingNotificationEmail('bookingCancelled', {
+            email: booking.email,
+            customerName: booking.customerName,
+            referenceId: booking.referenceId,
+            bookingType: 'rental',
+            fromLocation: booking.fromLocation,
+            toLocation: booking.toLocation,
+            startDate: booking.startDate,
+            startTime: booking.startTime,
+            endDate: booking.endDate,
+            endTime: booking.endTime,
+            vehicleType: booking.vehicleType,
+            vehicleCapacity: booking.vehicleCapacity,
+            reason: 'Your booking has been cancelled. Please contact us if you have any questions.'
+          });
+          
+          // Mark notification email as sent
+          if (booking.userId) {
+            const notifications = await storage.getNotificationsByUser(booking.userId);
+            const latestNotification = notifications.find(n => 
+              n.bookingId === booking.id && n.type === 'booking_cancelled' && !n.emailSent
+            );
+            if (latestNotification) {
+              await storage.markNotificationEmailSent(latestNotification.id);
+            }
+          }
+        } catch (emailError) {
+          console.error("Failed to send cancellation email:", emailError);
+          // Continue with deletion even if email fails
+        }
+      }
+      
+      // Delete the booking
+      await storage.deleteRentalBooking(id);
+      
+      res.json({ message: "Booking cancelled successfully" });
+    } catch (error) {
+      console.error("Delete rental booking error:", error);
+      res.status(500).json({ message: "Failed to cancel rental booking" });
+    }
+  });
+
   // Corporate booking routes
   app.post("/api/corporate-bookings", validateCorporateBooking, async (req: any, res: any) => {
     try {
@@ -1142,6 +1212,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Update corporate booking error:", error);
         res.status(500).json({ message: "Failed to update corporate booking" });
       }
+    }
+  });
+
+  // Cancel/Delete corporate booking
+  app.delete("/api/corporate-bookings/:id", hasPermission('corporateBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const id = req.params.id;
+      
+      // Get booking before deletion
+      const booking = await storage.getCorporateBooking(id);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Create notification in database before deletion
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'corporate',
+          type: 'booking_cancelled',
+          title: 'Booking Cancelled',
+          message: `Your booking #${booking.referenceId} has been cancelled.`,
+          isRead: false,
+          emailSent: !booking.email // Mark as sent if no email to send
+        });
+      }
+      
+      // Send email notification to customer (only if email exists)
+      if (booking.email) {
+        try {
+          await sendBookingNotificationEmail('bookingCancelled', {
+            email: booking.email,
+            customerName: booking.customerName,
+            referenceId: booking.referenceId,
+            bookingType: 'corporate',
+            companyName: booking.companyName,
+            serviceType: booking.serviceType,
+            reason: 'Your booking has been cancelled. Please contact us if you have any questions.'
+          });
+          
+          // Mark notification email as sent
+          if (booking.userId) {
+            const notifications = await storage.getNotificationsByUser(booking.userId);
+            const latestNotification = notifications.find(n => 
+              n.bookingId === booking.id && n.type === 'booking_cancelled' && !n.emailSent
+            );
+            if (latestNotification) {
+              await storage.markNotificationEmailSent(latestNotification.id);
+            }
+          }
+        } catch (emailError) {
+          console.error("Failed to send cancellation email:", emailError);
+          // Continue with deletion even if email fails
+        }
+      }
+      
+      // Delete the booking
+      await storage.deleteCorporateBooking(id);
+      
+      res.json({ message: "Booking cancelled successfully" });
+    } catch (error) {
+      console.error("Delete corporate booking error:", error);
+      res.status(500).json({ message: "Failed to cancel corporate booking" });
     }
   });
 
