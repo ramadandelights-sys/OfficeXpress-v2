@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -2069,6 +2070,49 @@ function FormSectionTable({
   // State for driver assignment dialog
   const [assigningBooking, setAssigningBooking] = useState<RentalBooking | null>(null);
   
+  // State for edit/delete dialogs
+  const [editingBooking, setEditingBooking] = useState<any | null>(null);
+  const [deletingBooking, setDeletingBooking] = useState<any | null>(null);
+  
+  // Delete mutations
+  const deleteRentalMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/rental-bookings/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete booking');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+      setDeletingBooking(null);
+    },
+  });
+
+  const deleteCorporateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/corporate-bookings/${id}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok) throw new Error('Failed to delete booking');
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-bookings'] });
+      setDeletingBooking(null);
+    },
+  });
+
+  const handleDelete = () => {
+    if (!deletingBooking) return;
+    
+    if (type === 'rental') {
+      deleteRentalMutation.mutate(deletingBooking.id);
+    } else if (type === 'corporate') {
+      deleteCorporateMutation.mutate(deletingBooking.id);
+    }
+  };
+  
   // Helper function to get all fields for each form type
   const getFormFields = (type: string) => {
     switch (type) {
@@ -2082,7 +2126,8 @@ function FormSectionTable({
           { key: 'officeAddress', label: 'Office Address' },
           { key: 'serviceType', label: 'Service Type' },
           { key: 'contractType', label: 'Contract Type' },
-          { key: 'createdAt', label: 'Submitted' }
+          { key: 'createdAt', label: 'Submitted' },
+          { key: 'actions', label: 'Actions' }
         ];
       case 'rental':
         const rentalFields = [
@@ -2108,6 +2153,7 @@ function FormSectionTable({
         if (showDriverAssignment) {
           rentalFields.push({ key: 'driver', label: 'Driver' });
         }
+        rentalFields.push({ key: 'actions', label: 'Actions' });
         return rentalFields;
       case 'vendor':
         return [
@@ -2170,6 +2216,34 @@ function FormSectionTable({
   
   // Format value for display
   const formatValue = (value: any, key: string, item?: any) => {
+    // Check for actions column
+    if (key === 'actions') {
+      return (
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            onClick={() => setEditingBooking(item)}
+            data-testid={`button-edit-${type}-${item.id}`}
+          >
+            <Edit className="h-3 w-3 mr-1" />
+            Edit
+          </Button>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="h-8 text-xs"
+            onClick={() => setDeletingBooking(item)}
+            data-testid={`button-delete-${type}-${item.id}`}
+          >
+            <Trash2 className="h-3 w-3 mr-1" />
+            Delete
+          </Button>
+        </div>
+      );
+    }
+    
     // Check for driver field FIRST, before null check, so button renders even when value is null
     if (key === 'driver' && showDriverAssignment) {
       const assignedDriver = activeDrivers.find(d => d.id === item.driverId);
@@ -2396,6 +2470,68 @@ function FormSectionTable({
           }}
         />
       )}
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingBooking} onOpenChange={(open) => !open && setDeletingBooking(null)}>
+        <AlertDialogContent data-testid="dialog-delete-booking">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete booking #{deletingBooking?.referenceId}? This action cannot be undone. 
+              {deletingBooking?.email && " The customer will receive an email notification."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {(deleteRentalMutation.isPending || deleteCorporateMutation.isPending) ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Edit Booking Dialog (Placeholder for Future Implementation) */}
+      <Dialog open={!!editingBooking} onOpenChange={(open) => !open && setEditingBooking(null)}>
+        <DialogContent data-testid="dialog-edit-booking" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Booking</DialogTitle>
+            <DialogDescription>
+              Full edit functionality is coming soon. For now, booking details can be viewed here.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Reference ID:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">#{editingBooking?.referenceId}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Customer:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{editingBooking?.customerName}</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Contact:</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {editingBooking?.phone}
+                {editingBooking?.email && ` • ${editingBooking.email}`}
+              </p>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                <strong>Note:</strong> To modify booking details, please use the update booking functionality that will send automatic notifications to the customer.
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditingBooking(null)} data-testid="button-close-edit">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
