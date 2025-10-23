@@ -681,6 +681,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search driver by phone number (for driver assignment lookup)
+  // Must be before /api/drivers/:id to avoid :id matching "search"
+  app.get("/api/drivers/search", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const phone = req.query.phone as string;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      const driver = await storage.getDriverByPhone(phone);
+      if (!driver) {
+        return res.status(404).json({ message: "Driver not found" });
+      }
+      
+      res.json(driver);
+    } catch (error) {
+      console.error("Search driver by phone error:", error);
+      res.status(500).json({ message: "Failed to search driver" });
+    }
+  });
+
+  // Get driver suggestions by partial phone number (for autocomplete)
+  // Must be before /api/drivers/:id to avoid :id matching "suggestions"
+  app.get("/api/drivers/suggestions", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const phone = req.query.phone as string;
+      if (!phone || phone.length < 3) {
+        return res.json([]);
+      }
+      
+      const drivers = await storage.searchDriversByPhone(phone);
+      res.json(drivers);
+    } catch (error) {
+      console.error("Get driver suggestions error:", error);
+      res.status(500).json({ message: "Failed to get driver suggestions" });
+    }
+  });
+
   app.get("/api/drivers/:id", hasPermission('driverManagement', 'view'), async (req: any, res: any) => {
     try {
       const driver = await storage.getDriver(req.params.id);
@@ -731,42 +769,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Delete driver error:", error);
       res.status(500).json({ message: "Failed to delete driver" });
-    }
-  });
-
-  // Search driver by phone number (for driver assignment lookup)
-  app.get("/api/drivers/search", hasPermission('driverAssignment'), async (req: any, res: any) => {
-    try {
-      const phone = req.query.phone as string;
-      if (!phone) {
-        return res.status(400).json({ message: "Phone number is required" });
-      }
-      
-      const driver = await storage.getDriverByPhone(phone);
-      if (!driver) {
-        return res.status(404).json({ message: "Driver not found" });
-      }
-      
-      res.json(driver);
-    } catch (error) {
-      console.error("Search driver by phone error:", error);
-      res.status(500).json({ message: "Failed to search driver" });
-    }
-  });
-
-  // Get driver suggestions by partial phone number (for autocomplete)
-  app.get("/api/drivers/suggestions", hasPermission('driverAssignment'), async (req: any, res: any) => {
-    try {
-      const phone = req.query.phone as string;
-      if (!phone || phone.length < 3) {
-        return res.json([]);
-      }
-      
-      const drivers = await storage.searchDriversByPhone(phone);
-      res.json(drivers);
-    } catch (error) {
-      console.error("Get driver suggestions error:", error);
-      res.status(500).json({ message: "Failed to get driver suggestions" });
     }
   });
 

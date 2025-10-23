@@ -1702,7 +1702,7 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
 
   // Fetch driver suggestions as user types
   const { data: driverSuggestions = [] } = useQuery<Driver[]>({
-    queryKey: ['/api/drivers/suggestions', phoneNumber],
+    queryKey: [`/api/drivers/suggestions?phone=${encodeURIComponent(phoneNumber)}`],
     enabled: phoneNumber.length >= 3 && !searchedDriver && !showCreateForm,
     refetchOnWindowFocus: false,
   });
