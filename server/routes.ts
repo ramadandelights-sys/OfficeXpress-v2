@@ -1143,6 +1143,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer notifications endpoints
+  app.get("/api/my/notifications", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const notifications = await storage.getNotificationsByUser(userId);
+      res.json(notifications);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+
+  app.put("/api/my/notifications/:id/read", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const userId = req.session.userId;
+      const notificationId = req.params.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Verify notification belongs to user
+      const notifications = await storage.getNotificationsByUser(userId);
+      const notification = notifications.find(n => n.id === notificationId);
+      
+      if (!notification) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      await storage.markNotificationAsRead(notificationId);
+      res.json({ message: "Notification marked as read" });
+    } catch (error) {
+      console.error("Mark notification as read error:", error);
+      res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+
   // Admin endpoint - returns all bookings (protected)
   app.get("/api/corporate-bookings", isEmployeeOrAdmin, async (req, res) => {
     try {
