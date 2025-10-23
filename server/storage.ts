@@ -85,6 +85,7 @@ export interface IStorage {
   
   // Rental bookings
   createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking>;
+  getRentalBooking(id: string): Promise<RentalBooking | undefined>;
   getRentalBookings(): Promise<RentalBooking[]>;
   getRentalBookingsByUser(userId: string): Promise<RentalBooking[]>;
   getRentalBookingsByPhone(phone: string): Promise<RentalBooking[]>;
@@ -147,6 +148,7 @@ export interface IStorage {
   getUnreadNotificationsByUser(userId: string): Promise<Notification[]>;
   markNotificationAsRead(id: string): Promise<void>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
+  markNotificationEmailSent(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -313,6 +315,11 @@ export class DatabaseStorage implements IStorage {
       .values(booking)
       .returning();
     return newBooking;
+  }
+
+  async getRentalBooking(id: string): Promise<RentalBooking | undefined> {
+    const [booking] = await db.select().from(rentalBookings).where(eq(rentalBookings.id, id));
+    return booking || undefined;
   }
 
   async getRentalBookings(): Promise<RentalBooking[]> {
@@ -741,6 +748,13 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ isRead: true })
       .where(eq(notifications.userId, userId));
+  }
+
+  async markNotificationEmailSent(id: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ emailSent: true })
+      .where(eq(notifications.id, id));
   }
 }
 

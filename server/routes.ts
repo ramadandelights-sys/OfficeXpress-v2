@@ -43,7 +43,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail } from "./lib/resend";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
 
@@ -783,11 +783,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Driver with this phone number already exists" });
       }
       
+      // Get booking before assignment to check previous driver state
+      const bookingBefore = await storage.getRentalBooking(req.params.id);
+      if (!bookingBefore) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
       // Create the driver
       const driver = await storage.createDriver(driverData);
       
       // Assign to the rental booking
       const booking = await storage.assignDriverToRental(req.params.id, driver.id);
+      
+      // Determine notification type based on whether driver is being replaced
+      const notificationType = bookingBefore.driverId ? 'driver_changed' : 'driver_assigned';
+      
+      // Create notification in database
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'rental',
+          type: notificationType,
+          title: notificationType === 'driver_changed' ? 'Driver Updated' : 'Driver Assigned',
+          message: notificationType === 'driver_changed' 
+            ? `Your driver for booking #${booking.referenceId} has been updated to ${driver.name}.`
+            : `${driver.name} has been assigned to your booking #${booking.referenceId}.`,
+          isRead: false,
+          emailSent: false
+        });
+      }
+      
+      // Send email notification to customer
+      const emailType = notificationType === 'driver_changed' ? 'driverChanged' : 'driverAssigned';
+      await sendBookingNotificationEmail(emailType, {
+        email: booking.email,
+        customerName: booking.customerName,
+        referenceId: booking.referenceId,
+        driverName: driver.name,
+        driverPhone: driver.phone,
+        licensePlate: driver.licensePlate,
+        vehicleMake: driver.vehicleMake,
+        vehicleModel: driver.vehicleModel,
+        vehicleYear: driver.vehicleYear,
+        fromLocation: booking.fromLocation,
+        toLocation: booking.toLocation,
+        startDate: booking.startDate,
+        startTime: booking.startTime
+      });
+      
+      // Mark notification email as sent
+      if (booking.userId) {
+        const notifications = await storage.getNotificationsByUser(booking.userId);
+        const latestNotification = notifications.find(n => 
+          n.bookingId === booking.id && n.type === notificationType && !n.emailSent
+        );
+        if (latestNotification) {
+          await storage.markNotificationEmailSent(latestNotification.id);
+        }
+      }
       
       res.json({ driver, booking });
     } catch (error) {
@@ -813,7 +867,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Driver not found" });
       }
       
+      // Get booking before assignment to check previous driver state
+      const bookingBefore = await storage.getRentalBooking(req.params.id);
+      if (!bookingBefore) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
       const booking = await storage.assignDriverToRental(req.params.id, driverId);
+      
+      // Determine notification type based on whether driver is being replaced
+      const notificationType = bookingBefore.driverId ? 'driver_changed' : 'driver_assigned';
+      
+      // Create notification in database
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'rental',
+          type: notificationType,
+          title: notificationType === 'driver_changed' ? 'Driver Updated' : 'Driver Assigned',
+          message: notificationType === 'driver_changed' 
+            ? `Your driver for booking #${booking.referenceId} has been updated to ${driver.name}.`
+            : `${driver.name} has been assigned to your booking #${booking.referenceId}.`,
+          isRead: false,
+          emailSent: false
+        });
+      }
+      
+      // Send email notification to customer
+      const emailType = notificationType === 'driver_changed' ? 'driverChanged' : 'driverAssigned';
+      await sendBookingNotificationEmail(emailType, {
+        email: booking.email,
+        customerName: booking.customerName,
+        referenceId: booking.referenceId,
+        driverName: driver.name,
+        driverPhone: driver.phone,
+        licensePlate: driver.licensePlate,
+        vehicleMake: driver.vehicleMake,
+        vehicleModel: driver.vehicleModel,
+        vehicleYear: driver.vehicleYear,
+        fromLocation: booking.fromLocation,
+        toLocation: booking.toLocation,
+        startDate: booking.startDate,
+        startTime: booking.startTime
+      });
+      
+      // Mark notification email as sent
+      if (booking.userId) {
+        const notifications = await storage.getNotificationsByUser(booking.userId);
+        const latestNotification = notifications.find(n => 
+          n.bookingId === booking.id && n.type === notificationType && !n.emailSent
+        );
+        if (latestNotification) {
+          await storage.markNotificationEmailSent(latestNotification.id);
+        }
+      }
+      
       res.json(booking);
     } catch (error) {
       console.error("Assign driver error:", error);
