@@ -38,7 +38,9 @@ import {
   updateLegalPageSchema,
   insertUserSchema,
   insertDriverSchema,
-  updateDriverSchema
+  updateDriverSchema,
+  updateRentalBookingSchema,
+  updateCorporateBookingSchema
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
@@ -930,6 +932,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update rental booking
+  app.put("/api/rental-bookings/:id", hasPermission('rentalBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const updateData = updateRentalBookingSchema.parse({ ...req.body, id: req.params.id });
+      const { id, ...data } = updateData;
+      
+      // Get booking before update
+      const bookingBefore = await storage.getRentalBooking(id);
+      if (!bookingBefore) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Update the booking
+      const booking = await storage.updateRentalBooking(id, data);
+      
+      // Create notification in database
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'rental',
+          type: 'booking_updated',
+          title: 'Booking Updated',
+          message: `Your booking #${booking.referenceId} has been updated.`,
+          isRead: false,
+          emailSent: false
+        });
+      }
+      
+      // Send email notification to customer
+      await sendBookingNotificationEmail('bookingUpdated', {
+        email: booking.email,
+        customerName: booking.customerName,
+        referenceId: booking.referenceId,
+        bookingType: 'rental',
+        fromLocation: booking.fromLocation,
+        toLocation: booking.toLocation,
+        startDate: booking.startDate,
+        startTime: booking.startTime,
+        endDate: booking.endDate,
+        endTime: booking.endTime,
+        vehicleType: booking.vehicleType,
+        vehicleCapacity: booking.vehicleCapacity,
+        changes: 'Please review the updated booking details above.'
+      });
+      
+      // Mark notification email as sent
+      if (booking.userId) {
+        const notifications = await storage.getNotificationsByUser(booking.userId);
+        const latestNotification = notifications.find(n => 
+          n.bookingId === booking.id && n.type === 'booking_updated' && !n.emailSent
+        );
+        if (latestNotification) {
+          await storage.markNotificationEmailSent(latestNotification.id);
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid booking data", errors: error.errors });
+      } else {
+        console.error("Update rental booking error:", error);
+        res.status(500).json({ message: "Failed to update rental booking" });
+      }
+    }
+  });
+
   // Corporate booking routes
   app.post("/api/corporate-bookings", validateCorporateBooking, async (req: any, res: any) => {
     try {
@@ -1010,6 +1080,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(bookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch corporate bookings" });
+    }
+  });
+
+  // Update corporate booking
+  app.put("/api/corporate-bookings/:id", hasPermission('corporateBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const updateData = updateCorporateBookingSchema.parse({ ...req.body, id: req.params.id });
+      const { id, ...data } = updateData;
+      
+      // Get booking before update
+      const bookingBefore = await storage.getCorporateBooking(id);
+      if (!bookingBefore) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Update the booking
+      const booking = await storage.updateCorporateBooking(id, data);
+      
+      // Create notification in database
+      if (booking.userId) {
+        await storage.createNotification({
+          userId: booking.userId,
+          bookingId: booking.id,
+          bookingType: 'corporate',
+          type: 'booking_updated',
+          title: 'Booking Updated',
+          message: `Your booking #${booking.referenceId} has been updated.`,
+          isRead: false,
+          emailSent: false
+        });
+      }
+      
+      // Send email notification to customer
+      await sendBookingNotificationEmail('bookingUpdated', {
+        email: booking.email,
+        customerName: booking.customerName,
+        referenceId: booking.referenceId,
+        bookingType: 'corporate',
+        companyName: booking.companyName,
+        serviceType: booking.serviceType,
+        changes: 'Please review the updated booking details above.'
+      });
+      
+      // Mark notification email as sent
+      if (booking.userId) {
+        const notifications = await storage.getNotificationsByUser(booking.userId);
+        const latestNotification = notifications.find(n => 
+          n.bookingId === booking.id && n.type === 'booking_updated' && !n.emailSent
+        );
+        if (latestNotification) {
+          await storage.markNotificationEmailSent(latestNotification.id);
+        }
+      }
+      
+      res.json(booking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid booking data", errors: error.errors });
+      } else {
+        console.error("Update corporate booking error:", error);
+        res.status(500).json({ message: "Failed to update corporate booking" });
+      }
     }
   });
 

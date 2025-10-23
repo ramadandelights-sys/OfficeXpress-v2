@@ -454,6 +454,25 @@ export const insertNotificationSchema = createInsertSchema(notifications).omit({
   createdAt: true,
 });
 
+export const updateRentalBookingSchema = createInsertSchema(rentalBookings).omit({
+  id: true,
+  referenceId: true,
+  userId: true,
+  driverId: true,
+  createdAt: true,
+}).extend({
+  id: z.string(),
+}).partial();
+
+export const updateCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
+  id: true,
+  referenceId: true,
+  userId: true,
+  createdAt: true,
+}).extend({
+  id: z.string(),
+}).partial();
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -489,3 +508,5 @@ export type OnboardingToken = typeof onboardingTokens.$inferSelect;
 export type InsertOnboardingToken = z.infer<typeof insertOnboardingTokenSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type UpdateRentalBooking = z.infer<typeof updateRentalBookingSchema>;
+export type UpdateCorporateBooking = z.infer<typeof updateCorporateBookingSchema>;

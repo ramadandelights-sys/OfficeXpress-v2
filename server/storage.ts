@@ -80,8 +80,10 @@ export interface IStorage {
   
   // Corporate bookings
   createCorporateBooking(booking: InsertCorporateBooking): Promise<CorporateBooking>;
+  getCorporateBooking(id: string): Promise<CorporateBooking | undefined>;
   getCorporateBookings(): Promise<CorporateBooking[]>;
   getCorporateBookingsByUser(userId: string): Promise<CorporateBooking[]>;
+  updateCorporateBooking(id: string, data: Partial<Omit<CorporateBooking, 'id' | 'referenceId' | 'userId' | 'createdAt'>>): Promise<CorporateBooking>;
   
   // Rental bookings
   createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking>;
@@ -91,6 +93,7 @@ export interface IStorage {
   getRentalBookingsByPhone(phone: string): Promise<RentalBooking[]>;
   getCorporateBookingsByPhone(phone: string): Promise<CorporateBooking[]>;
   assignDriverToRental(rentalId: string, driverId: string): Promise<RentalBooking>;
+  updateRentalBooking(id: string, data: Partial<Omit<RentalBooking, 'id' | 'referenceId' | 'userId' | 'driverId' | 'createdAt'>>): Promise<RentalBooking>;
   
   // Vendor registrations
   createVendorRegistration(vendor: InsertVendorRegistration): Promise<VendorRegistration>;
@@ -299,6 +302,11 @@ export class DatabaseStorage implements IStorage {
     return newBooking;
   }
 
+  async getCorporateBooking(id: string): Promise<CorporateBooking | undefined> {
+    const [booking] = await db.select().from(corporateBookings).where(eq(corporateBookings.id, id));
+    return booking || undefined;
+  }
+
   async getCorporateBookings(): Promise<CorporateBooking[]> {
     return await db.select().from(corporateBookings).orderBy(desc(corporateBookings.createdAt));
   }
@@ -307,6 +315,15 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(corporateBookings)
       .where(eq(corporateBookings.userId, userId))
       .orderBy(desc(corporateBookings.createdAt));
+  }
+
+  async updateCorporateBooking(id: string, data: Partial<Omit<CorporateBooking, 'id' | 'referenceId' | 'userId' | 'createdAt'>>): Promise<CorporateBooking> {
+    const [booking] = await db
+      .update(corporateBookings)
+      .set(data)
+      .where(eq(corporateBookings.id, id))
+      .returning();
+    return booking;
   }
 
   async createRentalBooking(booking: InsertRentalBooking): Promise<RentalBooking> {
@@ -349,6 +366,15 @@ export class DatabaseStorage implements IStorage {
       .update(rentalBookings)
       .set({ driverId })
       .where(eq(rentalBookings.id, rentalId))
+      .returning();
+    return booking;
+  }
+
+  async updateRentalBooking(id: string, data: Partial<Omit<RentalBooking, 'id' | 'referenceId' | 'userId' | 'driverId' | 'createdAt'>>): Promise<RentalBooking> {
+    const [booking] = await db
+      .update(rentalBookings)
+      .set(data)
+      .where(eq(rentalBookings.id, id))
       .returning();
     return booking;
   }
