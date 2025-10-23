@@ -1,17 +1,20 @@
 import { useAuth, useLogout } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, Package, Calendar } from "lucide-react";
-import type { CorporateBooking, RentalBooking } from "@shared/schema";
+import { LogOut, User, Package, Calendar, Bell, Check } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { CorporateBooking, RentalBooking, Notification } from "@shared/schema";
+import { useState } from "react";
 
 export default function CustomerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const logout = useLogout();
+  const [markingAsReadIds, setMarkingAsReadIds] = useState<Set<string>>(new Set());
 
   const { data: corporateBookings } = useQuery<CorporateBooking[]>({
     queryKey: ["/api/my/corporate-bookings"],
@@ -21,6 +24,42 @@ export default function CustomerDashboard() {
   const { data: rentalBookings } = useQuery<RentalBooking[]>({
     queryKey: ["/api/my/rental-bookings"],
     enabled: !!user,
+  });
+
+  const { data: notifications = [] } = useQuery<Notification[]>({
+    queryKey: ["/api/my/notifications"],
+    enabled: !!user,
+  });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (notificationId: string) => {
+      setMarkingAsReadIds((prev) => new Set(prev).add(notificationId));
+      await apiRequest("PUT", `/api/my/notifications/${notificationId}/read`);
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/my/notifications"] });
+      setMarkingAsReadIds((prev) => {
+        const next = new Set(prev);
+        next.delete(variables);
+        return next;
+      });
+      toast({
+        title: "Notification marked as read",
+        description: "The notification has been marked as read",
+      });
+    },
+    onError: (_error, variables) => {
+      setMarkingAsReadIds((prev) => {
+        const next = new Set(prev);
+        next.delete(variables);
+        return next;
+      });
+      toast({
+        title: "Error",
+        description: "Failed to mark notification as read",
+        variant: "destructive",
+      });
+    },
   });
 
   const handleLogout = async () => {
@@ -56,6 +95,7 @@ export default function CustomerDashboard() {
   // No need to filter - the API already returns only user's bookings
   const userCorporateBookings = corporateBookings || [];
   const userRentalBookings = rentalBookings || [];
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
@@ -75,7 +115,7 @@ export default function CustomerDashboard() {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3 mb-8">
+        <div className="grid gap-6 md:grid-cols-4 mb-8">
           <Card data-testid="card-profile">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -136,6 +176,21 @@ export default function CustomerDashboard() {
               <p className="text-sm text-gray-600 dark:text-gray-400">Total rentals</p>
             </CardContent>
           </Card>
+
+          <Card data-testid="card-notifications-summary">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bell className="mr-2 h-5 w-5" />
+                Notifications
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold" data-testid="text-notifications-count">{notifications.length}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                {unreadCount > 0 ? `${unreadCount} unread` : 'All read'}
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <div className="space-y-6">
@@ -160,7 +215,7 @@ export default function CustomerDashboard() {
                           <p className="text-xs text-gray-500 mt-1">Ref: {booking.referenceId}</p>
                         </div>
                         <p className="text-xs text-gray-500">
-                          {new Date(booking.date || booking.createdAt).toLocaleDateString()}
+                          {new Date(booking.createdAt).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -220,6 +275,70 @@ export default function CustomerDashboard() {
               </CardContent>
             </Card>
           )}
+
+          <Card data-testid="card-notifications-inbox">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Bell className="mr-2 h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription>All your booking notifications and updates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {notifications.length === 0 ? (
+                <p className="text-center py-8 text-gray-600 dark:text-gray-400" data-testid="text-no-notifications">
+                  No notifications yet
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification.id}
+                      className={`border rounded-lg p-4 ${
+                        notification.isRead
+                          ? 'bg-gray-50 dark:bg-gray-800'
+                          : 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+                      }`}
+                      data-testid={`notification-${notification.id}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium text-gray-900 dark:text-white" data-testid={`notification-title-${notification.id}`}>
+                              {notification.title}
+                            </h4>
+                            {!notification.isRead && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-600 text-white">
+                                New
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1" data-testid={`notification-message-${notification.id}`}>
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2" data-testid={`notification-time-${notification.id}`}>
+                            {new Date(notification.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        {!notification.isRead && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => markAsReadMutation.mutate(notification.id)}
+                            disabled={markingAsReadIds.has(notification.id)}
+                            data-testid={`button-mark-read-${notification.id}`}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            {markingAsReadIds.has(notification.id) ? "Marking..." : "Mark as read"}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
