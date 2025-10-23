@@ -6,6 +6,13 @@ OfficeXpress is a comprehensive transportation services platform for businesses 
 
 ## Recent Changes
 
+### Environment-Aware Rate Limiting (October 2025)
+- **Automatic Environment Detection**: Rate limiters now automatically adjust based on `NODE_ENV` for seamless testing and production security
+- **Development Mode**: Generous limits for testing - 100 login attempts, 50 form submissions, 100 admin requests per 15 minutes
+- **Production Mode**: Strict limits for security - 5 login attempts, 5 form submissions, 10 admin requests per 15 minutes
+- **Zero Configuration**: No manual toggling required - automatically uses correct limits based on environment
+- **Benefit**: Eliminates "429 Too many requests" errors during manual testing while maintaining robust protection in production
+
 ### Phone-Based Driver Assignment Workflow (October 2025)
 - **Streamlined UX**: Replaced dropdown Select with "Assign Driver" button that opens a dedicated dialog for driver assignment
 - **Phone-Based Lookup**: Enter phone number to search for existing drivers; auto-populates driver details if found
@@ -89,7 +96,8 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 - **Secure Onboarding System**: One-time 24-hour onboarding links sent via email for new employee accounts, replacing temporary passwords for enhanced security
 - **Email Notifications**: Resend integration for transactional emails to both admin and customers with professional templates.
 - **Reference ID Tracking**: Unique IDs generated for all form submissions, integrated into database, emails, and admin panel.
-- **Security Enhancements**: Rate limiting, Helmet security headers, input validation, sanitization, CSRF protection, and permission-based API middleware
+- **Security Enhancements**: Environment-aware rate limiting (strict in production, lenient in development for testing), Helmet security headers, input validation, sanitization, CSRF protection, and permission-based API middleware
+  - **Rate Limiting**: Automatically adjusts based on NODE_ENV - Authentication: 5 attempts (prod) / 100 attempts (dev), Forms: 5 submissions (prod) / 50 submissions (dev), Admin: 10 requests (prod) / 100 requests (dev)
 - **Analytics Integration**: Comprehensive event tracking with Google Analytics 4 (GA4) and Facebook Pixel, including value-based tracking and server-side conversion API.
 - **Deployment**: Environment-aware API base URL system, SSL certificate management, and production environment variables.
 - **ReCAPTCHA**: Optional spam protection for forms, configurable per environment.
