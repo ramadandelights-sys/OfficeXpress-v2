@@ -56,9 +56,10 @@ app.use(helmet({
 }));
 
 // Rate limiting for form submissions
+// Environment-aware: strict in production (5), lenient in development (50)
 const formLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 5 : 50, // Auto-adjusts based on environment
   message: {
     error: "Too many form submissions from this IP, please try again later."
   },
@@ -67,9 +68,10 @@ const formLimiter = rateLimit({
 });
 
 // Rate limiting for admin operations
+// Environment-aware: strict in production (10), lenient in development (100)
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // limit each IP to 10 admin requests per windowMs
+  max: process.env.NODE_ENV === 'production' ? 10 : 100, // Auto-adjusts based on environment
   message: {
     error: "Too many admin requests from this IP, please try again later."
   },
