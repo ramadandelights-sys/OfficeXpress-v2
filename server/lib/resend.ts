@@ -444,6 +444,198 @@ export const emailTemplates = {
     })
   },
   
+  driverAssigned: (data: any) => ({
+    subject: `Driver Assigned to Your Booking #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        Driver Assigned to Your Booking
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Great news! We have assigned a driver to your booking <strong>#${data.referenceId}</strong>.
+      </p>
+      
+      ${detailSection('Driver Information', [
+        { label: 'Driver Name', value: data.driverName },
+        { label: 'Phone', value: data.driverPhone },
+        { label: 'Vehicle', value: `${data.vehicleMake} ${data.vehicleModel} (${data.vehicleYear})` },
+        { label: 'License Plate', value: data.licensePlate }
+      ])}
+      
+      ${detailSection('Your Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Pickup Location', value: data.fromLocation },
+        { label: 'Destination', value: data.toLocation },
+        { label: 'Pickup Date', value: data.startDate },
+        { label: 'Pickup Time', value: data.startTime }
+      ])}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+        <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
+          ✓ Your driver will contact you before the scheduled pickup time.
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
+  }),
+  
+  driverChanged: (data: any) => ({
+    subject: `Driver Changed for Your Booking #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        Driver Update Notification
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        We wanted to inform you that we have updated the driver assigned to your booking <strong>#${data.referenceId}</strong>.
+      </p>
+      
+      ${detailSection('New Driver Information', [
+        { label: 'Driver Name', value: data.driverName },
+        { label: 'Phone', value: data.driverPhone },
+        { label: 'Vehicle', value: `${data.vehicleMake} ${data.vehicleModel} (${data.vehicleYear})` },
+        { label: 'License Plate', value: data.licensePlate }
+      ])}
+      
+      ${detailSection('Your Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Pickup Location', value: data.fromLocation },
+        { label: 'Destination', value: data.toLocation },
+        { label: 'Pickup Date', value: data.startDate },
+        { label: 'Pickup Time', value: data.startTime }
+      ])}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+        <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
+          ⓘ Your new driver will contact you before the scheduled pickup time.
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
+  }),
+  
+  bookingUpdated: (data: any) => ({
+    subject: `Booking Updated - #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        Your Booking Has Been Updated
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Your booking <strong>#${data.referenceId}</strong> has been updated with the following details:
+      </p>
+      
+      ${data.bookingType === 'rental' ? detailSection('Updated Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Pickup Location', value: data.fromLocation },
+        { label: 'Destination', value: data.toLocation },
+        { label: 'Pickup Date', value: data.startDate },
+        { label: 'Pickup Time', value: data.startTime },
+        ...(data.endDate ? [{ label: 'Return Date', value: data.endDate }] : []),
+        ...(data.endTime ? [{ label: 'End Time', value: data.endTime }] : []),
+        { label: 'Vehicle Type', value: data.vehicleType },
+        { label: 'Capacity', value: data.vehicleCapacity }
+      ]) : detailSection('Updated Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Service Type', value: data.serviceType },
+        { label: 'Company', value: data.companyName }
+      ])}
+      
+      ${data.changes ? `
+        <div style="margin: 30px 0; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+          <p style="margin: 0 0 8px 0; color: #856404; font-size: 14px; font-weight: 600;">
+            What Changed:
+          </p>
+          <p style="margin: 0; color: #856404; font-size: 13px; line-height: 1.6;">
+            ${data.changes}
+          </p>
+        </div>
+      ` : ''}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
+        <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
+          ✓ Please review the updated details carefully. If you have any questions, feel free to contact us.
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
+  }),
+  
+  bookingCancelled: (data: any) => ({
+    subject: `Booking Cancelled - #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        Booking Cancellation Confirmation
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Your booking <strong>#${data.referenceId}</strong> has been ${data.cancelledBy === 'admin' ? 'cancelled by our team' : 'successfully cancelled'}.
+      </p>
+      
+      ${data.bookingType === 'rental' ? detailSection('Cancelled Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Service Type', value: data.serviceType },
+        { label: 'Pickup Location', value: data.fromLocation },
+        { label: 'Destination', value: data.toLocation },
+        { label: 'Pickup Date', value: data.startDate }
+      ]) : detailSection('Cancelled Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Company', value: data.companyName },
+        { label: 'Service Type', value: data.serviceType }
+      ])}
+      
+      ${data.cancellationReason ? `
+        <div style="margin: 30px 0; padding: 20px; background-color: #f3f4f6; border-radius: 8px;">
+          <p style="margin: 0 0 8px 0; color: #374151; font-size: 14px; font-weight: 600;">
+            Cancellation Reason:
+          </p>
+          <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6;">
+            ${data.cancellationReason}
+          </p>
+        </div>
+      ` : ''}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #fee2e2; border-left: 4px solid #ef4444; border-radius: 4px;">
+        <p style="margin: 0; color: #991b1b; font-size: 14px; line-height: 1.6;">
+          This booking is no longer active. If you have any questions or would like to make a new booking, please contact us.
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
+  }),
+  
   employeeOnboarding: (data: any) => ({
     subject: `Welcome to OfficeXpress - Complete Your Account Setup`,
     html: emailWrapper(`
@@ -565,5 +757,33 @@ export async function sendEmployeeOnboardingEmail(data: {
   } catch (error) {
     console.error('Error sending employee onboarding email:', error);
     throw error; // Throw so we can inform the user if email fails
+  }
+}
+
+// Send booking update notification email
+export async function sendBookingNotificationEmail(
+  type: 'driverAssigned' | 'driverChanged' | 'bookingUpdated' | 'bookingCancelled',
+  data: any
+) {
+  try {
+    if (!data.email) {
+      console.log(`No email provided for ${type} notification`);
+      return;
+    }
+    
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates[type](data);
+    
+    await client.emails.send({
+      from: `OfficeXpress <${fromEmail}>`,
+      to: data.email,
+      subject: template.subject,
+      html: template.html
+    });
+    
+    console.log(`${type} email sent to ${data.email}`);
+  } catch (error) {
+    console.error(`Error sending ${type} email:`, error);
+    // Don't throw - we don't want to fail the operation if email fails
   }
 }
