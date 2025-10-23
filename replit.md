@@ -9,12 +9,14 @@ OfficeXpress is a comprehensive transportation services platform for businesses 
 ### Phone-Based Driver Assignment Workflow (October 2025)
 - **Streamlined UX**: Replaced dropdown Select with "Assign Driver" button that opens a dedicated dialog for driver assignment
 - **Phone-Based Lookup**: Enter phone number to search for existing drivers; auto-populates driver details if found
+- **Dynamic Autocomplete Suggestions**: As users type phone numbers (minimum 3 characters), matching drivers appear in a dropdown with name, phone, license plate, and vehicle info for quick selection
 - **On-the-Fly Driver Creation**: If phone not found, seamlessly transition to create driver form and assign in one operation
 - **Two Workflows**:
   1. **Existing Driver**: Phone found → Show driver details (green card) → Assign to booking
   2. **New Driver**: Phone not found → Show create form (blue card) → Create driver & assign to booking
 - **Backend APIs**: 
-  - `GET /api/drivers/search?phone=xxx` - Search driver by phone
+  - `GET /api/drivers/search?phone=xxx` - Search driver by exact phone match
+  - `GET /api/drivers/suggestions?phone=xxx` - Get autocomplete suggestions for partial phone numbers
   - `POST /api/rental-bookings/:id/create-and-assign-driver` - Create driver and assign in one operation
 - **Mobile-Friendly**: Dialog-based approach works better on all screen sizes than inline dropdowns
 
