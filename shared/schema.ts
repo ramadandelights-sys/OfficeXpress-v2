@@ -305,6 +305,20 @@ export const drivers = pgTable("drivers", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  bookingId: varchar("booking_id"),
+  bookingType: text("booking_type"),
+  type: text("type").notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  metadata: json("metadata").$type<Record<string, any>>().default({}),
+  isRead: boolean("is_read").default(false),
+  emailSent: boolean("email_sent").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -435,6 +449,11 @@ export const insertOnboardingTokenSchema = createInsertSchema(onboardingTokens).
   createdAt: true,
 });
 
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -468,3 +487,5 @@ export type InsertDriver = z.infer<typeof insertDriverSchema>;
 export type UpdateDriver = z.infer<typeof updateDriverSchema>;
 export type OnboardingToken = typeof onboardingTokens.$inferSelect;
 export type InsertOnboardingToken = z.infer<typeof insertOnboardingTokenSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;

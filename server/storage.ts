@@ -12,6 +12,7 @@ import {
   legalPages,
   websiteSettings,
   onboardingTokens,
+  notifications,
   type User, 
   type InsertUser,
   type Driver,
@@ -43,7 +44,9 @@ import {
   type InsertWebsiteSettings,
   type UpdateWebsiteSettings,
   type OnboardingToken,
-  type InsertOnboardingToken
+  type InsertOnboardingToken,
+  type Notification,
+  type InsertNotification
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt } from "drizzle-orm";
@@ -137,6 +140,13 @@ export interface IStorage {
   createWebsiteSettings(settings: InsertWebsiteSettings): Promise<WebsiteSettings>;
   updateWebsiteSettings(settings: UpdateWebsiteSettings): Promise<WebsiteSettings | null>;
   deleteWebsiteSettings(id: string): Promise<boolean>;
+  
+  // Notifications
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  getNotificationsByUser(userId: string): Promise<Notification[]>;
+  getUnreadNotificationsByUser(userId: string): Promise<Notification[]>;
+  markNotificationAsRead(id: string): Promise<void>;
+  markAllNotificationsAsRead(userId: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -693,6 +703,44 @@ export class DatabaseStorage implements IStorage {
   async deleteWebsiteSettings(id: string): Promise<boolean> {
     const result = await db.delete(websiteSettings).where(eq(websiteSettings.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Notifications implementation
+  async createNotification(notificationData: InsertNotification): Promise<Notification> {
+    const [notification] = await db.insert(notifications).values([notificationData]).returning();
+    return notification;
+  }
+
+  async getNotificationsByUser(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(eq(notifications.userId, userId))
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async getUnreadNotificationsByUser(userId: string): Promise<Notification[]> {
+    return await db
+      .select()
+      .from(notifications)
+      .where(
+        sql`${notifications.userId} = ${userId} AND ${notifications.isRead} = false`
+      )
+      .orderBy(desc(notifications.createdAt));
+  }
+
+  async markNotificationAsRead(id: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.id, id));
+  }
+
+  async markAllNotificationsAsRead(userId: string): Promise<void> {
+    await db
+      .update(notifications)
+      .set({ isRead: true })
+      .where(eq(notifications.userId, userId));
   }
 }
 
