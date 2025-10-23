@@ -753,6 +753,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get driver suggestions by partial phone number (for autocomplete)
+  app.get("/api/drivers/suggestions", hasPermission('driverAssignment'), async (req: any, res: any) => {
+    try {
+      const phone = req.query.phone as string;
+      if (!phone || phone.length < 3) {
+        return res.json([]);
+      }
+      
+      const drivers = await storage.searchDriversByPhone(phone);
+      res.json(drivers);
+    } catch (error) {
+      console.error("Get driver suggestions error:", error);
+      res.status(500).json({ message: "Failed to get driver suggestions" });
+    }
+  });
+
   // Create driver and assign to rental booking in one operation
   app.post("/api/rental-bookings/:id/create-and-assign-driver", hasPermission('driverAssignment'), async (req: any, res: any) => {
     try {

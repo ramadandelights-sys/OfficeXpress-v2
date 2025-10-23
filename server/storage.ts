@@ -46,7 +46,7 @@ import {
   type InsertOnboardingToken
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, ilike, sql, lt } from "drizzle-orm";
+import { eq, desc, or, ilike, like, sql, lt } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -70,6 +70,7 @@ export interface IStorage {
   getActiveDrivers(): Promise<Driver[]>;
   getDriver(id: string): Promise<Driver | undefined>;
   getDriverByPhone(phone: string): Promise<Driver | undefined>;
+  searchDriversByPhone(phonePartial: string): Promise<Driver[]>;
   createDriver(driver: InsertDriver): Promise<Driver>;
   updateDriver(driver: UpdateDriver): Promise<Driver>;
   deleteDriver(id: string): Promise<void>;
@@ -248,6 +249,10 @@ export class DatabaseStorage implements IStorage {
   async getDriverByPhone(phone: string): Promise<Driver | undefined> {
     const [driver] = await db.select().from(drivers).where(eq(drivers.phone, phone));
     return driver || undefined;
+  }
+
+  async searchDriversByPhone(phonePartial: string): Promise<Driver[]> {
+    return await db.select().from(drivers).where(like(drivers.phone, `%${phonePartial}%`)).limit(10);
   }
 
   async createDriver(insertDriver: InsertDriver): Promise<Driver> {

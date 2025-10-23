@@ -1698,6 +1698,14 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
+  // Fetch driver suggestions as user types
+  const { data: driverSuggestions = [] } = useQuery<Driver[]>({
+    queryKey: ['/api/drivers/suggestions', phoneNumber],
+    enabled: phoneNumber.length >= 3 && !searchedDriver && !showCreateForm,
+    refetchOnWindowFocus: false,
+  });
 
   // Reset state when dialog opens/closes
   useEffect(() => {
@@ -1706,6 +1714,7 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
       setSearchedDriver(null);
       setSearchError(null);
       setShowCreateForm(false);
+      setShowSuggestions(false);
     }
   }, [open]);
 
@@ -1816,25 +1825,66 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
           {/* Phone number search */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Driver Phone Number</label>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Enter phone number (e.g., 01XXXXXXXXX)"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearchDriver();
-                  }
-                }}
-                data-testid="input-driver-phone"
-              />
-              <Button
-                onClick={handleSearchDriver}
-                disabled={isSearching || !phoneNumber.trim()}
-                data-testid="button-search-driver"
-              >
-                {isSearching ? 'Searching...' : 'Search'}
-              </Button>
+            <div className="relative">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter phone number (e.g., 01XXXXXXXXX)"
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    setPhoneNumber(e.target.value);
+                    setShowSuggestions(true);
+                    setSearchError(null);
+                    setSearchedDriver(null);
+                    setShowCreateForm(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearchDriver();
+                    } else if (e.key === 'Escape') {
+                      setShowSuggestions(false);
+                    }
+                  }}
+                  onFocus={() => setShowSuggestions(true)}
+                  data-testid="input-driver-phone"
+                />
+                <Button
+                  onClick={handleSearchDriver}
+                  disabled={isSearching || !phoneNumber.trim()}
+                  data-testid="button-search-driver"
+                >
+                  {isSearching ? 'Searching...' : 'Search'}
+                </Button>
+              </div>
+              
+              {/* Suggestions dropdown */}
+              {showSuggestions && driverSuggestions.length > 0 && phoneNumber.length >= 3 && !searchedDriver && !showCreateForm && (
+                <div className="absolute z-50 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                  <div className="p-2">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Suggestions:</p>
+                    {driverSuggestions.map((driver) => (
+                      <button
+                        key={driver.id}
+                        type="button"
+                        onClick={() => {
+                          setPhoneNumber(driver.phone);
+                          setSearchedDriver(driver);
+                          setShowSuggestions(false);
+                        }}
+                        className="w-full text-left px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded flex items-center gap-3"
+                        data-testid={`suggestion-${driver.phone}`}
+                      >
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{driver.name}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">{driver.phone} • {driver.licensePlate}</p>
+                        </div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {driver.vehicleMake} {driver.vehicleModel}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             {searchError && (
               <p className="text-sm text-orange-600 dark:text-orange-400">{searchError}</p>
