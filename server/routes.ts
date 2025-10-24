@@ -303,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               <code style="color: #374151; font-size: 13px;">${resetUrl}</code>
             </div>
             
-            <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid: #f59e0b; border-radius: 4px;">
+            <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
               <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
                 ⚠️ This link will expire in 1 hour. If you didn't request this reset, you can safely ignore this email.
               </p>
