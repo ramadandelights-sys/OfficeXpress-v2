@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck, Eye } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck, Eye, Check } from "lucide-react";
 import { useLocation } from "wouter";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
@@ -870,6 +870,7 @@ function AdminDashboard({ user }: { user: any }) {
                     loading={loadingCorporate}
                     type="corporate"
                     exportToCSV={exportToCSV}
+                    userRole={user.role}
                   />
                 </TabsContent>
               )}
@@ -891,6 +892,7 @@ function AdminDashboard({ user }: { user: any }) {
                   activeDrivers={activeDrivers}
                   assignDriverMutation={assignDriverMutation}
                   showDriverAssignment={hasPermission('driverAssignment')}
+                  userRole={user.role}
                 />
                 </TabsContent>
               )}
@@ -909,6 +911,7 @@ function AdminDashboard({ user }: { user: any }) {
                   loading={loadingVendors}
                   type="vendor"
                   exportToCSV={exportToCSV}
+                  userRole={user.role}
                 />
                 </TabsContent>
               )}
@@ -927,6 +930,7 @@ function AdminDashboard({ user }: { user: any }) {
                   loading={loadingMessages}
                   type="contact"
                   exportToCSV={exportToCSV}
+                  userRole={user.role}
                 />
                 </TabsContent>
               )}
@@ -2272,6 +2276,7 @@ interface FormSectionTableProps {
   activeDrivers?: Driver[];
   assignDriverMutation?: any;
   showDriverAssignment?: boolean;
+  userRole?: string;
 }
 
 function FormSectionTable({
@@ -2288,7 +2293,8 @@ function FormSectionTable({
   exportToCSV,
   activeDrivers = [],
   assignDriverMutation,
-  showDriverAssignment = false
+  showDriverAssignment = false,
+  userRole
 }: FormSectionTableProps) {
   // State for driver assignment dialog
   const [assigningBooking, setAssigningBooking] = useState<RentalBooking | null>(null);
@@ -2299,6 +2305,9 @@ function FormSectionTable({
   
   // State for details view dialog
   const [viewingDetails, setViewingDetails] = useState<any | null>(null);
+
+  // Status management state - tracks pending status changes before confirmation
+  const [pendingStatusChanges, setPendingStatusChanges] = useState<Record<string, string>>({});
   
   // Delete mutations
   const deleteRentalMutation = useMutation({
@@ -2338,6 +2347,68 @@ function FormSectionTable({
       deleteCorporateMutation.mutate(deletingBooking.id);
     }
   };
+
+  // Status update mutations
+  const updateCorporateStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest("PUT", `/api/corporate-bookings/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-bookings'] });
+      setPendingStatusChanges({});
+    },
+  });
+
+  const updateRentalStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest("PUT", `/api/rental-bookings/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+      setPendingStatusChanges({});
+    },
+  });
+
+  const updateVendorStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest("PUT", `/api/vendor-registrations/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/vendor-registrations'] });
+      setPendingStatusChanges({});
+    },
+  });
+
+  const updateContactStatusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      return await apiRequest("PUT", `/api/contact-messages/${id}/status`, { status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/contact-messages'] });
+      setPendingStatusChanges({});
+    },
+  });
+
+  const handleStatusConfirm = (id: string, type: string) => {
+    const newStatus = pendingStatusChanges[id];
+    if (!newStatus) return;
+
+    if (type === 'corporate') {
+      updateCorporateStatusMutation.mutate({ id, status: newStatus });
+    } else if (type === 'rental') {
+      updateRentalStatusMutation.mutate({ id, status: newStatus });
+    } else if (type === 'vendor') {
+      updateVendorStatusMutation.mutate({ id, status: newStatus });
+    } else if (type === 'contact') {
+      updateContactStatusMutation.mutate({ id, status: newStatus });
+    }
+  };
+
+  const handleStatusCancel = (id: string) => {
+    const updated = { ...pendingStatusChanges };
+    delete updated[id];
+    setPendingStatusChanges(updated);
+  };
   
   // Helper function to get condensed fields for each form type
   const getFormFields = (type: string) => {
@@ -2367,14 +2438,16 @@ function FormSectionTable({
           { key: 'referenceId', label: 'Reference ID' },
           { key: 'serviceModality', label: 'Service Type' },
           { key: 'createdAt', label: 'Submitted' },
-          { key: 'viewDetails', label: '' }
+          { key: 'viewDetails', label: '' },
+          { key: 'actions', label: 'Actions' }
         ];
       case 'contact':
         return [
           { key: 'referenceId', label: 'Reference ID' },
           { key: 'subject', label: 'Subject' },
           { key: 'createdAt', label: 'Submitted' },
-          { key: 'viewDetails', label: '' }
+          { key: 'viewDetails', label: '' },
+          { key: 'actions', label: 'Actions' }
         ];
       default:
         return [];
@@ -2432,28 +2505,88 @@ function FormSectionTable({
     
     // Check for actions column
     if (key === 'actions') {
+      const statusOptions = [
+        "Fake Request",
+        "Interested",
+        "Not Interested",
+        "Cancelled",
+        "Rejected",
+        "Completed"
+      ];
+      const hasPendingStatus = pendingStatusChanges[item.id];
+      const currentStatus = item.status || null;
+
       return (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-8 text-xs"
-            onClick={() => setEditingBooking({ ...item, bookingType: type })}
-            data-testid={`button-edit-${type}-${item.id}`}
-          >
-            <Edit className="h-3 w-3 mr-1" />
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant="destructive"
-            className="h-8 text-xs"
-            onClick={() => setDeletingBooking({ ...item, bookingType: type })}
-            data-testid={`button-delete-${type}-${item.id}`}
-          >
-            <Trash2 className="h-3 w-3 mr-1" />
-            Delete
-          </Button>
+        <div className="flex flex-col gap-2 min-w-[200px]">
+          {/* Status Dropdown with Confirmation Buttons */}
+          <div className="flex gap-1 items-center">
+            <Select
+              value={hasPendingStatus || currentStatus || ""}
+              onValueChange={(value) => {
+                setPendingStatusChanges({ ...pendingStatusChanges, [item.id]: value });
+              }}
+              data-testid={`select-status-${type}-${item.id}`}
+            >
+              <SelectTrigger className="h-8 text-xs flex-1">
+                <SelectValue placeholder="Set Status..." />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasPendingStatus && (
+              <>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-8 p-0 bg-green-50 hover:bg-green-100 border-green-300"
+                  onClick={() => handleStatusConfirm(item.id, type)}
+                  data-testid={`button-confirm-status-${type}-${item.id}`}
+                >
+                  <Check className="h-4 w-4 text-green-600" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-8 w-8 p-0 bg-red-50 hover:bg-red-100 border-red-300"
+                  onClick={() => handleStatusCancel(item.id)}
+                  data-testid={`button-cancel-status-${type}-${item.id}`}
+                >
+                  <X className="h-4 w-4 text-red-600" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Edit/Delete Buttons Row */}
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs"
+              onClick={() => setEditingBooking({ ...item, bookingType: type })}
+              data-testid={`button-edit-${type}-${item.id}`}
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              Edit
+            </Button>
+            {userRole === 'superadmin' && (
+              <Button
+                size="sm"
+                variant="destructive"
+                className="h-8 text-xs"
+                onClick={() => setDeletingBooking({ ...item, bookingType: type })}
+                data-testid={`button-delete-${type}-${item.id}`}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Delete
+              </Button>
+            )}
+          </div>
         </div>
       );
     }
