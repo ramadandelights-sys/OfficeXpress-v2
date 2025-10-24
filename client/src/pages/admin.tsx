@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck, Eye } from "lucide-react";
 import { useLocation } from "wouter";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
@@ -2035,6 +2035,124 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
   );
 }
 
+// Booking Details Dialog Component
+function BookingDetailsDialog({ booking, type, onClose }: { booking: any; type: string; onClose: () => void }) {
+  if (!booking) return null;
+
+  const renderField = (label: string, value: any) => {
+    if (value === null || value === undefined || value === '') return null;
+    
+    let displayValue = value;
+    if (Array.isArray(value)) {
+      displayValue = value.join(', ');
+    } else if (typeof value === 'boolean') {
+      displayValue = value ? 'Yes' : 'No';
+    } else if (label === 'Submitted' && value) {
+      displayValue = new Date(value).toLocaleString();
+    }
+
+    return (
+      <div key={label} className="grid grid-cols-3 gap-4 py-2 border-b last:border-b-0">
+        <div className="font-medium text-gray-700 dark:text-gray-300">{label}:</div>
+        <div className="col-span-2 text-gray-900 dark:text-gray-100">
+          {label === 'Email' ? (
+            <a href={`mailto:${displayValue}`} className="text-blue-600 hover:underline">
+              {displayValue}
+            </a>
+          ) : label === 'Phone' ? (
+            <a href={`tel:${displayValue}`} className="text-blue-600 hover:underline">
+              {displayValue}
+            </a>
+          ) : (
+            displayValue
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const getBookingFields = () => {
+    switch (type) {
+      case 'corporate':
+        return [
+          ['Reference ID', booking.referenceId],
+          ['Customer Name', booking.customerName],
+          ['Company Name', booking.companyName],
+          ['Email', booking.email],
+          ['Phone', booking.phone],
+          ['Office Address', booking.officeAddress],
+          ['Service Type', booking.serviceType],
+          ['Contract Type', booking.contractType],
+          ['Submitted', booking.createdAt],
+        ];
+      case 'rental':
+        return [
+          ['Reference ID', booking.referenceId],
+          ['Customer Name', booking.customerName],
+          ['Email', booking.email],
+          ['Phone', booking.phone],
+          ['Service Type', booking.serviceType],
+          ['Vehicle Type', booking.vehicleType],
+          ['Capacity', booking.capacity],
+          ['Vehicle Capacity', booking.vehicleCapacity],
+          ['From Location', booking.fromLocation],
+          ['To Location', booking.toLocation],
+          ['Start Date', booking.startDate],
+          ['End Date', booking.endDate],
+          ['Start Time', booking.startTime],
+          ['End Time', booking.endTime],
+          ['Pickup Date', booking.pickupDate],
+          ['Duration', booking.duration],
+          ['Return Trip', booking.isReturnTrip],
+          ['Submitted', booking.createdAt],
+        ];
+      case 'vendor':
+        return [
+          ['Reference ID', booking.referenceId],
+          ['Full Name', booking.fullName],
+          ['Email', booking.email],
+          ['Phone', booking.phone],
+          ['Location', booking.location],
+          ['Vehicle Types', booking.vehicleTypes],
+          ['Service Modality', booking.serviceModality],
+          ['Experience', booking.experience],
+          ['Additional Info', booking.additionalInfo],
+          ['Submitted', booking.createdAt],
+        ];
+      case 'contact':
+        return [
+          ['Reference ID', booking.referenceId],
+          ['Name', booking.name],
+          ['Email', booking.email],
+          ['Phone', booking.phone],
+          ['Subject', booking.subject],
+          ['Message', booking.message],
+          ['Submitted', booking.createdAt],
+        ];
+      default:
+        return [];
+    }
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {type.charAt(0).toUpperCase() + type.slice(1)} Booking Details
+          </DialogTitle>
+          <DialogDescription>
+            Complete details for reference #{booking.referenceId}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1">
+          {getBookingFields().map(([label, value]) => renderField(label, value))}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface FormSectionTableProps {
   title: string;
   data: any[];
@@ -2075,6 +2193,9 @@ function FormSectionTable({
   const [editingBooking, setEditingBooking] = useState<any | null>(null);
   const [deletingBooking, setDeletingBooking] = useState<any | null>(null);
   
+  // State for details view dialog
+  const [viewingDetails, setViewingDetails] = useState<any | null>(null);
+  
   // Delete mutations
   const deleteRentalMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -2114,70 +2235,43 @@ function FormSectionTable({
     }
   };
   
-  // Helper function to get all fields for each form type
+  // Helper function to get condensed fields for each form type
   const getFormFields = (type: string) => {
     switch (type) {
       case 'corporate':
         return [
           { key: 'referenceId', label: 'Reference ID' },
-          { key: 'customerName', label: 'Customer Name' },
-          { key: 'companyName', label: 'Company Name' },
-          { key: 'email', label: 'Email' },
-          { key: 'phone', label: 'Phone' },
-          { key: 'officeAddress', label: 'Office Address' },
           { key: 'serviceType', label: 'Service Type' },
           { key: 'contractType', label: 'Contract Type' },
           { key: 'createdAt', label: 'Submitted' },
+          { key: 'viewDetails', label: '' },
           { key: 'actions', label: 'Actions' }
         ];
       case 'rental':
         const rentalFields = [
           { key: 'referenceId', label: 'Reference ID' },
-          { key: 'customerName', label: 'Customer Name' },
-          { key: 'email', label: 'Email' },
-          { key: 'phone', label: 'Phone' },
           { key: 'serviceType', label: 'Service Type' },
-          { key: 'vehicleType', label: 'Vehicle Type' },
-          { key: 'capacity', label: 'Capacity' },
-          { key: 'vehicleCapacity', label: 'Vehicle Capacity' },
-          { key: 'fromLocation', label: 'From Location' },
-          { key: 'toLocation', label: 'To Location' },
-          { key: 'startDate', label: 'Start Date' },
-          { key: 'endDate', label: 'End Date' },
-          { key: 'startTime', label: 'Start Time' },
-          { key: 'endTime', label: 'End Time' },
-          { key: 'pickupDate', label: 'Pickup Date' },
-          { key: 'duration', label: 'Duration' },
-          { key: 'isReturnTrip', label: 'Return Trip' },
           { key: 'createdAt', label: 'Submitted' }
         ];
         if (showDriverAssignment) {
           rentalFields.push({ key: 'driver', label: 'Driver' });
         }
+        rentalFields.push({ key: 'viewDetails', label: '' });
         rentalFields.push({ key: 'actions', label: 'Actions' });
         return rentalFields;
       case 'vendor':
         return [
           { key: 'referenceId', label: 'Reference ID' },
-          { key: 'fullName', label: 'Full Name' },
-          { key: 'email', label: 'Email' },
-          { key: 'phone', label: 'Phone' },
-          { key: 'location', label: 'Location' },
-          { key: 'vehicleTypes', label: 'Vehicle Types' },
-          { key: 'serviceModality', label: 'Service Modality' },
-          { key: 'experience', label: 'Experience' },
-          { key: 'additionalInfo', label: 'Additional Info' },
-          { key: 'createdAt', label: 'Submitted' }
+          { key: 'serviceModality', label: 'Service Type' },
+          { key: 'createdAt', label: 'Submitted' },
+          { key: 'viewDetails', label: '' }
         ];
       case 'contact':
         return [
           { key: 'referenceId', label: 'Reference ID' },
-          { key: 'name', label: 'Name' },
-          { key: 'email', label: 'Email' },
-          { key: 'phone', label: 'Phone' },
           { key: 'subject', label: 'Subject' },
-          { key: 'message', label: 'Message' },
-          { key: 'createdAt', label: 'Submitted' }
+          { key: 'createdAt', label: 'Submitted' },
+          { key: 'viewDetails', label: '' }
         ];
       default:
         return [];
@@ -2217,6 +2311,22 @@ function FormSectionTable({
   
   // Format value for display
   const formatValue = (value: any, key: string, item?: any) => {
+    // Check for view details button
+    if (key === 'viewDetails') {
+      return (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 text-xs"
+          onClick={() => setViewingDetails(item)}
+          data-testid={`button-view-${type}-${item.id}`}
+        >
+          <Eye className="h-4 w-4 mr-1" />
+          View Details
+        </Button>
+      );
+    }
+    
     // Check for actions column
     if (key === 'actions') {
       return (
@@ -2506,6 +2616,15 @@ function FormSectionTable({
               booking={editingBooking} 
               onClose={() => setEditingBooking(null)} 
             />
+      )}
+      
+      {/* Booking Details Dialog */}
+      {viewingDetails && (
+        <BookingDetailsDialog
+          booking={viewingDetails}
+          type={type}
+          onClose={() => setViewingDetails(null)}
+        />
       )}
     </div>
   );
