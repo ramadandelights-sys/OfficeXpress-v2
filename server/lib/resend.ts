@@ -814,3 +814,80 @@ export async function sendBookingNotificationEmail(
     // Don't throw - we don't want to fail the operation if email fails
   }
 }
+
+// Send completion email with NPS survey link
+export async function sendCompletionEmailWithSurvey(data: {
+  email: string;
+  customerName: string;
+  referenceId: string;
+  surveyToken: string;
+  submissionType: string;
+}) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    
+    // Survey URL with token
+    const surveyUrl = `https://officexpress.org/survey?token=${data.surveyToken}`;
+    
+    const content = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #B2DFDB 0%, #80CBC4 100%); padding: 40px; border-radius: 8px; margin-bottom: 30px;">
+          <h1 style="margin: 0; color: #1a1a1a; font-size: 28px; font-weight: 700;">
+            ✨ Thank You!
+          </h1>
+        </div>
+      </div>
+
+      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Dear <strong>${data.customerName}</strong>,
+      </p>
+
+      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Thank you for choosing OfficeXpress! We're delighted to inform you that your request 
+        <strong style="color: #059669;">#${data.referenceId}</strong> has been completed.
+      </p>
+
+      <div style="background-color: #f9fafb; padding: 25px; border-radius: 8px; border-left: 4px solid #B2DFDB; margin: 30px 0;">
+        <p style="margin: 0 0 15px 0; color: #374151; font-size: 16px; font-weight: 600;">
+          📊 Help us improve your experience
+        </p>
+        <p style="margin: 0 0 20px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+          We'd love to hear about your experience! Please take a moment to complete our quick survey.
+          Your feedback helps us serve you better.
+        </p>
+        <div style="text-align: center;">
+          <a href="${surveyUrl}" 
+             style="display: inline-block; background-color: #059669; color: #ffffff; 
+                    text-decoration: none; padding: 14px 32px; border-radius: 6px; 
+                    font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(5, 150, 105, 0.2);">
+            Complete Survey
+          </a>
+        </div>
+        <p style="margin: 15px 0 0 0; color: #9ca3af; font-size: 12px; text-align: center;">
+          This survey will take less than 2 minutes to complete
+        </p>
+      </div>
+
+      <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px; line-height: 1.6;">
+        If you have any questions or concerns, please don't hesitate to contact us.
+      </p>
+
+      <p style="margin: 0; color: #374151; font-size: 14px; line-height: 1.6;">
+        Best regards,<br/>
+        <strong style="color: #059669;">The OfficeXpress Team</strong>
+      </p>
+    `;
+
+    await client.emails.send({
+      from: `OfficeXpress <${fromEmail}>`,
+      to: data.email,
+      subject: `✅ Request Completed - ${data.referenceId} | We'd love your feedback!`,
+      html: emailWrapper(content, false)
+    });
+    
+    console.log(`Completion email with survey sent to ${data.email} for ${data.referenceId}`);
+  } catch (error) {
+    console.error('Error sending completion email with survey:', error);
+    // Don't throw - we don't want to fail the status update if email fails
+  }
+}

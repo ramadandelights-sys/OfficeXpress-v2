@@ -15,6 +15,7 @@ import {
   passwordResetTokens,
   notifications,
   submissionStatusHistory,
+  surveys,
   type User, 
   type InsertUser,
   type Driver,
@@ -52,7 +53,9 @@ import {
   type Notification,
   type InsertNotification,
   type SubmissionStatusHistory,
-  type InsertSubmissionStatusHistory
+  type InsertSubmissionStatusHistory,
+  type Survey,
+  type InsertSurvey
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
@@ -180,6 +183,12 @@ export interface IStorage {
     newStatus: string,
     changedByUserId: string | null
   ): Promise<{ submission: any, history: SubmissionStatusHistory }>;
+  
+  // Survey operations
+  createSurvey(survey: InsertSurvey): Promise<Survey>;
+  getSurveyByToken(token: string): Promise<Survey | undefined>;
+  getSurveyByReferenceId(referenceId: string): Promise<Survey | undefined>;
+  updateSurveyResponse(token: string, npsScore: number, feedback?: string): Promise<Survey>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -970,6 +979,62 @@ export class DatabaseStorage implements IStorage {
 
       return { submission, history };
     });
+  }
+
+  // Survey operations
+  async createSurvey(survey: InsertSurvey): Promise<Survey> {
+    const [createdSurvey] = await db
+      .insert(surveys)
+      .values(survey)
+      .returning();
+    return createdSurvey;
+  }
+
+  async getSurveyByToken(token: string): Promise<Survey | undefined> {
+    const [survey] = await db
+      .select()
+      .from(surveys)
+      .where(eq(surveys.token, token));
+    return survey || undefined;
+  }
+
+  async getSurveyByReferenceId(referenceId: string): Promise<Survey | undefined> {
+    const [survey] = await db
+      .select()
+      .from(surveys)
+      .where(eq(surveys.referenceId, referenceId))
+      .orderBy(desc(surveys.createdAt));
+    return survey || undefined;
+  }
+
+  async updateSurveyResponse(token: string, npsScore: number, feedback?: string): Promise<Survey> {
+    // First, get the survey to check expiry
+    const survey = await this.getSurveyByToken(token);
+    if (!survey) {
+      throw new Error('Survey not found');
+    }
+    
+    // Check if survey has expired
+    if (new Date() > new Date(survey.expiresAt)) {
+      throw new Error('Survey has expired');
+    }
+    
+    // Check if survey has already been submitted
+    if (survey.submittedAt) {
+      throw new Error('Survey has already been submitted');
+    }
+    
+    // Update the survey response
+    const [updatedSurvey] = await db
+      .update(surveys)
+      .set({ 
+        npsScore, 
+        feedback: feedback || null,
+        submittedAt: new Date()
+      })
+      .where(eq(surveys.token, token))
+      .returning();
+    return updatedSurvey;
   }
 }
 

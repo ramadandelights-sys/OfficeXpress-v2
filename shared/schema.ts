@@ -159,6 +159,22 @@ export const submissionStatusHistory = pgTable("submission_status_history", {
   index("idx_history_user").on(table.changedByUserId),
 ]);
 
+export const surveys = pgTable("surveys", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull(),
+  submissionType: text("submission_type").notNull(), // 'corporate' | 'rental' | 'vendor' | 'contact'
+  submissionId: varchar("submission_id").notNull(),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  npsScore: integer("nps_score"), // 0-10 rating, null if not submitted yet
+  feedback: text("feedback"), // Optional text feedback
+  submittedAt: timestamp("submitted_at"), // When survey was completed
+  expiresAt: timestamp("expires_at").notNull(), // 7 days from creation
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_survey_reference").on(table.referenceId),
+  index("idx_survey_token").on(table.token),
+]);
+
 export const blogPosts = pgTable("blog_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   title: text("title").notNull(),
@@ -401,6 +417,12 @@ export const insertSubmissionStatusHistorySchema = createInsertSchema(submission
   createdAt: true,
 });
 
+export const insertSurveySchema = createInsertSchema(surveys).omit({
+  id: true,
+  submittedAt: true,
+  createdAt: true,
+});
+
 export const insertBlogPostSchema = createInsertSchema(blogPosts).omit({
   id: true,
   createdAt: true,
@@ -574,3 +596,5 @@ export type UpdateRentalBooking = z.infer<typeof updateRentalBookingSchema>;
 export type UpdateCorporateBooking = z.infer<typeof updateCorporateBookingSchema>;
 export type SubmissionStatusHistory = typeof submissionStatusHistory.$inferSelect;
 export type InsertSubmissionStatusHistory = z.infer<typeof insertSubmissionStatusHistorySchema>;
+export type Survey = typeof surveys.$inferSelect;
+export type InsertSurvey = z.infer<typeof insertSurveySchema>;

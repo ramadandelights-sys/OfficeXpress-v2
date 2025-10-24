@@ -46,7 +46,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey } from "./lib/resend";
 import { getUncachableResendClient } from "./resend-client";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
@@ -80,6 +80,96 @@ const statusUpdateSchema = z.object({
     "Completed"
   ])
 });
+
+// Helper function to handle completion email with NPS survey
+async function handleCompletionEmail(
+  submissionType: 'corporate' | 'rental' | 'vendor' | 'contact',
+  submission: any,
+  newStatus: string
+) {
+  // Only send completion email if:
+  // 1. Status is "Completed"
+  // 2. Completion email hasn't been sent yet
+  if (newStatus === 'Completed' && !submission.completionEmailSentAt) {
+    try {
+      // Check if survey already exists for this submission (idempotency check)
+      const existingSurvey = await storage.getSurveyByReferenceId(submission.referenceId);
+      if (existingSurvey) {
+        console.log(`Survey already exists for ${submission.referenceId}, skipping creation`);
+        return;
+      }
+      
+      // Generate unique survey token
+      const surveyToken = randomBytes(32).toString('hex');
+      
+      // Calculate expiry date (7 days from now)
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      // Create survey record
+      await storage.createSurvey({
+        referenceId: submission.referenceId,
+        submissionType,
+        submissionId: submission.id,
+        token: surveyToken,
+        expiresAt
+      });
+      
+      // Get customer name and email based on submission type
+      let customerName = '';
+      let email = '';
+      
+      if (submissionType === 'corporate') {
+        customerName = submission.customerName;
+        email = submission.email;
+      } else if (submissionType === 'rental') {
+        customerName = submission.customerName;
+        email = submission.email;
+      } else if (submissionType === 'vendor') {
+        customerName = submission.fullName;
+        email = submission.email;
+      } else if (submissionType === 'contact') {
+        customerName = submission.name;
+        email = submission.email;
+      }
+      
+      // Send completion email with survey link (only if email exists)
+      if (email) {
+        // Mark completion email as sent BEFORE attempting email (ensures consistency)
+        // Even if email fails, we have the survey record and won't create duplicates
+        if (submissionType === 'corporate') {
+          await storage.updateCorporateBooking(submission.id, {
+            completionEmailSentAt: new Date()
+          });
+        } else if (submissionType === 'rental') {
+          await storage.updateRentalBooking(submission.id, {
+            completionEmailSentAt: new Date()
+          });
+        } else if (submissionType === 'vendor') {
+          await storage.updateVendorRegistration(submission.id, {
+            completionEmailSentAt: new Date()
+          });
+        } else if (submissionType === 'contact') {
+          await storage.updateContactMessage(submission.id, {
+            completionEmailSentAt: new Date()
+          });
+        }
+        
+        // Send email (if this fails, survey still exists and can be resent manually)
+        await sendCompletionEmailWithSurvey({
+          email,
+          customerName,
+          referenceId: submission.referenceId,
+          surveyToken,
+          submissionType
+        });
+      }
+    } catch (error) {
+      console.error('Error handling completion email:', error);
+      // Don't throw - we don't want to fail the status update if email/survey creation fails
+    }
+  }
+}
 
 // CSRF protection middleware - validates Origin header for state-changing requests
 function csrfProtection(req: any, res: any, next: any) {
@@ -1099,6 +1189,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId
       );
       
+      // Handle completion email with NPS survey (await to ensure consistency)
+      await handleCompletionEmail('corporate', submission, status);
+      
       res.json(submission);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1130,6 +1223,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         req.session.userId
       );
+      
+      // Handle completion email with NPS survey (await to ensure consistency)
+      await handleCompletionEmail('rental', submission, status);
       
       res.json(submission);
     } catch (error) {
@@ -1163,6 +1259,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         req.session.userId
       );
       
+      // Handle completion email with NPS survey (await to ensure consistency)
+      await handleCompletionEmail('vendor', submission, status);
+      
       res.json(submission);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -1194,6 +1293,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status,
         req.session.userId
       );
+      
+      // Handle completion email with NPS survey (await to ensure consistency)
+      await handleCompletionEmail('contact', submission, status);
       
       res.json(submission);
     } catch (error) {
