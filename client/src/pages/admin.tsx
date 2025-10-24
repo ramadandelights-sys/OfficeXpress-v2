@@ -2036,8 +2036,30 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
 }
 
 // Booking Details Dialog Component
-function BookingDetailsDialog({ booking, type, onClose }: { booking: any; type: string; onClose: () => void }) {
+interface BookingDetailsDialogProps {
+  booking: any;
+  type: string;
+  onClose: () => void;
+  onEdit?: (booking: any) => void;
+  activeDrivers?: Driver[];
+  onAssignDriver?: (booking: any) => void;
+  showDriverAssignment?: boolean;
+}
+
+function BookingDetailsDialog({ 
+  booking, 
+  type, 
+  onClose, 
+  onEdit,
+  activeDrivers = [],
+  onAssignDriver,
+  showDriverAssignment = false
+}: BookingDetailsDialogProps) {
   if (!booking) return null;
+
+  const assignedDriver = type === 'rental' && showDriverAssignment 
+    ? activeDrivers.find(d => d.id === booking.driverId) 
+    : null;
 
   const renderField = (label: string, value: any) => {
     if (value === null || value === undefined || value === '') return null;
@@ -2052,8 +2074,8 @@ function BookingDetailsDialog({ booking, type, onClose }: { booking: any; type: 
     }
 
     return (
-      <div key={label} className="grid grid-cols-3 gap-4 py-2 border-b last:border-b-0">
-        <div className="font-medium text-gray-700 dark:text-gray-300">{label}:</div>
+      <div key={label} className="grid grid-cols-3 gap-4 py-2.5 border-b last:border-b-0">
+        <div className="font-medium text-gray-700 dark:text-gray-300 text-sm">{label}:</div>
         <div className="col-span-2 text-gray-900 dark:text-gray-100">
           {label === 'Email' ? (
             <a href={`mailto:${displayValue}`} className="text-blue-600 hover:underline">
@@ -2136,17 +2158,99 @@ function BookingDetailsDialog({ booking, type, onClose }: { booking: any; type: 
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="text-xl">
             {type.charAt(0).toUpperCase() + type.slice(1)} Booking Details
           </DialogTitle>
           <DialogDescription>
             Complete details for reference #{booking.referenceId}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-1">
+        
+        {/* Booking Fields */}
+        <div className="space-y-0 mt-4">
           {getBookingFields().map(([label, value]) => renderField(label, value))}
+        </div>
+        
+        {/* Driver Assignment Section for Rental Bookings */}
+        {type === 'rental' && showDriverAssignment && (
+          <div className="mt-6 pt-6 border-t">
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">
+              Driver Assignment
+            </h3>
+            {assignedDriver ? (
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {assignedDriver.name}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {assignedDriver.phone}
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {assignedDriver.licensePlate} • {assignedDriver.vehicleMake} {assignedDriver.vehicleModel}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      onClose();
+                      onAssignDriver?.(booking);
+                    }}
+                    data-testid="button-reassign-driver-details"
+                  >
+                    <Truck className="h-3 w-3 mr-1" />
+                    Reassign
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">No driver assigned yet</p>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      onClose();
+                      onAssignDriver?.(booking);
+                    }}
+                    data-testid="button-assign-driver-details"
+                  >
+                    <Truck className="h-3 w-3 mr-1" />
+                    Assign Driver
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Action Buttons */}
+        <div className="flex gap-3 mt-6 pt-4 border-t">
+          {onEdit && (type === 'rental' || type === 'corporate') && (
+            <Button
+              onClick={() => {
+                onClose();
+                onEdit({ ...booking, bookingType: type });
+              }}
+              className="flex-1"
+              data-testid="button-edit-from-details"
+            >
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Booking
+            </Button>
+          )}
+          <Button
+            onClick={onClose}
+            variant="outline"
+            className="flex-1"
+            data-testid="button-close-details"
+          >
+            Close
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
@@ -2643,6 +2747,10 @@ function FormSectionTable({
           booking={viewingDetails}
           type={type}
           onClose={() => setViewingDetails(null)}
+          onEdit={setEditingBooking}
+          activeDrivers={activeDrivers}
+          onAssignDriver={setAssigningBooking}
+          showDriverAssignment={showDriverAssignment}
         />
       )}
     </div>
