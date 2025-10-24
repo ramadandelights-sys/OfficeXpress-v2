@@ -2788,7 +2788,16 @@ function EmployeeManagementSection({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingEmployee) {
-      updateUserMutation.mutate({ id: editingEmployee, data: { permissions: formData.permissions } }, {
+      updateUserMutation.mutate({ 
+        id: editingEmployee, 
+        data: {
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          role: formData.role,
+          permissions: formData.permissions
+        }
+      }, {
         onSuccess: () => resetForm()
       });
     } else {
@@ -2845,76 +2854,73 @@ function EmployeeManagementSection({
         {showEmployeeCreator || editingEmployee ? (
           <form onSubmit={handleSubmit} className="space-y-4 border rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
             <h3 className="font-semibold text-lg mb-4">
-              {editingEmployee ? 'Edit Employee Permissions' : 'Create New Employee'}
+              {editingEmployee ? 'Edit Employee' : 'Create New Employee'}
             </h3>
             
-            {!editingEmployee && (
-              <>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Name *</label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Employee name"
-                    required
-                    data-testid="input-employee-name"
-                  />
-                </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Name *</label>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="Employee name"
+                required
+                data-testid="input-employee-name"
+              />
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Phone *</label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
-                    placeholder="01XXXXXXXXX"
-                    required
-                    pattern="^01\d{9}$"
-                    title="Phone number must start with 01 and be exactly 11 digits"
-                    data-testid="input-employee-phone"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Enter any format - auto-converts to 01XXXXXXXXX
-                  </p>
-                  {formData.phone && !/^01\d{9}$/.test(formData.phone) && formData.phone.length > 0 && (
-                    <p className="text-xs text-red-600 mt-1">
-                      Phone must start with 01 and be exactly 11 digits
-                    </p>
-                  )}
-                </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Phone *</label>
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
+                placeholder="01XXXXXXXXX"
+                required
+                pattern="^01\d{9}$"
+                title="Phone number must start with 01 and be exactly 11 digits"
+                data-testid="input-employee-phone"
+                disabled={!!editingEmployee}
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {editingEmployee ? 'Phone number cannot be changed after creation' : 'Enter any format - auto-converts to 01XXXXXXXXX'}
+              </p>
+              {!editingEmployee && formData.phone && !/^01\d{9}$/.test(formData.phone) && formData.phone.length > 0 && (
+                <p className="text-xs text-red-600 mt-1">
+                  Phone must start with 01 and be exactly 11 digits
+                </p>
+              )}
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    placeholder="employee@example.com"
-                    required
-                    data-testid="input-employee-email"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Login credentials will be sent to this email address
-                  </p>
-                </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Email *</label>
+              <Input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                placeholder="employee@example.com"
+                required
+                data-testid="input-employee-email"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                {editingEmployee ? 'Updated email will be used for communications' : 'Login credentials will be sent to this email address'}
+              </p>
+            </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Role *</label>
-                  <Select
-                    value={formData.role}
-                    onValueChange={(value: 'employee' | 'customer') => setFormData({ ...formData, role: value })}
-                    data-testid="select-employee-role"
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="employee">Employee</SelectItem>
-                      <SelectItem value="customer">Customer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
+            <div>
+              <label className="block text-sm font-medium mb-1">Role *</label>
+              <Select
+                value={formData.role}
+                onValueChange={(value: 'employee' | 'customer') => setFormData({ ...formData, role: value })}
+                data-testid="select-employee-role"
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             <div>
               <label className="block text-sm font-medium mb-4">Permissions</label>
@@ -2931,7 +2937,7 @@ function EmployeeManagementSection({
                 data-testid="button-save-employee"
               >
                 <Save className="h-4 w-4 mr-2" />
-                {editingEmployee ? 'Update Permissions' : 'Create Employee'}
+                {editingEmployee ? 'Update Employee' : 'Create Employee'}
               </Button>
               <Button
                 type="button"
