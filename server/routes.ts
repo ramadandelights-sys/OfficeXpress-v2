@@ -2574,6 +2574,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Survey API endpoints (public)
+  // Validate survey token - returns survey details if valid
+  app.get("/api/survey/validate/:token", async (req, res) => {
+    try {
+      const token = req.params.token;
+      const survey = await storage.getSurveyByToken(token);
+
+      if (!survey) {
+        return res.status(404).json({ message: "Survey not found or invalid token" });
+      }
+
+      // Check if survey has expired
+      if (new Date() > new Date(survey.expiresAt)) {
+        return res.status(410).json({ message: "This survey link has expired" });
+      }
+
+      // Check if survey has already been submitted
+      if (survey.submittedAt) {
+        return res.status(409).json({ message: "This survey has already been completed" });
+      }
+
+      // Return survey details (without sensitive data)
+      res.json({
+        referenceId: survey.referenceId,
+        submissionType: survey.submissionType,
+        token: survey.token,
+        expiresAt: survey.expiresAt
+      });
+    } catch (error) {
+      console.error('Survey validation error:', error);
+      res.status(500).json({ message: "Failed to validate survey" });
+    }
+  });
+
+  // Submit survey response
+  app.post("/api/survey/submit", async (req, res) => {
+    try {
+      const { token, npsScore, feedback } = z.object({
+        token: z.string(),
+        npsScore: z.number().int().min(0).max(10),
+        feedback: z.string().optional()
+      }).parse(req.body);
+
+      // Update survey with response
+      const updatedSurvey = await storage.updateSurveyResponse(token, npsScore, feedback);
+      
+      res.json({
+        success: true,
+        message: "Thank you for your feedback!",
+        npsScore: updatedSurvey.npsScore
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid survey data", errors: error.errors });
+      }
+      
+      if (error instanceof Error) {
+        // Handle storage errors (expired, already submitted, not found)
+        if (error.message === 'Survey not found') {
+          return res.status(404).json({ message: "Survey not found" });
+        }
+        if (error.message === 'Survey has expired') {
+          return res.status(410).json({ message: "This survey has expired and can no longer be submitted" });
+        }
+        if (error.message === 'Survey has already been submitted') {
+          return res.status(409).json({ message: "This survey has already been completed" });
+        }
+      }
+
+      console.error('Survey submission error:', error);
+      res.status(500).json({ message: "Failed to submit survey response" });
+    }
+  });
+
 
   const httpServer = createServer(app);
   return httpServer;
