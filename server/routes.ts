@@ -962,11 +962,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Send email notification to customer
+      const bookingUrl = `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'https://officexpress.org'}/dashboard`;
+      
       await sendBookingNotificationEmail('bookingUpdated', {
         email: booking.email,
         customerName: booking.customerName,
         referenceId: booking.referenceId,
         bookingType: 'rental',
+        bookingUrl: bookingUrl,
         fromLocation: booking.fromLocation,
         toLocation: booking.toLocation,
         startDate: booking.startDate,
@@ -975,7 +978,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endTime: booking.endTime,
         vehicleType: booking.vehicleType,
         vehicleCapacity: booking.vehicleCapacity,
-        changes: 'Please review the updated booking details above.'
+        oldFromLocation: bookingBefore.fromLocation,
+        oldToLocation: bookingBefore.toLocation,
+        oldStartDate: bookingBefore.startDate,
+        oldStartTime: bookingBefore.startTime,
+        oldEndDate: bookingBefore.endDate,
+        oldEndTime: bookingBefore.endTime,
+        oldVehicleType: bookingBefore.vehicleType,
+        oldVehicleCapacity: bookingBefore.vehicleCapacity
       });
       
       // Mark notification email as sent

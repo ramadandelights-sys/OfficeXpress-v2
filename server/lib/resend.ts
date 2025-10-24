@@ -123,6 +123,44 @@ function detailSection(title: string, items: Array<{label: string, value: string
   `;
 }
 
+// Helper for detail sections with change tracking
+function detailSectionWithChanges(title: string, items: Array<{label: string, value: string, oldValue?: string, bookingUrl?: string}>) {
+  return `
+    <div style="margin: 30px 0;">
+      <h2 style="margin: 0 0 20px 0; color: #374151; font-size: 18px; font-weight: 600; padding-bottom: 10px; border-bottom: 2px solid #B2DFDB;">
+        ${title}
+      </h2>
+      <table width="100%" cellpadding="0" cellspacing="0">
+        ${items.map(item => {
+          const hasChanged = item.oldValue !== undefined && item.oldValue !== item.value;
+          let valueHtml = item.value;
+          
+          // Add hyperlink for Reference ID if bookingUrl is provided
+          if (item.bookingUrl && item.label === 'Reference ID') {
+            valueHtml = `<a href="${item.bookingUrl}" style="color: #4c9096; text-decoration: none; font-weight: 600;">${item.value}</a>`;
+          }
+          
+          // If value changed, show in bold with old value struck through in red
+          if (hasChanged) {
+            valueHtml = `<strong>${valueHtml}</strong> <span style="color: #dc2626; text-decoration: line-through; font-size: 13px;">(${item.oldValue})</span>`;
+          }
+          
+          return `
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-weight: 500; width: 40%;">
+              ${item.label}
+            </td>
+            <td style="padding: 8px 0; color: #374151; font-size: 14px;">
+              ${valueHtml}
+            </td>
+          </tr>
+        `;
+        }).join('')}
+      </table>
+    </div>
+  `;
+}
+
 // Email templates
 export const emailTemplates = {
   corporateBooking: {
@@ -545,32 +583,21 @@ export const emailTemplates = {
         Your booking <strong>#${data.referenceId}</strong> has been updated with the following details:
       </p>
       
-      ${data.bookingType === 'rental' ? detailSection('Updated Booking Details', [
-        { label: 'Reference ID', value: `#${data.referenceId}` },
-        { label: 'Pickup Location', value: data.fromLocation },
-        { label: 'Destination', value: data.toLocation },
-        { label: 'Pickup Date', value: data.startDate },
-        { label: 'Pickup Time', value: data.startTime },
-        ...(data.endDate ? [{ label: 'Return Date', value: data.endDate }] : []),
-        ...(data.endTime ? [{ label: 'End Time', value: data.endTime }] : []),
-        { label: 'Vehicle Type', value: data.vehicleType },
-        { label: 'Capacity', value: data.vehicleCapacity }
-      ]) : detailSection('Updated Booking Details', [
-        { label: 'Reference ID', value: `#${data.referenceId}` },
-        { label: 'Service Type', value: data.serviceType },
-        { label: 'Company', value: data.companyName }
+      ${data.bookingType === 'rental' ? detailSectionWithChanges('Updated Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}`, bookingUrl: data.bookingUrl },
+        { label: 'Pickup Location', value: data.fromLocation, oldValue: data.oldFromLocation },
+        { label: 'Destination', value: data.toLocation, oldValue: data.oldToLocation },
+        { label: 'Pickup Date', value: data.startDate, oldValue: data.oldStartDate },
+        { label: 'Pickup Time', value: data.startTime, oldValue: data.oldStartTime },
+        ...(data.endDate ? [{ label: 'Return Date', value: data.endDate, oldValue: data.oldEndDate }] : []),
+        ...(data.endTime ? [{ label: 'End Time', value: data.endTime, oldValue: data.oldEndTime }] : []),
+        { label: 'Vehicle Type', value: data.vehicleType, oldValue: data.oldVehicleType },
+        { label: 'Capacity', value: data.vehicleCapacity, oldValue: data.oldVehicleCapacity }
+      ]) : detailSectionWithChanges('Updated Booking Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}`, bookingUrl: data.bookingUrl },
+        { label: 'Service Type', value: data.serviceType, oldValue: data.oldServiceType },
+        { label: 'Company', value: data.companyName, oldValue: data.oldCompanyName }
       ])}
-      
-      ${data.changes ? `
-        <div style="margin: 30px 0; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-          <p style="margin: 0 0 8px 0; color: #856404; font-size: 14px; font-weight: 600;">
-            What Changed:
-          </p>
-          <p style="margin: 0; color: #856404; font-size: 13px; line-height: 1.6;">
-            ${data.changes}
-          </p>
-        </div>
-      ` : ''}
       
       <div style="margin: 30px 0; padding: 20px; background-color: #e0f2f1; border-left: 4px solid #B2DFDB; border-radius: 4px;">
         <p style="margin: 0; color: #004d40; font-size: 14px; line-height: 1.6;">
