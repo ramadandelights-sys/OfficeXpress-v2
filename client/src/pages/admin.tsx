@@ -51,7 +51,7 @@ import type {
   InsertDriver,
   UpdateDriver
 } from "@shared/schema";
-import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema, insertDriverSchema, updateDriverSchema } from "@shared/schema";
+import { updateBlogPostSchema, updatePortfolioClientSchema, insertPortfolioClientSchema, insertMarketingSettingsSchema, updateMarketingSettingsSchema, insertWebsiteSettingsSchema, updateWebsiteSettingsSchema, insertLegalPageSchema, updateLegalPageSchema, insertDriverSchema, updateDriverSchema, updateRentalBookingSchema, updateCorporateBookingSchema } from "@shared/schema";
 
 export default function Admin() {
   const { user, isLoading, hasPermission } = useAuth();
@@ -2494,44 +2494,18 @@ function FormSectionTable({
         </AlertDialogContent>
       </AlertDialog>
       
-      {/* Edit Booking Dialog (Placeholder for Future Implementation) */}
-      <Dialog open={!!editingBooking} onOpenChange={(open) => !open && setEditingBooking(null)}>
-        <DialogContent data-testid="dialog-edit-booking" className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Booking</DialogTitle>
-            <DialogDescription>
-              Full edit functionality is coming soon. For now, booking details can be viewed here.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Reference ID:</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">#{editingBooking?.referenceId}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Customer:</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">{editingBooking?.customerName}</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Contact:</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {editingBooking?.phone}
-                {editingBooking?.email && ` • ${editingBooking.email}`}
-              </p>
-            </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-              <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Note:</strong> To modify booking details, please use the update booking functionality that will send automatic notifications to the customer.
-              </p>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setEditingBooking(null)} data-testid="button-close-edit">
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Edit Booking Dialog */}
+      {editingBooking && (
+        editingBooking.bookingType === 'rental' 
+          ? <EditRentalBookingDialog 
+              booking={editingBooking} 
+              onClose={() => setEditingBooking(null)} 
+            />
+          : <EditCorporateBookingDialog 
+              booking={editingBooking} 
+              onClose={() => setEditingBooking(null)} 
+            />
+      )}
     </div>
   );
 }
@@ -3329,5 +3303,518 @@ function DriverManagementSection({
         )}
       </CardContent>
     </Card>
+  );
+}
+// Edit Rental Booking Dialog Component
+function EditRentalBookingDialog({ booking, onClose }: { booking: RentalBooking; onClose: () => void }) {
+  const { toast } = useToast();
+  const [startDate, setStartDate] = useState<Date | undefined>(
+    booking.startDate ? new Date(booking.startDate) : undefined
+  );
+  const [endDate, setEndDate] = useState<Date | undefined>(
+    booking.endDate ? new Date(booking.endDate) : undefined
+  );
+
+  const form = useForm({
+    resolver: zodResolver(updateRentalBookingSchema),
+    defaultValues: {
+      id: booking.id,
+      startDate: booking.startDate || "",
+      endDate: booking.endDate || "",
+      startTime: booking.startTime || "",
+      endTime: booking.endTime || "",
+      vehicleType: booking.vehicleType || "",
+      vehicleCapacity: booking.vehicleCapacity || "",
+      fromLocation: booking.fromLocation || "",
+      toLocation: booking.toLocation || "",
+      isReturnTrip: booking.isReturnTrip ?? false,
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PUT", `/api/rental-bookings/${booking.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Updated",
+        description: "The booking has been updated successfully. Customer has been notified via email.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/rental-bookings'] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update booking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: any) => {
+    const submitData = {
+      ...data,
+      startDate: startDate?.toISOString().split('T')[0],
+      endDate: endDate?.toISOString().split('T')[0],
+    };
+    updateMutation.mutate(submitData);
+  };
+
+  const timeOptions = [
+    "12:00 AM", "12:30 AM", "1:00 AM", "1:30 AM", "2:00 AM", "2:30 AM",
+    "3:00 AM", "3:30 AM", "4:00 AM", "4:30 AM", "5:00 AM", "5:30 AM",
+    "6:00 AM", "6:30 AM", "7:00 AM", "7:30 AM", "8:00 AM", "8:30 AM",
+    "9:00 AM", "9:30 AM", "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "1:00 PM", "1:30 PM", "2:00 PM", "2:30 PM",
+    "3:00 PM", "3:30 PM", "4:00 PM", "4:30 PM", "5:00 PM", "5:30 PM",
+    "6:00 PM", "6:30 PM", "7:00 PM", "7:30 PM", "8:00 PM", "8:30 PM",
+    "9:00 PM", "9:30 PM", "10:00 PM", "10:30 PM", "11:00 PM", "11:30 PM",
+  ];
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-edit-rental-booking">
+        <DialogHeader>
+          <DialogTitle>Edit Rental Booking</DialogTitle>
+          <DialogDescription>
+            Update booking details. Customer will receive email and inbox notifications about the changes.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Static Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reference ID</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">#{booking.referenceId}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Customer</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{booking.customerName}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Contact</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {booking.phone}
+              {booking.email && <span className="block text-xs">{booking.email}</span>}
+            </p>
+          </div>
+        </div>
+
+        {/* Editable Form */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Date Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <FormLabel>Start Date *</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      data-testid="button-start-date"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {startDate ? format(startDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={startDate}
+                      onSelect={setStartDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <FormLabel>End Date *</FormLabel>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
+                      data-testid="button-end-date"
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {endDate ? format(endDate, "PPP") : <span>Pick a date</span>}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <CalendarComponent
+                      mode="single"
+                      selected={endDate}
+                      onSelect={setEndDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
+            {/* Time Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="startTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Start Time *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-start-time">
+                          <SelectValue placeholder="Select start time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="endTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Time</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-end-time">
+                          <SelectValue placeholder="Select end time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((time) => (
+                          <SelectItem key={time} value={time}>
+                            {time}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Location Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="fromLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>From Location *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter pickup location" data-testid="input-from-location" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="toLocation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>To Location *</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="Enter destination" data-testid="input-to-location" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Vehicle Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="vehicleType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vehicle Type *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-vehicle-type">
+                          <SelectValue placeholder="Select vehicle type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="super-economy">Super Economy</SelectItem>
+                        <SelectItem value="economy">Economy</SelectItem>
+                        <SelectItem value="standard">Standard</SelectItem>
+                        <SelectItem value="premium">Premium</SelectItem>
+                        <SelectItem value="luxury">Luxury</SelectItem>
+                        <SelectItem value="ultra-luxury">Ultra Luxury</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="vehicleCapacity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Vehicle Capacity *</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-vehicle-capacity">
+                          <SelectValue placeholder="Select capacity" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="4">4 Passengers</SelectItem>
+                        <SelectItem value="7">7 Passengers</SelectItem>
+                        <SelectItem value="11">11 Passengers</SelectItem>
+                        <SelectItem value="28">28 Passengers</SelectItem>
+                        <SelectItem value="32">32 Passengers</SelectItem>
+                        <SelectItem value="40">40 Passengers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Return Trip */}
+            <FormField
+              control={form.control}
+              name="isReturnTrip"
+              render={({ field }) => (
+                <FormItem className="flex items-center gap-2 space-y-0">
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      data-testid="switch-return-trip"
+                    />
+                  </FormControl>
+                  <FormLabel className="!mt-0">Return Trip</FormLabel>
+                </FormItem>
+              )}
+            />
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={updateMutation.isPending}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                data-testid="button-save-edit"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Edit Corporate Booking Dialog Component
+function EditCorporateBookingDialog({ booking, onClose }: { booking: CorporateBooking; onClose: () => void }) {
+  const { toast } = useToast();
+
+  const form = useForm({
+    resolver: zodResolver(updateCorporateBookingSchema),
+    defaultValues: {
+      id: booking.id,
+      companyName: booking.companyName || "",
+      officeAddress: booking.officeAddress || "",
+      serviceType: booking.serviceType || "",
+      contractType: booking.contractType || "",
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PUT", `/api/corporate-bookings/${booking.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking Updated",
+        description: "The booking has been updated successfully. Customer has been notified via email.",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/corporate-bookings'] });
+      onClose();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update booking",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onSubmit = (data: any) => {
+    updateMutation.mutate(data);
+  };
+
+  return (
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl" data-testid="dialog-edit-corporate-booking">
+        <DialogHeader>
+          <DialogTitle>Edit Corporate Booking</DialogTitle>
+          <DialogDescription>
+            Update booking details. Customer will receive email and inbox notifications about the changes.
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Static Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Reference ID</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">#{booking.referenceId}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Customer</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{booking.customerName}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Contact</p>
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              {booking.phone}
+              {booking.email && <span className="block text-xs">{booking.email}</span>}
+            </p>
+          </div>
+        </div>
+
+        {/* Editable Form */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            {/* Company Name */}
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Enter company name" data-testid="input-company-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Office Address */}
+            <FormField
+              control={form.control}
+              name="officeAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Office Address</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} placeholder="Enter office address" rows={3} data-testid="input-office-address" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Service and Contract Type */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="serviceType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Service Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-service-type">
+                          <SelectValue placeholder="Select service type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="employee-transport">Employee Transport</SelectItem>
+                        <SelectItem value="executive-transport">Executive Transport</SelectItem>
+                        <SelectItem value="event-transport">Event Transport</SelectItem>
+                        <SelectItem value="mixed-fleet">Mixed Fleet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="contractType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contract Type</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || ""}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-contract-type">
+                          <SelectValue placeholder="Select contract type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                        <SelectItem value="quarterly">Quarterly</SelectItem>
+                        <SelectItem value="yearly">Yearly</SelectItem>
+                        <SelectItem value="project-based">Project Based</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                disabled={updateMutation.isPending}
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={updateMutation.isPending}
+                data-testid="button-save-edit"
+              >
+                {updateMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }
