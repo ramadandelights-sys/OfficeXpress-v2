@@ -194,12 +194,12 @@ export function PermissionMatrix({ permissions, onChange }: PermissionMatrixProp
         </div>
       </div>
 
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-lg overflow-hidden max-h-[500px] overflow-y-auto">
         <Table>
-          <TableHeader>
+          <TableHeader className="sticky top-0 z-10">
             <TableRow className="bg-gray-50 dark:bg-gray-800">
-              <TableHead className="w-[35%]">Section</TableHead>
-              <TableHead className="text-center w-[15%]">
+              <TableHead className="w-[35%] bg-gray-50 dark:bg-gray-800">Section</TableHead>
+              <TableHead className="text-center w-[15%] bg-gray-50 dark:bg-gray-800">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>View</TooltipTrigger>
@@ -209,7 +209,7 @@ export function PermissionMatrix({ permissions, onChange }: PermissionMatrixProp
                   </Tooltip>
                 </TooltipProvider>
               </TableHead>
-              <TableHead className="text-center w-[15%]">
+              <TableHead className="text-center w-[15%] bg-gray-50 dark:bg-gray-800">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>Edit</TooltipTrigger>
@@ -219,7 +219,7 @@ export function PermissionMatrix({ permissions, onChange }: PermissionMatrixProp
                   </Tooltip>
                 </TooltipProvider>
               </TableHead>
-              <TableHead className="text-center w-[20%]">
+              <TableHead className="text-center w-[20%] bg-gray-50 dark:bg-gray-800">
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>Download CSV</TooltipTrigger>
