@@ -2261,6 +2261,130 @@ function BookingDetailsDialog({
   );
 }
 
+// Status History Dialog Component
+function StatusHistoryDialog({
+  open,
+  onClose,
+  referenceId,
+  submissionType,
+  history,
+  loading
+}: {
+  open: boolean;
+  onClose: () => void;
+  referenceId: string;
+  submissionType: string;
+  history: any[];
+  loading: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            Status History for #{referenceId}
+            <span className="text-sm font-normal text-gray-500">
+              ({submissionType})
+            </span>
+          </DialogTitle>
+          <DialogDescription>
+            Complete timeline of all status changes for this submission
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mt-4">
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">Loading history...</div>
+          ) : history.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No status changes recorded yet
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {history.map((entry: any, index: number) => (
+                <div
+                  key={entry.id}
+                  className="flex gap-4 pb-4 border-b last:border-b-0"
+                  data-testid={`history-entry-${index}`}
+                >
+                  {/* Timeline dot */}
+                  <div className="flex flex-col items-center">
+                    <div className={`w-3 h-3 rounded-full ${
+                      entry.newStatus === 'Completed' ? 'bg-green-500' :
+                      entry.newStatus === 'Rejected' || entry.newStatus === 'Cancelled' ? 'bg-red-500' :
+                      entry.newStatus === 'Interested' ? 'bg-blue-500' :
+                      'bg-gray-400'
+                    }`} />
+                    {index < history.length - 1 && (
+                      <div className="w-0.5 flex-1 bg-gray-300 dark:bg-gray-600 mt-1" style={{ minHeight: '20px' }} />
+                    )}
+                  </div>
+
+                  {/* Status change details */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      {entry.oldStatus ? (
+                        <>
+                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-gray-100 dark:bg-gray-700">
+                            {entry.oldStatus}
+                          </span>
+                          <span className="text-gray-400">→</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                            entry.newStatus === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                            entry.newStatus === 'Rejected' || entry.newStatus === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                            entry.newStatus === 'Interested' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                            'bg-gray-100 dark:bg-gray-700'
+                          }`}>
+                            {entry.newStatus}
+                          </span>
+                        </>
+                      ) : (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                          entry.newStatus === 'Completed' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
+                          entry.newStatus === 'Rejected' || entry.newStatus === 'Cancelled' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                          entry.newStatus === 'Interested' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
+                          'bg-gray-100 dark:bg-gray-700'
+                        }`}>
+                          {entry.newStatus}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {new Date(entry.createdAt).toLocaleString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                      {entry.changedByUserId && (
+                        <span className="ml-2">
+                          • Changed by staff
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
+          <Button
+            onClick={onClose}
+            variant="outline"
+            data-testid="button-close-history"
+          >
+            Close
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 interface FormSectionTableProps {
   title: string;
   data: any[];
@@ -2308,6 +2432,9 @@ function FormSectionTable({
 
   // Status management state - tracks pending status changes before confirmation
   const [pendingStatusChanges, setPendingStatusChanges] = useState<Record<string, string>>({});
+
+  // State for status history dialog
+  const [viewingHistory, setViewingHistory] = useState<{ referenceId: string, submissionType: string } | null>(null);
   
   // Delete mutations
   const deleteRentalMutation = useMutation({
@@ -2409,6 +2536,12 @@ function FormSectionTable({
     delete updated[id];
     setPendingStatusChanges(updated);
   };
+
+  // Query to fetch status history
+  const { data: statusHistory = [], isLoading: loadingHistory } = useQuery({
+    queryKey: ['/api/status-history', viewingHistory?.referenceId],
+    enabled: !!viewingHistory?.referenceId,
+  });
   
   // Helper function to get condensed fields for each form type
   const getFormFields = (type: string) => {
@@ -2625,9 +2758,13 @@ function FormSectionTable({
     
     if (key === 'referenceId') {
       return (
-        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200">
+        <button
+          onClick={() => setViewingHistory({ referenceId: value, submissionType: type })}
+          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 dark:bg-teal-900 dark:text-teal-200 hover:bg-teal-200 dark:hover:bg-teal-800 cursor-pointer transition-colors"
+          data-testid={`button-view-history-${type}-${item.id}`}
+        >
           #{value}
-        </span>
+        </button>
       );
     }
     
@@ -2884,6 +3021,18 @@ function FormSectionTable({
           activeDrivers={activeDrivers}
           onAssignDriver={setAssigningBooking}
           showDriverAssignment={showDriverAssignment}
+        />
+      )}
+
+      {/* Status History Dialog */}
+      {viewingHistory && (
+        <StatusHistoryDialog
+          open={!!viewingHistory}
+          onClose={() => setViewingHistory(null)}
+          referenceId={viewingHistory.referenceId}
+          submissionType={viewingHistory.submissionType}
+          history={statusHistory}
+          loading={loadingHistory}
         />
       )}
     </div>

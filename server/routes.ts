@@ -1206,6 +1206,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get status history by reference ID (admin-only)
+  app.get("/api/status-history/:referenceId", isEmployeeOrAdmin, async (req: any, res: any) => {
+    try {
+      const { referenceId } = req.params;
+      const history = await storage.getStatusHistoryByReferenceId(referenceId);
+      res.json(history);
+    } catch (error) {
+      console.error("Get status history error:", error);
+      res.status(500).json({ message: "Failed to fetch status history" });
+    }
+  });
+
   // Update rental booking
   app.put("/api/rental-bookings/:id", hasPermission('rentalBookings', 'edit'), async (req: any, res: any) => {
     try {
