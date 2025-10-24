@@ -10,6 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { insertContactMessageSchema, type InsertContactMessage } from "@shared/schema";
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
@@ -236,16 +237,16 @@ export default function Contact() {
                         <FormItem>
                           <FormLabel>Phone *</FormLabel>
                           <FormControl>
-                            <div className="flex gap-1">
-                              <div className="bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground flex items-center">
-                                (+88)
-                              </div>
+                            <div className="flex flex-col gap-1">
                               <Input 
                                 placeholder="01XXXXXXXXX"
-                                className="flex-1"
                                 {...field}
+                                onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
                                 data-testid="input-phone"
                               />
+                              <p className="text-xs text-muted-foreground">
+                                Enter any format - auto-converts to 01XXXXXXXXX
+                              </p>
                             </div>
                           </FormControl>
                           <FormMessage />

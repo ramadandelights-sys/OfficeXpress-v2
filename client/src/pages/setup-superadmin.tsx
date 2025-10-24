@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -94,14 +95,14 @@ export default function SetupSuperAdminPage() {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+8801XXXXXXXXX"
+                placeholder="01XXXXXXXXX"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
                 required
                 data-testid="input-phone"
               />
               <p className="text-xs text-muted-foreground">
-                This will be your primary login identifier
+                Enter any format - auto-converts to 01XXXXXXXXX. This will be your primary login identifier.
               </p>
             </div>
             <div className="space-y-2">

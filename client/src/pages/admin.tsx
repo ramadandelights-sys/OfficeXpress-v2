@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { generateSlug } from "@/lib/slugUtils";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { PermissionMatrix, type UserPermissions } from "@/components/permission-matrix";
 import type { 
   BlogPost, 
@@ -2864,17 +2865,16 @@ function EmployeeManagementSection({
                   <label className="block text-sm font-medium mb-1">Phone *</label>
                   <Input
                     value={formData.phone}
-                    onChange={(e) => {
-                      // Only allow digits and limit to 11 characters
-                      const value = e.target.value.replace(/\D/g, '').slice(0, 11);
-                      setFormData({ ...formData, phone: value });
-                    }}
-                    placeholder="01XXXXXXXXX (11 digits)"
+                    onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
+                    placeholder="01XXXXXXXXX"
                     required
                     pattern="^01\d{9}$"
                     title="Phone number must start with 01 and be exactly 11 digits"
                     data-testid="input-employee-phone"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter any format - auto-converts to 01XXXXXXXXX
+                  </p>
                   {formData.phone && !/^01\d{9}$/.test(formData.phone) && formData.phone.length > 0 && (
                     <p className="text-xs text-red-600 mt-1">
                       Phone must start with 01 and be exactly 11 digits
@@ -3142,11 +3142,14 @@ function DriverManagementSection({
               <label className="block text-sm font-medium mb-1">Phone *</label>
               <Input
                 value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="Phone number"
+                onChange={(e) => setFormData({ ...formData, phone: formatPhoneNumber(e.target.value) })}
+                placeholder="01XXXXXXXXX"
                 required
                 data-testid="input-driver-phone"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter any format - auto-converts to 01XXXXXXXXX
+              </p>
             </div>
 
             <div>
@@ -3184,13 +3187,22 @@ function DriverManagementSection({
 
             <div>
               <label className="block text-sm font-medium mb-1">Vehicle Year *</label>
-              <Input
+              <Select
                 value={formData.vehicleYear}
-                onChange={(e) => setFormData({ ...formData, vehicleYear: e.target.value })}
-                placeholder="e.g., 2020"
+                onValueChange={(value) => setFormData({ ...formData, vehicleYear: value })}
                 required
-                data-testid="input-driver-year"
-              />
+              >
+                <SelectTrigger data-testid="select-driver-year">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 36 }, (_, i) => 2025 - i).map((year) => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex items-center space-x-2">
