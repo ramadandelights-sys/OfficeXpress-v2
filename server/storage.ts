@@ -14,6 +14,7 @@ import {
   onboardingTokens,
   passwordResetTokens,
   notifications,
+  submissionStatusHistory,
   type User, 
   type InsertUser,
   type Driver,
@@ -49,10 +50,12 @@ import {
   type PasswordResetToken,
   type InsertPasswordResetToken,
   type Notification,
-  type InsertNotification
+  type InsertNotification,
+  type SubmissionStatusHistory,
+  type InsertSubmissionStatusHistory
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, ilike, like, sql, lt } from "drizzle-orm";
+import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
@@ -106,11 +109,15 @@ export interface IStorage {
   
   // Vendor registrations
   createVendorRegistration(vendor: InsertVendorRegistration): Promise<VendorRegistration>;
+  getVendorRegistration(id: string): Promise<VendorRegistration | undefined>;
   getVendorRegistrations(): Promise<VendorRegistration[]>;
+  updateVendorRegistration(id: string, data: Partial<Omit<VendorRegistration, 'id' | 'referenceId' | 'createdAt'>>): Promise<VendorRegistration>;
   
   // Contact messages
   createContactMessage(message: InsertContactMessage): Promise<ContactMessage>;
+  getContactMessage(id: string): Promise<ContactMessage | undefined>;
   getContactMessages(): Promise<ContactMessage[]>;
+  updateContactMessage(id: string, data: Partial<Omit<ContactMessage, 'id' | 'referenceId' | 'createdAt'>>): Promise<ContactMessage>;
   
   // Blog posts
   createBlogPost(post: InsertBlogPost): Promise<BlogPost>;
@@ -161,6 +168,18 @@ export interface IStorage {
   markNotificationAsRead(id: string): Promise<void>;
   markAllNotificationsAsRead(userId: string): Promise<void>;
   markNotificationEmailSent(id: string): Promise<void>;
+  
+  // Status history
+  createStatusHistory(history: InsertSubmissionStatusHistory): Promise<SubmissionStatusHistory>;
+  getStatusHistoryByReferenceId(referenceId: string): Promise<SubmissionStatusHistory[]>;
+  getStatusHistoryBySubmission(submissionType: string, submissionId: string): Promise<SubmissionStatusHistory[]>;
+  updateSubmissionStatus(
+    submissionType: 'corporate' | 'rental' | 'vendor' | 'contact',
+    submissionId: string,
+    referenceId: string,
+    newStatus: string,
+    changedByUserId: string | null
+  ): Promise<{ submission: any, history: SubmissionStatusHistory }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -430,8 +449,22 @@ export class DatabaseStorage implements IStorage {
     return newVendor;
   }
 
+  async getVendorRegistration(id: string): Promise<VendorRegistration | undefined> {
+    const [vendor] = await db.select().from(vendorRegistrations).where(eq(vendorRegistrations.id, id));
+    return vendor || undefined;
+  }
+
   async getVendorRegistrations(): Promise<VendorRegistration[]> {
     return await db.select().from(vendorRegistrations).orderBy(desc(vendorRegistrations.createdAt));
+  }
+
+  async updateVendorRegistration(id: string, data: Partial<Omit<VendorRegistration, 'id' | 'referenceId' | 'createdAt'>>): Promise<VendorRegistration> {
+    const [vendor] = await db
+      .update(vendorRegistrations)
+      .set(data)
+      .where(eq(vendorRegistrations.id, id))
+      .returning();
+    return vendor;
   }
 
   async createContactMessage(message: InsertContactMessage): Promise<ContactMessage> {
@@ -442,8 +475,22 @@ export class DatabaseStorage implements IStorage {
     return newMessage;
   }
 
+  async getContactMessage(id: string): Promise<ContactMessage | undefined> {
+    const [message] = await db.select().from(contactMessages).where(eq(contactMessages.id, id));
+    return message || undefined;
+  }
+
   async getContactMessages(): Promise<ContactMessage[]> {
     return await db.select().from(contactMessages).orderBy(desc(contactMessages.createdAt));
+  }
+
+  async updateContactMessage(id: string, data: Partial<Omit<ContactMessage, 'id' | 'referenceId' | 'createdAt'>>): Promise<ContactMessage> {
+    const [message] = await db
+      .update(contactMessages)
+      .set(data)
+      .where(eq(contactMessages.id, id))
+      .returning();
+    return message;
   }
 
   async createBlogPost(post: InsertBlogPost): Promise<BlogPost> {
@@ -821,6 +868,108 @@ export class DatabaseStorage implements IStorage {
       .update(notifications)
       .set({ emailSent: true })
       .where(eq(notifications.id, id));
+  }
+
+  // Status history operations
+  async createStatusHistory(history: InsertSubmissionStatusHistory): Promise<SubmissionStatusHistory> {
+    const [statusHistory] = await db
+      .insert(submissionStatusHistory)
+      .values(history)
+      .returning();
+    return statusHistory;
+  }
+
+  async getStatusHistoryByReferenceId(referenceId: string): Promise<SubmissionStatusHistory[]> {
+    return await db
+      .select()
+      .from(submissionStatusHistory)
+      .where(eq(submissionStatusHistory.referenceId, referenceId))
+      .orderBy(desc(submissionStatusHistory.createdAt));
+  }
+
+  async getStatusHistoryBySubmission(submissionType: string, submissionId: string): Promise<SubmissionStatusHistory[]> {
+    return await db
+      .select()
+      .from(submissionStatusHistory)
+      .where(
+        and(
+          eq(submissionStatusHistory.submissionType, submissionType),
+          eq(submissionStatusHistory.submissionId, submissionId)
+        )
+      )
+      .orderBy(desc(submissionStatusHistory.createdAt));
+  }
+
+  async updateSubmissionStatus(
+    submissionType: 'corporate' | 'rental' | 'vendor' | 'contact',
+    submissionId: string,
+    referenceId: string,
+    newStatus: string,
+    changedByUserId: string | null
+  ): Promise<{ submission: any, history: SubmissionStatusHistory }> {
+    // Use transaction to ensure atomicity
+    return await db.transaction(async (tx) => {
+      let submission: any;
+      let oldStatus: string | null = null;
+
+      // Determine table and get current submission
+      if (submissionType === 'corporate') {
+        const [current] = await tx.select().from(corporateBookings).where(eq(corporateBookings.id, submissionId));
+        if (!current) throw new Error('Submission not found');
+        oldStatus = current.status;
+        
+        [submission] = await tx
+          .update(corporateBookings)
+          .set({ status: newStatus, statusUpdatedAt: new Date() })
+          .where(eq(corporateBookings.id, submissionId))
+          .returning();
+      } else if (submissionType === 'rental') {
+        const [current] = await tx.select().from(rentalBookings).where(eq(rentalBookings.id, submissionId));
+        if (!current) throw new Error('Submission not found');
+        oldStatus = current.status;
+        
+        [submission] = await tx
+          .update(rentalBookings)
+          .set({ status: newStatus, statusUpdatedAt: new Date() })
+          .where(eq(rentalBookings.id, submissionId))
+          .returning();
+      } else if (submissionType === 'vendor') {
+        const [current] = await tx.select().from(vendorRegistrations).where(eq(vendorRegistrations.id, submissionId));
+        if (!current) throw new Error('Submission not found');
+        oldStatus = current.status;
+        
+        [submission] = await tx
+          .update(vendorRegistrations)
+          .set({ status: newStatus, statusUpdatedAt: new Date() })
+          .where(eq(vendorRegistrations.id, submissionId))
+          .returning();
+      } else {
+        const [current] = await tx.select().from(contactMessages).where(eq(contactMessages.id, submissionId));
+        if (!current) throw new Error('Submission not found');
+        oldStatus = current.status;
+        
+        [submission] = await tx
+          .update(contactMessages)
+          .set({ status: newStatus, statusUpdatedAt: new Date() })
+          .where(eq(contactMessages.id, submissionId))
+          .returning();
+      }
+
+      // Create history entry
+      const [history] = await tx
+        .insert(submissionStatusHistory)
+        .values({
+          submissionType,
+          submissionId,
+          referenceId,
+          changedByUserId,
+          oldStatus,
+          newStatus
+        })
+        .returning();
+
+      return { submission, history };
+    });
   }
 }
 

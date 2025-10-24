@@ -69,6 +69,18 @@ function generateReferenceId(): string {
   return nanoid(6).toUpperCase();
 }
 
+// Status validation schema for submission status updates
+const statusUpdateSchema = z.object({
+  status: z.enum([
+    "Fake Request",
+    "Interested",
+    "Not Interested",
+    "Cancelled",
+    "Rejected",
+    "Completed"
+  ])
+});
+
 // CSRF protection middleware - validates Origin header for state-changing requests
 function csrfProtection(req: any, res: any, next: any) {
   // Only check POST, PUT, DELETE, PATCH requests
@@ -1061,6 +1073,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Assign driver error:", error);
       res.status(500).json({ message: "Failed to assign driver" });
+    }
+  });
+
+  // Status update endpoints for all submission types
+  
+  // Update corporate booking status
+  app.put("/api/corporate-bookings/:id/status", hasPermission('corporateBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const { status } = statusUpdateSchema.parse(req.body);
+      const id = req.params.id;
+      
+      // Get current submission for reference ID
+      const currentBooking = await storage.getCorporateBooking(id);
+      if (!currentBooking) {
+        return res.status(404).json({ message: "Corporate booking not found" });
+      }
+      
+      // Atomically update status and create history entry
+      const { submission } = await storage.updateSubmissionStatus(
+        'corporate',
+        id,
+        currentBooking.referenceId,
+        status,
+        req.session.userId
+      );
+      
+      res.json(submission);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid status value", errors: error.errors });
+      } else {
+        console.error("Update corporate booking status error:", error);
+        res.status(500).json({ message: "Failed to update status" });
+      }
+    }
+  });
+
+  // Update rental booking status
+  app.put("/api/rental-bookings/:id/status", hasPermission('rentalBookings', 'edit'), async (req: any, res: any) => {
+    try {
+      const { status } = statusUpdateSchema.parse(req.body);
+      const id = req.params.id;
+      
+      // Get current submission for reference ID
+      const currentBooking = await storage.getRentalBooking(id);
+      if (!currentBooking) {
+        return res.status(404).json({ message: "Rental booking not found" });
+      }
+      
+      // Atomically update status and create history entry
+      const { submission } = await storage.updateSubmissionStatus(
+        'rental',
+        id,
+        currentBooking.referenceId,
+        status,
+        req.session.userId
+      );
+      
+      res.json(submission);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid status value", errors: error.errors });
+      } else {
+        console.error("Update rental booking status error:", error);
+        res.status(500).json({ message: "Failed to update status" });
+      }
+    }
+  });
+
+  // Update vendor registration status
+  app.put("/api/vendor-registrations/:id/status", hasPermission('vendorRegistrations', 'edit'), async (req: any, res: any) => {
+    try {
+      const { status } = statusUpdateSchema.parse(req.body);
+      const id = req.params.id;
+      
+      // Get current submission for reference ID
+      const currentVendor = await storage.getVendorRegistration(id);
+      if (!currentVendor) {
+        return res.status(404).json({ message: "Vendor registration not found" });
+      }
+      
+      // Atomically update status and create history entry
+      const { submission } = await storage.updateSubmissionStatus(
+        'vendor',
+        id,
+        currentVendor.referenceId,
+        status,
+        req.session.userId
+      );
+      
+      res.json(submission);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid status value", errors: error.errors });
+      } else {
+        console.error("Update vendor registration status error:", error);
+        res.status(500).json({ message: "Failed to update status" });
+      }
+    }
+  });
+
+  // Update contact message status
+  app.put("/api/contact-messages/:id/status", hasPermission('contactMessages', 'edit'), async (req: any, res: any) => {
+    try {
+      const { status } = statusUpdateSchema.parse(req.body);
+      const id = req.params.id;
+      
+      // Get current submission for reference ID
+      const currentMessage = await storage.getContactMessage(id);
+      if (!currentMessage) {
+        return res.status(404).json({ message: "Contact message not found" });
+      }
+      
+      // Atomically update status and create history entry
+      const { submission } = await storage.updateSubmissionStatus(
+        'contact',
+        id,
+        currentMessage.referenceId,
+        status,
+        req.session.userId
+      );
+      
+      res.json(submission);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid status value", errors: error.errors });
+      } else {
+        console.error("Update contact message status error:", error);
+        res.status(500).json({ message: "Failed to update status" });
+      }
     }
   });
 
