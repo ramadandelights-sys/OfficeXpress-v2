@@ -2250,7 +2250,6 @@ function FormSectionTable({
       case 'rental':
         const rentalFields = [
           { key: 'referenceId', label: 'Reference ID' },
-          { key: 'serviceType', label: 'Service Type' },
           { key: 'createdAt', label: 'Submitted' }
         ];
         if (showDriverAssignment) {
@@ -2396,7 +2395,23 @@ function FormSectionTable({
     }
     
     if (key === 'createdAt') {
-      return new Date(value).toLocaleString();
+      const date = new Date(value);
+      const dateStr = date.toLocaleDateString('en-US', { 
+        month: '2-digit', 
+        day: '2-digit', 
+        year: '2-digit' 
+      });
+      const timeStr = date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      return (
+        <div className="flex flex-col text-sm leading-tight">
+          <span className="font-medium">{dateStr}</span>
+          <span className="text-gray-500 dark:text-gray-400 text-xs">{timeStr}</span>
+        </div>
+      );
     }
     
     if (key === 'isReturnTrip') {
@@ -2541,7 +2556,7 @@ function FormSectionTable({
               <TableHeader className="sticky top-0 bg-white dark:bg-gray-900 z-10">
                 <TableRow>
                   {fields.map((field) => (
-                    <TableHead key={field.key} className="whitespace-nowrap px-4 py-2">
+                    <TableHead key={field.key} className="whitespace-nowrap px-3 py-1.5 text-xs">
                       {field.label}
                     </TableHead>
                   ))}
@@ -2551,7 +2566,11 @@ function FormSectionTable({
                 {filteredData.map((item, index) => (
                   <TableRow key={item.id || index} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     {fields.map((field) => (
-                      <TableCell key={field.key} className="whitespace-nowrap px-4 py-2 max-w-[200px] truncate" title={String(item[field.key] || '')}>
+                      <TableCell 
+                        key={field.key} 
+                        className={`px-3 py-1.5 ${field.key === 'createdAt' || field.key === 'driver' ? '' : 'whitespace-nowrap'} ${field.key !== 'actions' && field.key !== 'viewDetails' && field.key !== 'driver' ? 'max-w-[200px] truncate' : ''}`}
+                        title={String(item[field.key] || '')}
+                      >
                         {formatValue(item[field.key], field.key, item)}
                       </TableCell>
                     ))}
