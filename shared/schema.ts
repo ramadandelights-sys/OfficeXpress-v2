@@ -80,6 +80,9 @@ export const corporateBookings = pgTable("corporate_bookings", {
   officeAddress: text("office_address"),
   serviceType: text("service_type"),
   contractType: text("contract_type"),
+  status: text("status"),
+  completionEmailSentAt: timestamp("completion_email_sent_at"),
+  statusUpdatedAt: timestamp("status_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -104,6 +107,9 @@ export const rentalBookings = pgTable("rental_bookings", {
   fromLocation: text("from_location").notNull(),
   toLocation: text("to_location").notNull(),
   isReturnTrip: boolean("is_return_trip").default(false),
+  status: text("status"),
+  completionEmailSentAt: timestamp("completion_email_sent_at"),
+  statusUpdatedAt: timestamp("status_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -118,6 +124,9 @@ export const vendorRegistrations = pgTable("vendor_registrations", {
   serviceModality: text("service_modality").notNull(),
   experience: text("experience").notNull(),
   additionalInfo: text("additional_info"),
+  status: text("status"),
+  completionEmailSentAt: timestamp("completion_email_sent_at"),
+  statusUpdatedAt: timestamp("status_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -129,8 +138,26 @@ export const contactMessages = pgTable("contact_messages", {
   phone: text("phone").notNull(),
   subject: text("subject"),
   message: text("message").notNull(),
+  status: text("status"),
+  completionEmailSentAt: timestamp("completion_email_sent_at"),
+  statusUpdatedAt: timestamp("status_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+export const submissionStatusHistory = pgTable("submission_status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  submissionType: text("submission_type").notNull(), // 'corporate' | 'rental' | 'vendor' | 'contact'
+  submissionId: varchar("submission_id").notNull(), // Foreign key to the submission
+  referenceId: varchar("reference_id", { length: 6 }).notNull(), // For easy lookup
+  changedByUserId: varchar("changed_by_user_id"), // Employee who made the change
+  oldStatus: text("old_status"),
+  newStatus: text("new_status").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_history_submission").on(table.submissionType, table.submissionId),
+  index("idx_history_reference").on(table.referenceId),
+  index("idx_history_user").on(table.changedByUserId),
+]);
 
 export const blogPosts = pgTable("blog_posts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -334,6 +361,9 @@ export const insertCorporateBookingSchema = createInsertSchema(corporateBookings
   id: true,
   referenceId: true,
   userId: true,
+  status: true,
+  completionEmailSentAt: true,
+  statusUpdatedAt: true,
   createdAt: true,
 });
 
@@ -342,18 +372,32 @@ export const insertRentalBookingSchema = createInsertSchema(rentalBookings).omit
   referenceId: true,
   userId: true,
   driverId: true,
+  status: true,
+  completionEmailSentAt: true,
+  statusUpdatedAt: true,
   createdAt: true,
 });
 
 export const insertVendorRegistrationSchema = createInsertSchema(vendorRegistrations).omit({
   id: true,
   referenceId: true,
+  status: true,
+  completionEmailSentAt: true,
+  statusUpdatedAt: true,
   createdAt: true,
 });
 
 export const insertContactMessageSchema = createInsertSchema(contactMessages).omit({
   id: true,
   referenceId: true,
+  status: true,
+  completionEmailSentAt: true,
+  statusUpdatedAt: true,
+  createdAt: true,
+});
+
+export const insertSubmissionStatusHistorySchema = createInsertSchema(submissionStatusHistory).omit({
+  id: true,
   createdAt: true,
 });
 
@@ -528,3 +572,5 @@ export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type UpdateRentalBooking = z.infer<typeof updateRentalBookingSchema>;
 export type UpdateCorporateBooking = z.infer<typeof updateCorporateBookingSchema>;
+export type SubmissionStatusHistory = typeof submissionStatusHistory.$inferSelect;
+export type InsertSubmissionStatusHistory = z.infer<typeof insertSubmissionStatusHistorySchema>;
