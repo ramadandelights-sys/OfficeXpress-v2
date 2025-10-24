@@ -2224,7 +2224,7 @@ function FormSectionTable({
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            onClick={() => setEditingBooking(item)}
+            onClick={() => setEditingBooking({ ...item, bookingType: type })}
             data-testid={`button-edit-${type}-${item.id}`}
           >
             <Edit className="h-3 w-3 mr-1" />
@@ -2234,7 +2234,7 @@ function FormSectionTable({
             size="sm"
             variant="destructive"
             className="h-8 text-xs"
-            onClick={() => setDeletingBooking(item)}
+            onClick={() => setDeletingBooking({ ...item, bookingType: type })}
             data-testid={`button-delete-${type}-${item.id}`}
           >
             <Trash2 className="h-3 w-3 mr-1" />
