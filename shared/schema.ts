@@ -59,6 +59,16 @@ export const onboardingTokens = pgTable("onboarding_tokens", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  token: varchar("token", { length: 64 }).notNull().unique(),
+  email: text("email").notNull(),
+  userId: varchar("user_id").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const corporateBookings = pgTable("corporate_bookings", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
@@ -449,6 +459,12 @@ export const insertOnboardingTokenSchema = createInsertSchema(onboardingTokens).
   createdAt: true,
 });
 
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  used: true,
+  createdAt: true,
+});
+
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
   id: true,
   createdAt: true,
@@ -506,6 +522,8 @@ export type InsertDriver = z.infer<typeof insertDriverSchema>;
 export type UpdateDriver = z.infer<typeof updateDriverSchema>;
 export type OnboardingToken = typeof onboardingTokens.$inferSelect;
 export type InsertOnboardingToken = z.infer<typeof insertOnboardingTokenSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type UpdateRentalBooking = z.infer<typeof updateRentalBookingSchema>;

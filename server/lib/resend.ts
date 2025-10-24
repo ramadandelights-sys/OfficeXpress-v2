@@ -42,7 +42,7 @@ export async function getUncachableResendClient() {
 }
 
 // Base email template with branding
-function emailWrapper(content: string, isAdmin: boolean = false) {
+export function emailWrapper(content: string, isAdmin: boolean = false) {
   return `
     <!DOCTYPE html>
     <html lang="en">

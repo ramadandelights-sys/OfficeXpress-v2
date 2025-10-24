@@ -12,6 +12,7 @@ import {
   legalPages,
   websiteSettings,
   onboardingTokens,
+  passwordResetTokens,
   notifications,
   type User, 
   type InsertUser,
@@ -45,6 +46,8 @@ import {
   type UpdateWebsiteSettings,
   type OnboardingToken,
   type InsertOnboardingToken,
+  type PasswordResetToken,
+  type InsertPasswordResetToken,
   type Notification,
   type InsertNotification
 } from "@shared/schema";
@@ -67,6 +70,12 @@ export interface IStorage {
   getOnboardingToken(token: string): Promise<OnboardingToken | undefined>;
   markOnboardingTokenAsUsed(token: string): Promise<void>;
   deleteExpiredOnboardingTokens(): Promise<void>;
+  
+  // Password reset token operations
+  createPasswordResetToken(token: InsertPasswordResetToken): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenAsUsed(token: string): Promise<void>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
   
   // Driver operations
   getDrivers(): Promise<Driver[]>;
@@ -245,6 +254,37 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(onboardingTokens)
       .where(lt(onboardingTokens.expiresAt, now));
+  }
+
+  // Password reset token operations
+  async createPasswordResetToken(tokenData: InsertPasswordResetToken): Promise<PasswordResetToken> {
+    const [token] = await db
+      .insert(passwordResetTokens)
+      .values(tokenData)
+      .returning();
+    return token;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+    return resetToken || undefined;
+  }
+
+  async markPasswordResetTokenAsUsed(token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token));
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    const now = new Date();
+    await db
+      .delete(passwordResetTokens)
+      .where(lt(passwordResetTokens.expiresAt, now));
   }
 
   // Driver operations

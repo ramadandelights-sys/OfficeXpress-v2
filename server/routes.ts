@@ -40,12 +40,14 @@ import {
   insertDriverSchema,
   updateDriverSchema,
   updateRentalBookingSchema,
-  updateCorporateBookingSchema
+  updateCorporateBookingSchema,
+  type UserPermissions
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper } from "./lib/resend";
+import { getUncachableResendClient } from "./resend-client";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
 
@@ -81,7 +83,7 @@ function csrfProtection(req: any, res: any, next: any) {
   }
   
   // Skip CSRF check for unauthenticated auth endpoints only
-  const unauthenticatedAuthEndpoints = ['/api/auth/login', '/api/auth/register'];
+  const unauthenticatedAuthEndpoints = ['/api/auth/login', '/api/auth/register', '/api/auth/request-password-reset', '/api/auth/reset-password'];
   if (unauthenticatedAuthEndpoints.some(endpoint => req.path === endpoint)) {
     return next();
   }
@@ -233,6 +235,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Change password error:", error);
       res.status(500).json({ message: "Failed to change password" });
+    }
+  });
+
+  // Request password reset - sends email with reset token
+  app.post("/api/auth/request-password-reset", authRateLimiter, async (req: any, res: any) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        return res.json({ message: "If the email exists, a reset link will be sent" });
+      }
+      
+      if (!user.email) {
+        return res.json({ message: "If the email exists, a reset link will be sent" });
+      }
+      
+      // Generate reset token
+      const token = randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + 3600000); // 1 hour from now
+      
+      await storage.createPasswordResetToken({
+        token,
+        email: user.email,
+        userId: user.id,
+        expiresAt
+      });
+      
+      // Send password reset email
+      try {
+        const { client, fromEmail } = await getUncachableResendClient();
+        const resetUrl = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+        
+        await client.emails.send({
+          from: fromEmail,
+          to: user.email,
+          subject: 'Reset Your Password - OfficeXpress',
+          html: emailWrapper(`
+            <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+              Password Reset Request
+            </h2>
+            
+            <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+              Dear ${user.name},
+            </p>
+            
+            <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+              We received a request to reset your password. Click the button below to create a new password:
+            </p>
+            
+            <div style="margin: 32px 0; text-align: center;">
+              <a href="${resetUrl}" style="display: inline-block; padding: 16px 32px; background-color: #4c9096; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                Reset Password
+              </a>
+            </div>
+            
+            <p style="margin: 24px 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+              Or copy and paste this link into your browser:
+            </p>
+            
+            <div style="margin: 16px 0; padding: 12px; background-color: #f3f4f6; border-radius: 4px; word-break: break-all;">
+              <code style="color: #374151; font-size: 13px;">${resetUrl}</code>
+            </div>
+            
+            <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid: #f59e0b; border-radius: 4px;">
+              <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                ⚠️ This link will expire in 1 hour. If you didn't request this reset, you can safely ignore this email.
+              </p>
+            </div>
+            
+            <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+              Best regards,<br>
+              <strong style="color: #374151;">OfficeXpress Team</strong>
+            </p>
+          `, false)
+        });
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+      }
+      
+      res.json({ message: "If the email exists, a reset link will be sent" });
+    } catch (error) {
+      console.error("Request password reset error:", error);
+      res.status(500).json({ message: "Failed to process password reset request" });
+    }
+  });
+
+  // Reset password with token
+  app.post("/api/auth/reset-password", authRateLimiter, async (req: any, res: any) => {
+    try {
+      const { token, newPassword } = req.body;
+      
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+      
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+      
+      if (resetToken.used) {
+        return res.status(400).json({ message: "This reset token has already been used" });
+      }
+      
+      if (new Date() > new Date(resetToken.expiresAt)) {
+        return res.status(400).json({ message: "This reset token has expired" });
+      }
+      
+      const user = await storage.getUser(resetToken.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      const hashedPassword = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { 
+        password: hashedPassword,
+        temporaryPassword: false
+      } as any);
+      
+      await storage.markPasswordResetTokenAsUsed(token);
+      
+      res.json({ message: "Password reset successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password" });
     }
   });
 

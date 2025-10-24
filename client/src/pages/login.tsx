@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLogin } from "@/hooks/useAuth";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +70,14 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link href="/forgot-password">
+                  <a className="text-sm text-primary hover:underline" data-testid="link-forgot-password">
+                    Forgot password?
+                  </a>
+                </Link>
+              </div>
               <Input
                 id="password"
                 type="password"
