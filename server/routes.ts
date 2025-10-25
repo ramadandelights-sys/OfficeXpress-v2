@@ -820,6 +820,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const updatedUser = await storage.getUser(user.id);
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to retrieve created user" });
+      }
       res.json({
         user: {
           id: updatedUser.id,
@@ -1326,6 +1329,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = updateRentalBookingSchema.parse({ ...req.body, id: req.params.id });
       const { id, ...data } = updateData;
       
+      if (!id) {
+        return res.status(400).json({ message: "Booking ID is required" });
+      }
+      
       // Get booking before update
       const bookingBefore = await storage.getRentalBooking(id);
       if (!bookingBefore) {
@@ -1458,8 +1465,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Delete the booking
-      await storage.deleteRentalBooking(id);
+      // Update status to Cancelled instead of deleting
+      await storage.updateRentalBooking(id, { 
+        status: 'Cancelled',
+        statusUpdatedAt: new Date()
+      });
       
       res.json({ message: "Booking cancelled successfully" });
     } catch (error) {
@@ -1598,6 +1608,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData = updateCorporateBookingSchema.parse({ ...req.body, id: req.params.id });
       const { id, ...data } = updateData;
       
+      if (!id) {
+        return res.status(400).json({ message: "Booking ID is required" });
+      }
+      
       // Get booking before update
       const bookingBefore = await storage.getCorporateBooking(id);
       if (!bookingBefore) {
@@ -1708,8 +1722,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Delete the booking
-      await storage.deleteCorporateBooking(id);
+      // Update status to Cancelled instead of deleting
+      await storage.updateCorporateBooking(id, { 
+        status: 'Cancelled',
+        statusUpdatedAt: new Date()
+      });
       
       res.json({ message: "Booking cancelled successfully" });
     } catch (error) {
