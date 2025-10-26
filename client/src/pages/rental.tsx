@@ -21,6 +21,7 @@ import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
+import { useTranslation } from "react-i18next";
 
 // New rental booking schema matching the new requirements
 const newRentalBookingSchema = z.object({
@@ -83,13 +84,14 @@ const vehicleImages = {
 };
 
 // Progress Indicator Component
-function ProgressIndicator({ currentStep, highestStepReached, onStepClick }: { 
+function ProgressIndicator({ currentStep, highestStepReached, onStepClick, t }: { 
   currentStep: number;
   highestStepReached: number;
   onStepClick: (step: number) => void;
+  t: (key: string) => string;
 }) {
   const steps = [
-    { number: 1, label: "User Information" },
+    { number: 1, label: t('rental.userInformation') },
     { number: 2, label: "Service Information" },
     { number: 3, label: "Trip Information" }
   ];
@@ -140,6 +142,7 @@ function ProgressIndicator({ currentStep, highestStepReached, onStepClick }: {
 }
 
 export default function Rental() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
@@ -571,10 +574,10 @@ export default function Rental() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-2xl font-bold text-center">
-                    Book Your Rental
+                    {t('rental.pageTitle')}
                   </CardTitle>
                   <p className="text-muted-foreground text-center">
-                    Fill out the form below to request your vehicle rental
+                    {t('rental.pageDescription')}
                   </p>
                 </CardHeader>
                 <CardContent>
@@ -583,6 +586,7 @@ export default function Rental() {
                     currentStep={currentStep}
                     highestStepReached={highestStepReached}
                     onStepClick={handleStepClick}
+                    t={t}
                   />
 
                   <Form {...form}>
@@ -596,10 +600,10 @@ export default function Rental() {
                         name="customerName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Name *</FormLabel>
+                            <FormLabel>{t('common.name')} *</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Enter your name"
+                                placeholder={t('rental.namePlaceholder')}
                                 {...field}
                                 data-testid="input-customer-name"
                               />
@@ -614,17 +618,17 @@ export default function Rental() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number *</FormLabel>
+                            <FormLabel>{t('common.phoneNumber')} *</FormLabel>
                             <FormControl>
                               <div className="flex flex-col gap-1">
                                 <Input 
-                                  placeholder="01XXXXXXXXX"
+                                  placeholder={t('rental.phonePlaceholder')}
                                   {...field}
                                   onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
                                   data-testid="input-phone"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                  Enter any format - auto-converts to 01XXXXXXXXX
+                                  {t('rental.phoneHelper')}
                                 </p>
                               </div>
                             </FormControl>
@@ -639,11 +643,11 @@ export default function Rental() {
                             name="email"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Email Address</FormLabel>
+                                <FormLabel>{t('common.email')}</FormLabel>
                                 <FormControl>
                                   <Input 
                                     type="email" 
-                                    placeholder="your.email@example.com"
+                                    placeholder={t('rental.emailPlaceholder')}
                                     {...field}
                                     data-testid="input-email"
                                   />
@@ -662,7 +666,7 @@ export default function Rental() {
                             className="w-full"
                             data-testid="button-next-step-1"
                           >
-                            Next
+                            {t('common.next')}
                           </Button>
                         </>
                       )}

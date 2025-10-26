@@ -2,9 +2,12 @@ import { Link } from "wouter";
 import { Calendar, Play, Building, Car, Plane, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { PortfolioClient, BlogPost } from "@shared/schema";
 
 export default function Home() {
+  const { t } = useTranslation();
+  
   const { data: portfolioClients = [] } = useQuery<PortfolioClient[]>({
     queryKey: ["/api/portfolio-clients"],
   });
@@ -24,11 +27,10 @@ export default function Home() {
           <div className="flex flex-col lg:flex-row items-center">
             <div className="lg:w-1/2 mb-10 lg:mb-0">
               <h1 className="text-4xl lg:text-6xl font-bold text-primary-foreground mb-6 leading-tight">
-                Professional Transportation Solutions
+                {t('home.heroTitle')}
               </h1>
               <p className="text-xl text-primary-foreground/80 mb-8 leading-relaxed">
-                Reliable employee transportation, rental services, and airport transfers across Bangladesh. 
-                Experience comfort and punctuality with our professional chauffeur services.
+                {t('home.heroDescription')}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button 
@@ -38,7 +40,7 @@ export default function Home() {
                 >
                   <Link href="/corporate">
                     <Calendar className="mr-2 w-5 h-5" />
-                    Book Service
+                    {t('home.bookService')}
                   </Link>
                 </Button>
                 <Button 
@@ -49,7 +51,7 @@ export default function Home() {
                 >
                   <Link href="/about">
                     <Play className="mr-2 w-5 h-5" />
-                    Learn More
+                    {t('home.learnMore')}
                   </Link>
                 </Button>
               </div>
@@ -70,9 +72,9 @@ export default function Home() {
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">Our Transportation Services</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">{t('home.servicesTitle')}</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              From daily office commutes to special airport transfers, we provide comprehensive transportation solutions for individuals and businesses.
+              {t('home.servicesDescription')}
             </p>
           </div>
 
@@ -82,14 +84,14 @@ export default function Home() {
               <div className="w-16 h-16 bg-brand-primary/20 rounded-lg flex items-center justify-center mb-6">
                 <Building className="text-brand-primary w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-card-foreground mb-4">Corporate Services</h3>
-              <p className="text-muted-foreground mb-6">Professional pick & drop services for employees, monthly contracts, and corporate fleet management.</p>
+              <h3 className="text-xl font-semibold text-card-foreground mb-4">{t('home.corporateTitle')}</h3>
+              <p className="text-muted-foreground mb-6">{t('home.corporateDescription')}</p>
               <Link 
                 href="/corporate" 
                 className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="corporate-learn-more"
               >
-                Learn More <ArrowRight className="ml-2 w-4 h-4" />
+                {t('home.learnMore')} <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </div>
 
@@ -98,14 +100,14 @@ export default function Home() {
               <div className="w-16 h-16 bg-brand-secondary/20 rounded-lg flex items-center justify-center mb-6">
                 <Car className="text-brand-secondary w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-card-foreground mb-4">Vehicle Rental</h3>
-              <p className="text-muted-foreground mb-6">Quality cars at affordable rates across Bangladesh with professional chauffeur support for city tours.</p>
+              <h3 className="text-xl font-semibold text-card-foreground mb-4">{t('home.rentalTitle')}</h3>
+              <p className="text-muted-foreground mb-6">{t('home.rentalDescription')}</p>
               <Link 
                 href="/rental" 
                 className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="rental-learn-more"
               >
-                Learn More <ArrowRight className="ml-2 w-4 h-4" />
+                {t('home.learnMore')} <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </div>
 
@@ -114,14 +116,14 @@ export default function Home() {
               <div className="w-16 h-16 bg-brand-accent/20 rounded-lg flex items-center justify-center mb-6">
                 <Plane className="text-accent-foreground w-8 h-8" />
               </div>
-              <h3 className="text-xl font-semibold text-card-foreground mb-4">Airport Transfers</h3>
-              <p className="text-muted-foreground mb-6">Reliable airport pickup and drop services with English-speaking, tech-savvy chauffeurs for foreign visitors.</p>
+              <h3 className="text-xl font-semibold text-card-foreground mb-4">{t('home.airportTitle')}</h3>
+              <p className="text-muted-foreground mb-6">{t('home.airportDescription')}</p>
               <Link 
                 href="/rental?service=airport" 
                 className="inline-flex items-center text-brand-primary font-semibold hover:text-brand-primary/80 transition-colors"
                 data-testid="airport-learn-more"
               >
-                Book Now <ArrowRight className="ml-2 w-4 h-4" />
+                {t('home.bookNow')} <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </div>
           </div>
@@ -133,9 +135,9 @@ export default function Home() {
         <section className="py-16 bg-muted">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">Trusted by Leading Companies</h2>
+              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">{t('home.portfolioTitle')}</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                See who trusts us with their transportation needs across Bangladesh.
+                {t('home.portfolioDescription')}
               </p>
             </div>
 
@@ -158,7 +160,7 @@ export default function Home() {
                 asChild 
                 data-testid="view-portfolio-btn"
               >
-                <Link href="/portfolio">View Full Portfolio</Link>
+                <Link href="/portfolio">{t('home.viewFullPortfolio')}</Link>
               </Button>
             </div>
           </div>
@@ -170,9 +172,9 @@ export default function Home() {
         <section className="py-16 bg-card">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">Latest Updates</h2>
+              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">{t('home.blogTitle')}</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Stay informed with our latest news and insights from the transportation industry.
+                {t('home.blogDescription')}
               </p>
             </div>
 
@@ -217,7 +219,7 @@ export default function Home() {
                 asChild 
                 data-testid="view-blog-btn"
               >
-                <Link href="/blog">View All Posts</Link>
+                <Link href="/blog">{t('home.viewAllPosts')}</Link>
               </Button>
             </div>
           </div>

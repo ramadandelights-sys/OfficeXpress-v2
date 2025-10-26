@@ -29,7 +29,13 @@
     "edit": "編集",
     "close": "閉じる",
     "loading": "読み込み中...",
-    "other": "その他"
+    "other": "その他",
+    "next": "次へ",
+    "back": "戻る",
+    "name": "名前",
+    "email": "メール",
+    "phone": "電話",
+    "phoneNumber": "電話番号"
   },
   "services": {
     "header": "サービス",
@@ -41,5 +47,35 @@
     "header": "会社",
     "about": "会社概要",
     "contact": "お問い合わせ"
+  },
+  "home": {
+    "heroTitle": "プロフェッショナルな輸送ソリューション",
+    "heroDescription": "バングラデシュ全土で信頼できる従業員輸送、レンタルサービス、空港送迎。プロのドライバーサービスで快適さと時間厳守を体験してください。",
+    "bookService": "サービスを予約",
+    "learnMore": "詳しく見る",
+    "servicesTitle": "私たちの輸送サービス",
+    "servicesDescription": "日々のオフィス通勤から特別な空港送迎まで、個人と企業向けの包括的な輸送ソリューションを提供します。",
+    "corporateTitle": "企業サービス",
+    "corporateDescription": "従業員向けのプロフェッショナルな送迎サービス、月契約、企業車両管理。",
+    "rentalTitle": "車両レンタル",
+    "rentalDescription": "シティツアー向けのプロドライバーサポート付きで、バングラデシュ全土で手頃な価格の高品質な車両。",
+    "airportTitle": "空港送迎",
+    "airportDescription": "外国人訪問者向けに英語を話す技術に精通したドライバーによる信頼できる空港送迎サービス。",
+    "bookNow": "今すぐ予約",
+    "portfolioTitle": "主要企業に信頼されています",
+    "portfolioDescription": "バングラデシュ全土で輸送ニーズを任せている企業をご覧ください。",
+    "viewFullPortfolio": "全ポートフォリオを見る",
+    "blogTitle": "最新情報",
+    "blogDescription": "輸送業界の最新ニュースと洞察をご覧ください。",
+    "viewAllPosts": "すべての投稿を見る"
+  },
+  "rental": {
+    "pageTitle": "レンタルを予約",
+    "pageDescription": "車両レンタルをリクエストするには、以下のフォームに記入してください",
+    "userInformation": "ユーザー情報",
+    "namePlaceholder": "お名前を入力してください",
+    "phonePlaceholder": "01XXXXXXXXX",
+    "phoneHelper": "任意の形式を入力 - 自動的に01XXXXXXXXXに変換されます",
+    "emailPlaceholder": "your.email@example.com"
   }
 }
