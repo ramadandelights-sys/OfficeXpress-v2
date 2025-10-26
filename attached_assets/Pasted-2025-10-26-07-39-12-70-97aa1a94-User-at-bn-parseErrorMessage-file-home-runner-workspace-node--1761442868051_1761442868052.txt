@@ -1,0 +1,116 @@
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at bn.parseErrorMessage (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:955:41)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at bn.handlePacket (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:923:75)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at bn.parse (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:911:36)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at S. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:962:16)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at S.emit (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:317:79)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at WebSocket. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:403:19)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at callListener (/home/runner/workspace/node_modules/ws/lib/event-target.js:290:14)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at WebSocket.onMessage (/home/runner/workspace/node_modules/ws/lib/event-target.js:209:9)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at WebSocket.emit (node:events:524:28)
+2025-10-26 07:39:12.70
+97aa1a94
+User
+at Receiver.receiverOnMessage (/home/runner/workspace/node_modules/ws/lib/websocket.js:1220:20) {
+2025-10-26 07:39:12.70
+97aa1a94
+User
+length: 151,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+severity: 'ERROR',
+2025-10-26 07:39:12.70
+97aa1a94
+User
+code: '42703',
+2025-10-26 07:39:12.70
+97aa1a94
+User
+detail: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+hint: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+position: '67',
+2025-10-26 07:39:12.70
+97aa1a94
+User
+internalPosition: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+internalQuery: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+where: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+schema: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+table: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+column: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+dataType: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+constraint: undefined,
+2025-10-26 07:39:12.70
+97aa1a94
+User
+file: 'parse_target.c',
+2025-10-26 07:39:12.70
+97aa1a94
+User
+line: '1066',
+2025-10-26 07:39:12.70
+97aa1a94
+User
+routine: 'checkInsertTargets'
+2025-10-26 07:39:12.70
+97aa1a94
+User
+}
+2025-10-26 07:39:12.74
+97aa1a94
+User
+1:39:12 AM [express] PUT /api/rental-bookings/ef5d6353-aac6-405a-9ca2-75e18e6ddd6c/status 500 in 573…
