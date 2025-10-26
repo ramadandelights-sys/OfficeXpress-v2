@@ -34,6 +34,33 @@ export default function Header() {
     { name: "Blog", href: "/blog" },
   ];
 
+  // Grouped navigation for logged-in users (mobile)
+  const groupedNavigation = user ? [
+    {
+      header: "Services",
+      items: [
+        { name: "Corporate", href: "/corporate" },
+        { name: "Rental", href: "/rental" },
+      ]
+    },
+    {
+      header: "Company",
+      items: [
+        { name: "About", href: "/about" },
+        { name: "Contact", href: "/contact" },
+      ]
+    },
+    {
+      header: "Other",
+      items: [
+        { name: "Home", href: "/" },
+        { name: "Portfolio", href: "/portfolio" },
+        { name: "Vendors", href: "/vendor" },
+        { name: "Blog", href: "/blog" },
+      ]
+    }
+  ] : null;
+
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
@@ -142,7 +169,7 @@ export default function Header() {
           </nav>
 
           {/* Search & Mobile Menu */}
-          <div className="flex items-center space-x-4 absolute right-4 md:relative md:right-auto">
+          <div className="flex items-center space-x-4 absolute right-4 md:relative md:right-auto md:ml-6">
             <div className="relative hidden sm:block">
               <Input
                 type="text"
@@ -161,7 +188,7 @@ export default function Header() {
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               data-testid="mobile-menu-toggle"
             >
-              {isMobileMenuOpen ? <X className="w-8 h-8" /> : <Menu className="w-8 h-8" />}
+              {isMobileMenuOpen ? <X className="w-10 h-10" /> : <Menu className="w-10 h-10" />}
             </Button>
           </div>
         </div>
@@ -170,21 +197,47 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border py-4">
             <nav className="flex flex-col space-y-4">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-                    isActive(item.href)
-                      ? "bg-brand-primary text-primary-foreground"
-                      : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                  }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
-                >
-                  {item.name}
-                </Link>
-              ))}
+              {/* Show grouped navigation when logged in, otherwise show regular navigation */}
+              {groupedNavigation ? (
+                groupedNavigation.map((group) => (
+                  <div key={group.header} className="space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
+                      {group.header}
+                    </div>
+                    {group.items.map((item) => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={`font-medium transition-colors px-3 py-2 rounded-lg block ${
+                          isActive(item.href)
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
+                      >
+                        {item.name}
+                      </Link>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                navigation.map((item) => (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                      isActive(item.href)
+                        ? "bg-brand-primary text-primary-foreground"
+                        : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                    }`}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
+                  >
+                    {item.name}
+                  </Link>
+                ))
+              )}
               
               {/* Mobile Auth Navigation */}
               {!authLoading && (
