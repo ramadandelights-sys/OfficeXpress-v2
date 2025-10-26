@@ -6,6 +6,16 @@ OfficeXpress is a comprehensive transportation services platform for businesses 
 
 ## Recent Changes
 
+### Multi-Language Support (October 2025)
+- **Four Languages**: Complete internationalization (i18n) support for English, Chinese (中文), Japanese (日本語), and Bangla (বাংলা)
+- **Language Selector**: Globe icon in header with dropdown menu showing language options with flags (🇺🇸 🇨🇳 🇯🇵 🇧🇩)
+- **Persistent Preference**: Language selection automatically saved in browser localStorage for seamless experience
+- **Auto-Detection**: Automatically detects browser language on first visit, with locale normalization (e.g., en-US → en)
+- **Translation Coverage**: Navigation menu, authentication buttons, common UI elements (search, submit, cancel, etc.), toast messages
+- **Implementation**: Built with react-i18next and i18next-browser-languagedetector libraries
+- **Mobile-Friendly**: Responsive design shows flag emoji on mobile, full language name on desktop
+- **Adding Translations**: To add new translated strings, update all 4 locale files (en.json, zh.json, ja.json, bn.json) in client/src/locales/ with matching keys, then use `t('key.name')` in components
+
 ### Environment-Aware Rate Limiting (October 2025)
 - **Automatic Environment Detection**: Rate limiters now automatically adjust based on `NODE_ENV` for seamless testing and production security
 - **Development Mode**: Generous limits for testing - 100 login attempts, 50 form submissions, 100 admin requests per 15 minutes
@@ -123,6 +133,9 @@ Core entities include Users, Corporate Bookings, Rental Bookings, Vendor Registr
 - **Class Variance Authority**: CSS class variant management.
 - **nanoid**: For unique ID generation.
 - **DOMPurify**: For content sanitization.
+- **i18next**: Internationalization framework for multi-language support.
+- **react-i18next**: React bindings for i18next.
+- **i18next-browser-languagedetector**: Automatic browser language detection.
 
 ### External Integrations
 - **Resend**: Transactional email service.

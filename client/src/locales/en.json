@@ -14,6 +14,8 @@
   "auth": {
     "login": "Login",
     "logout": "Logout",
+    "logoutSuccess": "Logged out successfully",
+    "logoutFailed": "Logout failed. Please try again.",
     "email": "Email",
     "password": "Password",
     "phone": "Phone"
@@ -26,7 +28,8 @@
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "other": "Other"
   },
   "services": {
     "header": "Services",

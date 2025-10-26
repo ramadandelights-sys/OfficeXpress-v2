@@ -54,7 +54,7 @@ export default function Header() {
       ]
     },
     {
-      header: "Other",
+      header: t('common.other'),
       items: [
         { name: t('nav.home'), href: "/" },
         { name: t('nav.portfolio'), href: "/portfolio" },
@@ -67,11 +67,11 @@ export default function Header() {
   const handleLogout = async () => {
     try {
       await apiRequest("POST", "/api/auth/logout");
-      toast({ title: "Logged out successfully" });
+      toast({ title: t('auth.logoutSuccess') });
       navigate("/");
       window.location.reload();
     } catch (error) {
-      toast({ title: "Logout failed", variant: "destructive" });
+      toast({ title: t('auth.logoutFailed'), variant: "destructive" });
     }
   };
 

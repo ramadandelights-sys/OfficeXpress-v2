@@ -18,7 +18,8 @@ const languages = [
 export function LanguageSelector() {
   const { i18n } = useTranslation();
 
-  const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
+  const normalizedLanguage = i18n.language.split('-')[0];
+  const currentLanguage = languages.find((lang) => lang.code === normalizedLanguage) || languages[0];
 
   const changeLanguage = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
