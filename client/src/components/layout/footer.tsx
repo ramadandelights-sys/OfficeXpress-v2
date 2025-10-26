@@ -2,8 +2,11 @@ import { Link } from "wouter";
 import { Car, Facebook, Linkedin, Instagram, MapPin, Phone, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { WebsiteSettings } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 export default function Footer() {
+  const { t } = useTranslation();
+  
   // Fetch dynamic logo
   const { data: logoData } = useQuery({
     queryKey: ['/api/logo'],
@@ -59,7 +62,7 @@ export default function Footer() {
               />
             </div>
             <p className="mb-4" style={{ color: mutedTextColor }}>
-              Professional transportation solutions for businesses and individuals across Bangladesh.
+              {t('footer.tagline')}
             </p>
             <div className="space-y-2 mb-4" style={{ color: mutedTextColor }}>
               <p className="flex items-center">
@@ -111,7 +114,7 @@ export default function Footer() {
 
           {/* Services */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Our Services</h4>
+            <h4 className="text-lg font-semibold mb-4">{t('footer.ourServices')}</h4>
             <ul className="space-y-2" style={{ color: mutedTextColor }}>
               <li>
                 <Link 
@@ -121,7 +124,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Corporate Transportation
+                  {t('footer.corporateTransportation')}
                 </Link>
               </li>
               <li>
@@ -132,7 +135,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Vehicle Rental
+                  {t('footer.vehicleRental')}
                 </Link>
               </li>
               <li>
@@ -143,7 +146,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Airport Transfers
+                  {t('footer.airportTransfers')}
                 </Link>
               </li>
               <li>
@@ -154,7 +157,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  City Tours
+                  {t('footer.cityTours')}
                 </Link>
               </li>
             </ul>
@@ -162,7 +165,7 @@ export default function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
+            <h4 className="text-lg font-semibold mb-4">{t('footer.quickLinks')}</h4>
             <ul className="space-y-2" style={{ color: mutedTextColor }}>
               <li>
                 <Link 
@@ -172,7 +175,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  About Us
+                  {t('footer.aboutUs')}
                 </Link>
               </li>
               <li>
@@ -183,7 +186,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Our Clients
+                  {t('footer.ourClients')}
                 </Link>
               </li>
               <li>
@@ -194,7 +197,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Partner With Us
+                  {t('footer.partnerWithUs')}
                 </Link>
               </li>
               <li>
@@ -205,7 +208,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Blog
+                  {t('footer.blog')}
                 </Link>
               </li>
             </ul>
@@ -213,7 +216,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="text-lg font-semibold mb-4">Legal</h4>
+            <h4 className="text-lg font-semibold mb-4">{t('footer.legal')}</h4>
             <ul className="space-y-2" style={{ color: mutedTextColor }}>
               <li>
                 <Link 
@@ -224,7 +227,7 @@ export default function Footer() {
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                   data-testid="footer-terms"
                 >
-                  Terms & Conditions
+                  {t('footer.termsConditions')}
                 </Link>
               </li>
               <li>
@@ -236,7 +239,7 @@ export default function Footer() {
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                   data-testid="footer-privacy"
                 >
-                  Privacy Policy
+                  {t('footer.privacyPolicy')}
                 </Link>
               </li>
               <li>
@@ -247,7 +250,7 @@ export default function Footer() {
                   onMouseEnter={(e) => Object.assign((e.target as HTMLElement).style, linkHoverStyle)}
                   onMouseLeave={(e) => Object.assign((e.target as HTMLElement).style, linkStyle)}
                 >
-                  Contact Us
+                  {t('footer.contactUs')}
                 </Link>
               </li>
             </ul>
@@ -255,7 +258,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 pt-8 text-center" style={{ borderTop: `1px solid ${borderColor}` }}>
-          <p style={{ color: mutedTextColor }}>&copy; 2024 OfficeXpress Transportation Services. All rights reserved.</p>
+          <p style={{ color: mutedTextColor }}>{t('footer.copyright')}</p>
         </div>
       </div>
     </footer>
