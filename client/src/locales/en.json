@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "Home",
+    "about": "About",
+    "corporate": "Corporate",
+    "rental": "Rental",
+    "portfolio": "Portfolio",
+    "vendors": "Vendors",
+    "contact": "Contact",
+    "blog": "Blog",
+    "dashboard": "Dashboard",
+    "adminPanel": "Admin Panel"
+  },
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "phone": "Phone"
+  },
+  "common": {
+    "search": "Search...",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading..."
+  },
+  "services": {
+    "header": "Services",
+    "corporate": "Corporate Transport",
+    "rental": "Vehicle Rental",
+    "vendor": "Become a Vendor"
+  },
+  "company": {
+    "header": "Company",
+    "about": "About Us",
+    "contact": "Contact"
+  }
+}

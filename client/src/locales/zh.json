@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "首页",
+    "about": "关于我们",
+    "corporate": "企业服务",
+    "rental": "租车服务",
+    "portfolio": "案例展示",
+    "vendors": "供应商",
+    "contact": "联系我们",
+    "blog": "博客",
+    "dashboard": "仪表板",
+    "adminPanel": "管理面板"
+  },
+  "auth": {
+    "login": "登录",
+    "logout": "登出",
+    "email": "电子邮件",
+    "password": "密码",
+    "phone": "电话"
+  },
+  "common": {
+    "search": "搜索...",
+    "submit": "提交",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "close": "关闭",
+    "loading": "加载中..."
+  },
+  "services": {
+    "header": "服务",
+    "corporate": "企业交通",
+    "rental": "车辆租赁",
+    "vendor": "成为供应商"
+  },
+  "company": {
+    "header": "公司",
+    "about": "关于我们",
+    "contact": "联系方式"
+  }
+}

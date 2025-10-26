@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "about": "会社概要",
+    "corporate": "法人向け",
+    "rental": "レンタル",
+    "portfolio": "ポートフォリオ",
+    "vendors": "ベンダー",
+    "contact": "お問い合わせ",
+    "blog": "ブログ",
+    "dashboard": "ダッシュボード",
+    "adminPanel": "管理パネル"
+  },
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "email": "メール",
+    "password": "パスワード",
+    "phone": "電話"
+  },
+  "common": {
+    "search": "検索...",
+    "submit": "送信",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "loading": "読み込み中..."
+  },
+  "services": {
+    "header": "サービス",
+    "corporate": "企業輸送",
+    "rental": "車両レンタル",
+    "vendor": "ベンダーになる"
+  },
+  "company": {
+    "header": "会社",
+    "about": "会社概要",
+    "contact": "お問い合わせ"
+  }
+}

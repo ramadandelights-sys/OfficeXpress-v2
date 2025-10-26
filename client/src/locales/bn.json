@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "home": "হোম",
+    "about": "সম্পর্কে",
+    "corporate": "কর্পোরেট",
+    "rental": "ভাড়া",
+    "portfolio": "পোর্টফোলিও",
+    "vendors": "বিক্রেতা",
+    "contact": "যোগাযোগ",
+    "blog": "ব্লগ",
+    "dashboard": "ড্যাশবোর্ড",
+    "adminPanel": "অ্যাডমিন প্যানেল"
+  },
+  "auth": {
+    "login": "লগইন",
+    "logout": "লগআউট",
+    "email": "ইমেইল",
+    "password": "পাসওয়ার্ড",
+    "phone": "ফোন"
+  },
+  "common": {
+    "search": "অনুসন্ধান...",
+    "submit": "জমা দিন",
+    "cancel": "বাতিল",
+    "save": "সংরক্ষণ",
+    "delete": "মুছুন",
+    "edit": "সম্পাদনা",
+    "close": "বন্ধ করুন",
+    "loading": "লোড হচ্ছে..."
+  },
+  "services": {
+    "header": "সেবাসমূহ",
+    "corporate": "কর্পোরেট পরিবহন",
+    "rental": "গাড়ি ভাড়া",
+    "vendor": "বিক্রেতা হন"
+  },
+  "company": {
+    "header": "কোম্পানি",
+    "about": "আমাদের সম্পর্কে",
+    "contact": "যোগাযোগ"
+  }
+}

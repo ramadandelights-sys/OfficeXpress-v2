@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useTranslation } from "react-i18next";
+import { LanguageSelector } from "@/components/LanguageSelector";
 
 export default function Header() {
   const [location, navigate] = useLocation();
@@ -14,6 +16,7 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   // Fetch dynamic logo
   const { data: logoData } = useQuery({
@@ -24,39 +27,39 @@ export default function Header() {
   const logoSrc = logoData?.src || "/logo.jpg";
 
   const navigation = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Corporate", href: "/corporate" },
-    { name: "Rental", href: "/rental" },
-    { name: "Portfolio", href: "/portfolio" },
-    { name: "Vendors", href: "/vendor" },
-    { name: "Contact", href: "/contact" },
-    { name: "Blog", href: "/blog" },
+    { name: t('nav.home'), href: "/" },
+    { name: t('nav.about'), href: "/about" },
+    { name: t('nav.corporate'), href: "/corporate" },
+    { name: t('nav.rental'), href: "/rental" },
+    { name: t('nav.portfolio'), href: "/portfolio" },
+    { name: t('nav.vendors'), href: "/vendor" },
+    { name: t('nav.contact'), href: "/contact" },
+    { name: t('nav.blog'), href: "/blog" },
   ];
 
   // Grouped navigation for logged-in users (mobile)
   const groupedNavigation = user ? [
     {
-      header: "Services",
+      header: t('services.header'),
       items: [
-        { name: "Corporate", href: "/corporate" },
-        { name: "Rental", href: "/rental" },
+        { name: t('nav.corporate'), href: "/corporate" },
+        { name: t('nav.rental'), href: "/rental" },
       ]
     },
     {
-      header: "Company",
+      header: t('company.header'),
       items: [
-        { name: "About", href: "/about" },
-        { name: "Contact", href: "/contact" },
+        { name: t('nav.about'), href: "/about" },
+        { name: t('nav.contact'), href: "/contact" },
       ]
     },
     {
       header: "Other",
       items: [
-        { name: "Home", href: "/" },
-        { name: "Portfolio", href: "/portfolio" },
-        { name: "Vendors", href: "/vendor" },
-        { name: "Blog", href: "/blog" },
+        { name: t('nav.home'), href: "/" },
+        { name: t('nav.portfolio'), href: "/portfolio" },
+        { name: t('nav.vendors'), href: "/vendor" },
+        { name: t('nav.blog'), href: "/blog" },
       ]
     }
   ] : null;
@@ -127,7 +130,7 @@ export default function Header() {
                         data-testid="nav-dashboard"
                       >
                         <User className="w-4 h-4" />
-                        Dashboard
+                        {t('nav.dashboard')}
                       </Link>
                     )}
                     {(user.role === 'employee' || user.role === 'superadmin') && (
@@ -141,7 +144,7 @@ export default function Header() {
                         data-testid="nav-admin"
                       >
                         <Settings className="w-4 h-4" />
-                        Admin Panel
+                        {t('nav.adminPanel')}
                       </Link>
                     )}
                     <Button
@@ -152,7 +155,7 @@ export default function Header() {
                       data-testid="button-logout"
                     >
                       <LogOut className="w-4 h-4" />
-                      Logout
+                      {t('auth.logout')}
                     </Button>
                   </>
                 ) : (
@@ -161,19 +164,20 @@ export default function Header() {
                     className="font-medium transition-colors px-3 py-2 rounded-lg text-sm bg-brand-primary text-primary-foreground hover:bg-brand-primary/90"
                     data-testid="nav-login"
                   >
-                    Login
+                    {t('auth.login')}
                   </Link>
                 )}
               </>
             )}
           </nav>
 
-          {/* Search & Mobile Menu */}
-          <div className="flex items-center space-x-4 absolute right-4 md:relative md:right-auto md:ml-6">
+          {/* Language Selector, Search & Mobile Menu */}
+          <div className="flex items-center space-x-2 absolute right-4 md:relative md:right-auto md:ml-6">
+            <LanguageSelector />
             <div className="relative hidden sm:block">
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder={t('common.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-muted border-border rounded-lg px-4 py-2 pr-10 focus:ring-2 focus:ring-ring"
@@ -256,7 +260,7 @@ export default function Header() {
                           data-testid="mobile-nav-dashboard"
                         >
                           <User className="w-4 h-4" />
-                          Dashboard
+                          {t('nav.dashboard')}
                         </Link>
                       )}
                       {(user.role === 'employee' || user.role === 'superadmin') && (
@@ -271,7 +275,7 @@ export default function Header() {
                           data-testid="mobile-nav-admin"
                         >
                           <Settings className="w-4 h-4" />
-                          Admin Panel
+                          {t('nav.adminPanel')}
                         </Link>
                       )}
                       <Button
@@ -284,7 +288,7 @@ export default function Header() {
                         data-testid="mobile-button-logout"
                       >
                         <LogOut className="w-4 h-4" />
-                        Logout
+                        {t('auth.logout')}
                       </Button>
                     </>
                   ) : (
@@ -294,7 +298,7 @@ export default function Header() {
                       onClick={() => setIsMobileMenuOpen(false)}
                       data-testid="mobile-nav-login"
                     >
-                      Login
+                      {t('auth.login')}
                     </Link>
                   )}
                 </>
@@ -303,7 +307,7 @@ export default function Header() {
             <div className="mt-4 sm:hidden">
               <Input
                 type="text"
-                placeholder="Search..."
+                placeholder={t('common.search')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="bg-muted border-border rounded-lg"
