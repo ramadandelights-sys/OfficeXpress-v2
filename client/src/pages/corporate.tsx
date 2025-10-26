@@ -16,42 +16,44 @@ import { RecaptchaField } from "@/components/RecaptchaField";
 import { z } from "zod";
 import useEmblaCarousel from "embla-carousel-react";
 import Autoplay from "embla-carousel-autoplay";
-
-// Services data
-const services = [
-  {
-    icon: Route,
-    iconBg: "bg-brand-primary/20",
-    iconColor: "text-brand-primary",
-    title: "Daily Employee Commutes",
-    description: "Guarantee operational excellence and seamless team mobility. We provide structured, daily transportation with fixed routes, precise scheduling, and live location tracking. This complete system ensures your entire team arrives on time, every time, ready for peak productivity and minimizing all delays."
-  },
-  {
-    icon: Calendar,
-    iconBg: "bg-brand-secondary/20",
-    iconColor: "text-brand-secondary",
-    title: "Flexible Monthly Pay-Per-Use Contracts",
-    description: "Dedicated fleet access designed for maximum flexibility and integrated control. Our cost-effective monthly packages feature dedicated vehicles for fixed routing needs and offer limited ad hoc support. To simplify management, clients gain Vehicle Tracking System (VTS) access and the flexibility to customize in-car amenities."
-  },
-  {
-    icon: Building,
-    iconBg: "bg-brand-primary/20",
-    iconColor: "text-brand-primary",
-    title: "On-Demand (Ad Hoc) Car Requirements",
-    description: "Instant, reliable service for your immediate, unscheduled business needs. Access our professional fleet and chauffeurs anytime for last-minute meetings, emergency client transport, or urgent logistical support. This service is billed purely on a pay-per-use basis, ensuring rapid response and premium quality without contractual commitment."
-  },
-  {
-    icon: Plane,
-    iconBg: "bg-brand-accent/20",
-    iconColor: "text-accent-foreground",
-    title: "Executive & VIP Airport Transfers",
-    description: "Ensure a flawless welcome and departure for your most valuable travelers. We provide premium airport services with a focus on discretion and personalized care for C-suite professionals and foreign client delegations. Enjoy premium vehicles driven by professional chauffeurs trained for executive-level service and absolute confidentiality."
-  }
-];
+import { useTranslation } from "react-i18next";
 
 export default function Corporate() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Services data with translations
+  const services = [
+    {
+      icon: Route,
+      iconBg: "bg-brand-primary/20",
+      iconColor: "text-brand-primary",
+      title: t('corporate.dailyCommutesTitle'),
+      description: t('corporate.dailyCommutesDesc')
+    },
+    {
+      icon: Calendar,
+      iconBg: "bg-brand-secondary/20",
+      iconColor: "text-brand-secondary",
+      title: t('corporate.monthlyContractsTitle'),
+      description: t('corporate.monthlyContractsDesc')
+    },
+    {
+      icon: Building,
+      iconBg: "bg-brand-primary/20",
+      iconColor: "text-brand-primary",
+      title: t('corporate.adHocTitle'),
+      description: t('corporate.adHocDesc')
+    },
+    {
+      icon: Plane,
+      iconBg: "bg-brand-accent/20",
+      iconColor: "text-accent-foreground",
+      title: t('corporate.vipAirportTitle'),
+      description: t('corporate.vipAirportDesc')
+    }
+  ];
   
   // Carousel for mobile
   const [emblaRef] = useEmblaCarousel(
@@ -143,10 +145,10 @@ export default function Corporate() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent leading-tight">
-              Corporate Transportation Services
+              {t('corporate.pageTitle')}
             </h1>
             <p className="text-base md:text-lg lg:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-              Streamline your company's operations and elevate your professional image with our dedicated transportation portfolio. Our core offerings include reliable Employee Pick & Drop commutes, highly flexible monthly pay-per-use contracts, immediate On-Demand (Ad Hoc) Car Requirements, and specialized VIP airport transfers.
+              {t('corporate.pageDescription')}
             </p>
           </div>
         </div>
