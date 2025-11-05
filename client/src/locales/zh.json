@@ -138,5 +138,67 @@
   "rentalPage": {
     "heroTitle": "可靠的交通解决方案",
     "heroDescription": "预订优质车辆满足您的个人和商务交通需求。从日常通勤到特殊活动，我们都有完美的解决方案。"
+  },
+  "portfolio": {
+    "heroTitle": "我们尊贵的客户",
+    "heroDescription": "受孟加拉国领先公司和满意客户的信赖。看看我们的客户对我们服务的评价。",
+    "sectionTitle": "客户案例",
+    "sectionDescription": "浏览我们信赖的合作伙伴和依赖我们交通服务的重要客户的作品集。"
+  },
+  "vendor": {
+    "heroTitle": "与我们合作",
+    "heroDescription": "加入我们的专业司机和车主网络。与OfficeXpress一起扩展您的商机，为我们不断增长的客户群提供服务。",
+    "formTitle": "供应商注册表",
+    "fullName": "全名",
+    "fullNamePlaceholder": "输入您的全名",
+    "phoneNumber": "电话号码",
+    "vehicleMake": "车辆品牌",
+    "vehicleMakePlaceholder": "例如，Toyota",
+    "vehicleModel": "车辆型号",
+    "vehicleModelPlaceholder": "例如，Corolla",
+    "vehicleYear": "车辆年份",
+    "vehicleYearPlaceholder": "例如，2020",
+    "licensePlate": "车牌号",
+    "licensePlatePlaceholder": "例如，DHA-1234",
+    "vehicleCapacity": "车辆座位数",
+    "vehicleType": "车辆类型",
+    "selectVehicleType": "选择车辆类型",
+    "vehicleType_sedan": "轿车",
+    "vehicleType_suv": "SUV",
+    "vehicleType_van": "面包车",
+    "vehicleType_microbus": "小型巴士",
+    "vehicleType_other": "其他",
+    "experience": "驾驶经验年数",
+    "experiencePlaceholder": "输入经验年数",
+    "availability": "可用性",
+    "selectAvailability": "选择可用性",
+    "availability_fullTime": "全职",
+    "availability_partTime": "兼职",
+    "availability_weekends": "仅周末",
+    "availability_other": "其他"
+  },
+  "contact": {
+    "heroTitle": "联系我们",
+    "heroDescription": "准备预订我们的服务或有疑问？今天就联系我们，让我们讨论如何满足您的交通需求。",
+    "officeAddress": "办公地址",
+    "phoneNumbers": "电话号码",
+    "emailAddress": "电子邮件地址",
+    "businessHours": "营业时间",
+    "mondayToFriday": "周一至周五",
+    "saturday": "周六",
+    "sunday": "周日",
+    "closed": "关闭",
+    "contactFormTitle": "给我们留言",
+    "message": "消息",
+    "messagePlaceholder": "输入您的消息"
+  },
+  "blog": {
+    "heroTitle": "最新新闻与见解",
+    "heroDescription": "了解孟加拉国交通行业的最新新闻、提示和见解。",
+    "readMore": "阅读更多",
+    "backToBlog": "返回博客",
+    "publishedOn": "发布于",
+    "author": "作者",
+    "noPostsFound": "未找到博客文章。"
   }
 }

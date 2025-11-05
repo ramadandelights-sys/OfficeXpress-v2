@@ -138,5 +138,67 @@
   "rentalPage": {
     "heroTitle": "信頼できる輸送ソリューション",
     "heroDescription": "個人およびビジネスの輸送ニーズに対応する高品質な車両を予約します。日常の通勤から特別なイベントまで、完璧なソリューションがあります。"
+  },
+  "portfolio": {
+    "heroTitle": "大切なお客様",
+    "heroDescription": "バングラデシュ全土の主要企業と満足のお客様から信頼されています。お客様のサービスに対する評価をご覧ください。",
+    "sectionTitle": "クライアントポートフォリオ",
+    "sectionDescription": "当社の輸送サービスに依存している信頼できるパートナーと大切なクライアントのポートフォリオをご覧ください。"
+  },
+  "vendor": {
+    "heroTitle": "パートナーになる",
+    "heroDescription": "プロのドライバーと車両所有者のネットワークに参加してください。OfficeXpressと共にビジネスチャンスを拡大し、成長するクライアントベースにサービスを提供します。",
+    "formTitle": "ベンダー登録フォーム",
+    "fullName": "氏名",
+    "fullNamePlaceholder": "お名前を入力してください",
+    "phoneNumber": "電話番号",
+    "vehicleMake": "車両メーカー",
+    "vehicleMakePlaceholder": "例：Toyota",
+    "vehicleModel": "車両モデル",
+    "vehicleModelPlaceholder": "例：Corolla",
+    "vehicleYear": "車両年式",
+    "vehicleYearPlaceholder": "例：2020",
+    "licensePlate": "ナンバープレート",
+    "licensePlatePlaceholder": "例：DHA-1234",
+    "vehicleCapacity": "車両定員（座席数）",
+    "vehicleType": "車両タイプ",
+    "selectVehicleType": "車両タイプを選択",
+    "vehicleType_sedan": "セダン",
+    "vehicleType_suv": "SUV",
+    "vehicleType_van": "バン",
+    "vehicleType_microbus": "マイクロバス",
+    "vehicleType_other": "その他",
+    "experience": "運転経験年数",
+    "experiencePlaceholder": "経験年数を入力",
+    "availability": "稼働可能時間",
+    "selectAvailability": "稼働可能時間を選択",
+    "availability_fullTime": "フルタイム",
+    "availability_partTime": "パートタイム",
+    "availability_weekends": "週末のみ",
+    "availability_other": "その他"
+  },
+  "contact": {
+    "heroTitle": "お問い合わせ",
+    "heroDescription": "サービスの予約をご希望またはご質問がありますか？今すぐお問い合わせいただき、お客様の輸送ニーズにどのように対応できるかご相談ください。",
+    "officeAddress": "事務所住所",
+    "phoneNumbers": "電話番号",
+    "emailAddress": "メールアドレス",
+    "businessHours": "営業時間",
+    "mondayToFriday": "月曜日 - 金曜日",
+    "saturday": "土曜日",
+    "sunday": "日曜日",
+    "closed": "休業",
+    "contactFormTitle": "メッセージを送る",
+    "message": "メッセージ",
+    "messagePlaceholder": "メッセージを入力してください"
+  },
+  "blog": {
+    "heroTitle": "最新ニュースと洞察",
+    "heroDescription": "バングラデシュの輸送業界から最新のニュース、ヒント、洞察をお届けします。",
+    "readMore": "続きを読む",
+    "backToBlog": "ブログに戻る",
+    "publishedOn": "公開日",
+    "author": "著者",
+    "noPostsFound": "ブログ記事が見つかりません。"
   }
 }

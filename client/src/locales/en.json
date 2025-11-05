@@ -138,5 +138,67 @@
   "rentalPage": {
     "heroTitle": "Reliable Transportation Solutions",
     "heroDescription": "Book quality vehicles for your personal and business transportation needs. From daily commutes to special events, we have the perfect solution."
+  },
+  "portfolio": {
+    "heroTitle": "Our Valued Clients",
+    "heroDescription": "Trusted by leading companies and satisfied customers across Bangladesh. See what our clients say about our services.",
+    "sectionTitle": "Client Portfolio",
+    "sectionDescription": "Browse through our portfolio of trusted partners and valued clients who rely on our transportation services."
+  },
+  "vendor": {
+    "heroTitle": "Partner With Us",
+    "heroDescription": "Join our network of professional drivers and vehicle owners. Expand your business opportunities with OfficeXpress and serve our growing client base.",
+    "formTitle": "Vendor Registration Form",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Enter your full name",
+    "phoneNumber": "Phone Number",
+    "vehicleMake": "Vehicle Make",
+    "vehicleMakePlaceholder": "e.g., Toyota",
+    "vehicleModel": "Vehicle Model",
+    "vehicleModelPlaceholder": "e.g., Corolla",
+    "vehicleYear": "Vehicle Year",
+    "vehicleYearPlaceholder": "e.g., 2020",
+    "licensePlate": "License Plate Number",
+    "licensePlatePlaceholder": "e.g., DHA-1234",
+    "vehicleCapacity": "Vehicle Capacity (Seats)",
+    "vehicleType": "Vehicle Type",
+    "selectVehicleType": "Select vehicle type",
+    "vehicleType_sedan": "Sedan",
+    "vehicleType_suv": "SUV",
+    "vehicleType_van": "Van",
+    "vehicleType_microbus": "Microbus",
+    "vehicleType_other": "Other",
+    "experience": "Years of Driving Experience",
+    "experiencePlaceholder": "Enter years of experience",
+    "availability": "Availability",
+    "selectAvailability": "Select availability",
+    "availability_fullTime": "Full Time",
+    "availability_partTime": "Part Time",
+    "availability_weekends": "Weekends Only",
+    "availability_other": "Other"
+  },
+  "contact": {
+    "heroTitle": "Get in Touch",
+    "heroDescription": "Ready to book our services or have questions? Contact us today and let's discuss how we can meet your transportation needs.",
+    "officeAddress": "Office Address",
+    "phoneNumbers": "Phone Numbers",
+    "emailAddress": "Email Address",
+    "businessHours": "Business Hours",
+    "mondayToFriday": "Monday - Friday",
+    "saturday": "Saturday",
+    "sunday": "Sunday",
+    "closed": "Closed",
+    "contactFormTitle": "Send Us a Message",
+    "message": "Message",
+    "messagePlaceholder": "Enter your message"
+  },
+  "blog": {
+    "heroTitle": "Latest News & Insights",
+    "heroDescription": "Stay updated with the latest news, tips, and insights from the transportation industry in Bangladesh.",
+    "readMore": "Read More",
+    "backToBlog": "Back to Blog",
+    "publishedOn": "Published on",
+    "author": "Author",
+    "noPostsFound": "No blog posts found."
   }
 }

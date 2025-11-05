@@ -138,5 +138,67 @@
   "rentalPage": {
     "heroTitle": "নির্ভরযোগ্য পরিবহন সমাধান",
     "heroDescription": "আপনার ব্যক্তিগত এবং ব্যবসায়িক পরিবহন প্রয়োজনের জন্য মানসম্পন্ন গাড়ি বুক করুন। দৈনিক যাতায়াত থেকে বিশেষ ইভেন্ট পর্যন্ত, আমাদের কাছে নিখুঁত সমাধান রয়েছে।"
+  },
+  "portfolio": {
+    "heroTitle": "আমাদের মূল্যবান ক্লায়েন্ট",
+    "heroDescription": "বাংলাদেশ জুড়ে শীর্ষস্থানীয় কোম্পানি এবং সন্তুষ্ট গ্রাহকদের দ্বারা বিশ্বস্ত। আমাদের সেবা সম্পর্কে আমাদের ক্লায়েন্টরা কী বলে তা দেখুন।",
+    "sectionTitle": "ক্লায়েন্ট পোর্টফোলিও",
+    "sectionDescription": "আমাদের পরিবহন সেবার উপর নির্ভর করে এমন বিশ্বস্ত অংশীদার এবং মূল্যবান ক্লায়েন্টদের পোর্টফোলিও ব্রাউজ করুন।"
+  },
+  "vendor": {
+    "heroTitle": "আমাদের সাথে অংশীদার হন",
+    "heroDescription": "আমাদের পেশাদার চালক এবং গাড়ির মালিকদের নেটওয়ার্কে যোগ দিন। OfficeXpress এর সাথে আপনার ব্যবসায়িক সুযোগ প্রসারিত করুন এবং আমাদের ক্রমবর্ধমান ক্লায়েন্ট বেসের সেবা করুন।",
+    "formTitle": "ভেন্ডর রেজিস্ট্রেশন ফর্ম",
+    "fullName": "পূর্ণ নাম",
+    "fullNamePlaceholder": "আপনার পূর্ণ নাম লিখুন",
+    "phoneNumber": "ফোন নম্বর",
+    "vehicleMake": "গাড়ির ব্র্যান্ড",
+    "vehicleMakePlaceholder": "যেমন, Toyota",
+    "vehicleModel": "গাড়ির মডেল",
+    "vehicleModelPlaceholder": "যেমন, Corolla",
+    "vehicleYear": "গাড়ির বছর",
+    "vehicleYearPlaceholder": "যেমন, 2020",
+    "licensePlate": "লাইসেন্স প্লেট নম্বর",
+    "licensePlatePlaceholder": "যেমন, DHA-1234",
+    "vehicleCapacity": "গাড়ির ধারণক্ষমতা (সিট)",
+    "vehicleType": "গাড়ির ধরন",
+    "selectVehicleType": "গাড়ির ধরন নির্বাচন করুন",
+    "vehicleType_sedan": "সেডান",
+    "vehicleType_suv": "SUV",
+    "vehicleType_van": "ভ্যান",
+    "vehicleType_microbus": "মাইক্রোবাস",
+    "vehicleType_other": "অন্যান্য",
+    "experience": "ড্রাইভিং অভিজ্ঞতার বছর",
+    "experiencePlaceholder": "অভিজ্ঞতার বছর লিখুন",
+    "availability": "উপলব্ধতা",
+    "selectAvailability": "উপলব্ধতা নির্বাচন করুন",
+    "availability_fullTime": "পূর্ণ সময়",
+    "availability_partTime": "আংশিক সময়",
+    "availability_weekends": "শুধু সপ্তাহান্তে",
+    "availability_other": "অন্যান্য"
+  },
+  "contact": {
+    "heroTitle": "যোগাযোগ করুন",
+    "heroDescription": "আমাদের সেবা বুক করতে প্রস্তুত বা প্রশ্ন আছে? আজই আমাদের সাথে যোগাযোগ করুন এবং আসুন আলোচনা করি কীভাবে আমরা আপনার পরিবহন প্রয়োজন পূরণ করতে পারি।",
+    "officeAddress": "অফিস ঠিকানা",
+    "phoneNumbers": "ফোন নম্বর",
+    "emailAddress": "ইমেইল ঠিকানা",
+    "businessHours": "ব্যবসায়িক সময়",
+    "mondayToFriday": "সোমবার - শুক্রবার",
+    "saturday": "শনিবার",
+    "sunday": "রবিবার",
+    "closed": "বন্ধ",
+    "contactFormTitle": "আমাদের একটি বার্তা পাঠান",
+    "message": "বার্তা",
+    "messagePlaceholder": "আপনার বার্তা লিখুন"
+  },
+  "blog": {
+    "heroTitle": "সর্বশেষ সংবাদ এবং অন্তর্দৃষ্টি",
+    "heroDescription": "বাংলাদেশে পরিবহন শিল্পের সর্বশেষ সংবাদ, টিপস এবং অন্তর্দৃষ্টি দিয়ে আপডেট থাকুন।",
+    "readMore": "আরও পড়ুন",
+    "backToBlog": "ব্লগে ফিরে যান",
+    "publishedOn": "প্রকাশিত",
+    "author": "লেখক",
+    "noPostsFound": "কোনো ব্লগ পোস্ট পাওয়া যায়নি।"
   }
 }
