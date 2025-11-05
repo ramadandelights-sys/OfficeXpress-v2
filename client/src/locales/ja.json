@@ -142,8 +142,17 @@
   "portfolio": {
     "heroTitle": "大切なお客様",
     "heroDescription": "バングラデシュ全土の主要企業と満足のお客様から信頼されています。お客様のサービスに対する評価をご覧ください。",
+    "loading": "ポートフォリオを読み込んでいます...",
     "sectionTitle": "クライアントポートフォリオ",
-    "sectionDescription": "当社の輸送サービスに依存している信頼できるパートナーと大切なクライアントのポートフォリオをご覧ください。"
+    "sectionDescription": "当社の輸送サービスに依存している信頼できるパートナーと大切なクライアントのポートフォリオをご覧ください。",
+    "emptyTitle": "ポートフォリオアイテムはまだありません",
+    "emptyDescription": "ポートフォリオは更新中です。もうしばらくお待ちください。",
+    "testimonialsTitle": "お客様の声",
+    "testimonialsDescription": "当社の輸送サービスを信頼する満足のお客様からの本物のフィードバック。",
+    "clientRepresentative": "クライアント代表",
+    "joinTitle": "ポートフォリオに参加する準備はできましたか？",
+    "joinDescription": "今すぐOfficeXpressと共に旅を始め、信頼できるプロフェッショナルな輸送サービスを体験してください。",
+    "getStarted": "始める"
   },
   "vendor": {
     "heroTitle": "パートナーになる",

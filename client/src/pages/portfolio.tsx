@@ -20,7 +20,7 @@ export default function Portfolio() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-brand-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading portfolio...</p>
+          <p className="text-muted-foreground">{t('portfolio.loading')}</p>
         </div>
       </div>
     );
@@ -57,8 +57,8 @@ export default function Portfolio() {
               <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center mx-auto mb-4">
                 <span className="text-2xl">📁</span>
               </div>
-              <h3 className="text-xl font-semibold text-card-foreground mb-2">No Portfolio Items Yet</h3>
-              <p className="text-muted-foreground">Our portfolio is being updated. Please check back soon.</p>
+              <h3 className="text-xl font-semibold text-card-foreground mb-2">{t('portfolio.emptyTitle')}</h3>
+              <p className="text-muted-foreground">{t('portfolio.emptyDescription')}</p>
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
@@ -75,9 +75,9 @@ export default function Portfolio() {
         <section className="py-16 bg-muted">
           <div className="container mx-auto px-4">
             <div className="text-center mb-12">
-              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">What Our Clients Say</h2>
+              <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">{t('portfolio.testimonialsTitle')}</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Real feedback from our satisfied customers who trust us with their transportation needs.
+                {t('portfolio.testimonialsDescription')}
               </p>
             </div>
 
@@ -102,7 +102,7 @@ export default function Portfolio() {
                       />
                       <div>
                         <div className="font-semibold text-card-foreground">
-                          {client.clientRepresentative || "Client Representative"}
+                          {client.clientRepresentative || t('portfolio.clientRepresentative')}
                         </div>
                         <div className="text-sm text-muted-foreground">
                           {client.position || client.name}
@@ -122,10 +122,10 @@ export default function Portfolio() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">
-              Ready to Join Our Portfolio?
+              {t('portfolio.joinTitle')}
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Experience the same level of professional transportation service that our clients trust every day.
+              {t('portfolio.joinDescription')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -133,7 +133,7 @@ export default function Portfolio() {
                 asChild
                 data-testid="cta-corporate"
               >
-                <Link href="/corporate">Corporate Services</Link>
+                <Link href="/corporate">{t('nav.corporate')}</Link>
               </Button>
               <Button 
                 variant="outline"
@@ -141,7 +141,7 @@ export default function Portfolio() {
                 asChild
                 data-testid="cta-rental"
               >
-                <Link href="/rental">Rental Services</Link>
+                <Link href="/rental">{t('nav.rental')}</Link>
               </Button>
             </div>
           </div>

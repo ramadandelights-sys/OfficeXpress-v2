@@ -142,8 +142,17 @@
   "portfolio": {
     "heroTitle": "我们尊贵的客户",
     "heroDescription": "受孟加拉国领先公司和满意客户的信赖。看看我们的客户对我们服务的评价。",
+    "loading": "正在加载作品集...",
     "sectionTitle": "客户案例",
-    "sectionDescription": "浏览我们信赖的合作伙伴和依赖我们交通服务的重要客户的作品集。"
+    "sectionDescription": "浏览我们信赖的合作伙伴和依赖我们交通服务的重要客户的作品集。",
+    "emptyTitle": "暂无作品集项目",
+    "emptyDescription": "我们的作品集正在更新中。请稍后查看。",
+    "testimonialsTitle": "客户评价",
+    "testimonialsDescription": "信赖我们交通服务的满意客户的真实反馈。",
+    "clientRepresentative": "客户代表",
+    "joinTitle": "准备加入我们的作品集？",
+    "joinDescription": "今天就开始您与OfficeXpress的旅程，体验可靠、专业的交通服务。",
+    "getStarted": "开始使用"
   },
   "vendor": {
     "heroTitle": "与我们合作",

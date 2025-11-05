@@ -142,8 +142,17 @@
   "portfolio": {
     "heroTitle": "Our Valued Clients",
     "heroDescription": "Trusted by leading companies and satisfied customers across Bangladesh. See what our clients say about our services.",
+    "loading": "Loading portfolio...",
     "sectionTitle": "Client Portfolio",
-    "sectionDescription": "Browse through our portfolio of trusted partners and valued clients who rely on our transportation services."
+    "sectionDescription": "Browse through our portfolio of trusted partners and valued clients who rely on our transportation services.",
+    "emptyTitle": "No Portfolio Items Yet",
+    "emptyDescription": "Our portfolio is being updated. Please check back soon.",
+    "testimonialsTitle": "What Our Clients Say",
+    "testimonialsDescription": "Real feedback from our satisfied customers who trust us with their transportation needs.",
+    "clientRepresentative": "Client Representative",
+    "joinTitle": "Ready to Join Our Portfolio?",
+    "joinDescription": "Start your journey with OfficeXpress today and experience reliable, professional transportation services.",
+    "getStarted": "Get Started"
   },
   "vendor": {
     "heroTitle": "Partner With Us",
