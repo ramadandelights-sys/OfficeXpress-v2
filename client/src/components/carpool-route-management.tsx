@@ -707,6 +707,22 @@ function TimeSlotDialog({
     },
   });
 
+  // Reset form with routeId when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        routeId,
+        departureTime: '',
+        isActive: true,
+      });
+    }
+  }, [open, routeId, form]);
+
+  const handleSubmit = (data: z.infer<typeof insertCarpoolTimeSlotSchema>) => {
+    // Ensure routeId is included in the submission
+    onSubmit({ ...data, routeId });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -717,7 +733,7 @@ function TimeSlotDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="departureTime"
