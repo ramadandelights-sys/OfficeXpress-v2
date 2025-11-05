@@ -47,7 +47,8 @@ import {
   insertCarpoolTimeSlotSchema,
   insertCarpoolBookingSchema,
   updateCarpoolBookingSchema,
-  type UserPermissions
+  type UserPermissions,
+  type CarpoolPickupPoint
 } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
