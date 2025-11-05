@@ -16,6 +16,10 @@ import {
   notifications,
   submissionStatusHistory,
   surveys,
+  carpoolRoutes,
+  carpoolPickupPoints,
+  carpoolTimeSlots,
+  carpoolBookings,
   type User, 
   type InsertUser,
   type Driver,
@@ -55,7 +59,17 @@ import {
   type SubmissionStatusHistory,
   type InsertSubmissionStatusHistory,
   type Survey,
-  type InsertSurvey
+  type InsertSurvey,
+  type CarpoolRoute,
+  type InsertCarpoolRoute,
+  type UpdateCarpoolRoute,
+  type CarpoolPickupPoint,
+  type InsertCarpoolPickupPoint,
+  type CarpoolTimeSlot,
+  type InsertCarpoolTimeSlot,
+  type CarpoolBooking,
+  type InsertCarpoolBooking,
+  type UpdateCarpoolBooking
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
@@ -189,6 +203,40 @@ export interface IStorage {
   getSurveyByToken(token: string): Promise<Survey | undefined>;
   getSurveyByReferenceId(referenceId: string): Promise<Survey | undefined>;
   updateSurveyResponse(token: string, npsScore: number, feedback?: string): Promise<Survey>;
+  
+  // Carpool route operations
+  getCarpoolRoutes(): Promise<CarpoolRoute[]>;
+  getActiveCarpoolRoutes(): Promise<CarpoolRoute[]>;
+  getCarpoolRoute(id: string): Promise<CarpoolRoute | undefined>;
+  createCarpoolRoute(route: InsertCarpoolRoute): Promise<CarpoolRoute>;
+  updateCarpoolRoute(route: UpdateCarpoolRoute): Promise<CarpoolRoute>;
+  deleteCarpoolRoute(id: string): Promise<void>;
+  
+  // Carpool pickup point operations
+  getCarpoolPickupPoints(routeId: string): Promise<CarpoolPickupPoint[]>;
+  getCarpoolPickupPoint(id: string): Promise<CarpoolPickupPoint | undefined>;
+  createCarpoolPickupPoint(pickupPoint: InsertCarpoolPickupPoint): Promise<CarpoolPickupPoint>;
+  updateCarpoolPickupPoint(id: string, data: Partial<Omit<CarpoolPickupPoint, 'id' | 'createdAt'>>): Promise<CarpoolPickupPoint>;
+  deleteCarpoolPickupPoint(id: string): Promise<void>;
+  
+  // Carpool time slot operations
+  getCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]>;
+  getActiveCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]>;
+  getCarpoolTimeSlot(id: string): Promise<CarpoolTimeSlot | undefined>;
+  createCarpoolTimeSlot(timeSlot: InsertCarpoolTimeSlot): Promise<CarpoolTimeSlot>;
+  updateCarpoolTimeSlot(id: string, data: Partial<Omit<CarpoolTimeSlot, 'id' | 'createdAt'>>): Promise<CarpoolTimeSlot>;
+  deleteCarpoolTimeSlot(id: string): Promise<void>;
+  
+  // Carpool booking operations
+  getCarpoolBookings(): Promise<CarpoolBooking[]>;
+  getCarpoolBooking(id: string): Promise<CarpoolBooking | undefined>;
+  getCarpoolBookingsByUser(userId: string): Promise<CarpoolBooking[]>;
+  getCarpoolBookingsByPhone(phone: string): Promise<CarpoolBooking[]>;
+  getCarpoolBookingsByRouteAndDate(routeId: string, timeSlotId: string, travelDate: string): Promise<CarpoolBooking[]>;
+  createCarpoolBooking(booking: InsertCarpoolBooking): Promise<CarpoolBooking>;
+  updateCarpoolBooking(booking: UpdateCarpoolBooking): Promise<CarpoolBooking>;
+  assignDriverToCarpool(bookingId: string, driverId: string): Promise<CarpoolBooking>;
+  updateCarpoolBookingStatus(id: string, status: string): Promise<CarpoolBooking>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1035,6 +1083,236 @@ export class DatabaseStorage implements IStorage {
       .where(eq(surveys.token, token))
       .returning();
     return updatedSurvey;
+  }
+
+  // Carpool route operations
+  async getCarpoolRoutes(): Promise<CarpoolRoute[]> {
+    return await db.select().from(carpoolRoutes).orderBy(carpoolRoutes.name);
+  }
+
+  async getActiveCarpoolRoutes(): Promise<CarpoolRoute[]> {
+    return await db
+      .select()
+      .from(carpoolRoutes)
+      .where(eq(carpoolRoutes.isActive, true))
+      .orderBy(carpoolRoutes.name);
+  }
+
+  async getCarpoolRoute(id: string): Promise<CarpoolRoute | undefined> {
+    const [route] = await db
+      .select()
+      .from(carpoolRoutes)
+      .where(eq(carpoolRoutes.id, id));
+    return route || undefined;
+  }
+
+  async createCarpoolRoute(route: InsertCarpoolRoute): Promise<CarpoolRoute> {
+    const [created] = await db
+      .insert(carpoolRoutes)
+      .values(route)
+      .returning();
+    return created;
+  }
+
+  async updateCarpoolRoute(route: UpdateCarpoolRoute): Promise<CarpoolRoute> {
+    if (!route.id) throw new Error('Route ID is required');
+    const [updated] = await db
+      .update(carpoolRoutes)
+      .set({ ...route, updatedAt: new Date() })
+      .where(eq(carpoolRoutes.id, route.id))
+      .returning();
+    if (!updated) throw new Error('Route not found');
+    return updated;
+  }
+
+  async deleteCarpoolRoute(id: string): Promise<void> {
+    await db.delete(carpoolRoutes).where(eq(carpoolRoutes.id, id));
+  }
+
+  // Carpool pickup point operations
+  async getCarpoolPickupPoints(routeId: string): Promise<CarpoolPickupPoint[]> {
+    return await db
+      .select()
+      .from(carpoolPickupPoints)
+      .where(eq(carpoolPickupPoints.routeId, routeId))
+      .orderBy(carpoolPickupPoints.sequenceOrder);
+  }
+
+  async getCarpoolPickupPoint(id: string): Promise<CarpoolPickupPoint | undefined> {
+    const [point] = await db
+      .select()
+      .from(carpoolPickupPoints)
+      .where(eq(carpoolPickupPoints.id, id));
+    return point || undefined;
+  }
+
+  async createCarpoolPickupPoint(pickupPoint: InsertCarpoolPickupPoint): Promise<CarpoolPickupPoint> {
+    const [created] = await db
+      .insert(carpoolPickupPoints)
+      .values(pickupPoint)
+      .returning();
+    return created;
+  }
+
+  async updateCarpoolPickupPoint(id: string, data: Partial<Omit<CarpoolPickupPoint, 'id' | 'createdAt'>>): Promise<CarpoolPickupPoint> {
+    const [updated] = await db
+      .update(carpoolPickupPoints)
+      .set(data)
+      .where(eq(carpoolPickupPoints.id, id))
+      .returning();
+    if (!updated) throw new Error('Pickup point not found');
+    return updated;
+  }
+
+  async deleteCarpoolPickupPoint(id: string): Promise<void> {
+    await db.delete(carpoolPickupPoints).where(eq(carpoolPickupPoints.id, id));
+  }
+
+  // Carpool time slot operations
+  async getCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]> {
+    return await db
+      .select()
+      .from(carpoolTimeSlots)
+      .where(eq(carpoolTimeSlots.routeId, routeId))
+      .orderBy(carpoolTimeSlots.departureTime);
+  }
+
+  async getActiveCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]> {
+    return await db
+      .select()
+      .from(carpoolTimeSlots)
+      .where(and(
+        eq(carpoolTimeSlots.routeId, routeId),
+        eq(carpoolTimeSlots.isActive, true)
+      ))
+      .orderBy(carpoolTimeSlots.departureTime);
+  }
+
+  async getCarpoolTimeSlot(id: string): Promise<CarpoolTimeSlot | undefined> {
+    const [slot] = await db
+      .select()
+      .from(carpoolTimeSlots)
+      .where(eq(carpoolTimeSlots.id, id));
+    return slot || undefined;
+  }
+
+  async createCarpoolTimeSlot(timeSlot: InsertCarpoolTimeSlot): Promise<CarpoolTimeSlot> {
+    const [created] = await db
+      .insert(carpoolTimeSlots)
+      .values(timeSlot)
+      .returning();
+    return created;
+  }
+
+  async updateCarpoolTimeSlot(id: string, data: Partial<Omit<CarpoolTimeSlot, 'id' | 'createdAt'>>): Promise<CarpoolTimeSlot> {
+    const [updated] = await db
+      .update(carpoolTimeSlots)
+      .set(data)
+      .where(eq(carpoolTimeSlots.id, id))
+      .returning();
+    if (!updated) throw new Error('Time slot not found');
+    return updated;
+  }
+
+  async deleteCarpoolTimeSlot(id: string): Promise<void> {
+    await db.delete(carpoolTimeSlots).where(eq(carpoolTimeSlots.id, id));
+  }
+
+  // Carpool booking operations
+  async getCarpoolBookings(): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .orderBy(desc(carpoolBookings.createdAt));
+  }
+
+  async getCarpoolBooking(id: string): Promise<CarpoolBooking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(carpoolBookings)
+      .where(eq(carpoolBookings.id, id));
+    return booking || undefined;
+  }
+
+  async getCarpoolBookingsByUser(userId: string): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .where(eq(carpoolBookings.userId, userId))
+      .orderBy(desc(carpoolBookings.createdAt));
+  }
+
+  async getCarpoolBookingsByPhone(phone: string): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .where(eq(carpoolBookings.phone, phone))
+      .orderBy(desc(carpoolBookings.createdAt));
+  }
+
+  async getCarpoolBookingsByRouteAndDate(routeId: string, timeSlotId: string, travelDate: string): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .where(and(
+        eq(carpoolBookings.routeId, routeId),
+        eq(carpoolBookings.timeSlotId, timeSlotId),
+        eq(carpoolBookings.travelDate, travelDate)
+      ))
+      .orderBy(desc(carpoolBookings.createdAt));
+  }
+
+  async createCarpoolBooking(booking: InsertCarpoolBooking): Promise<CarpoolBooking> {
+    // Generate a unique 6-character reference ID
+    const referenceId = Math.random().toString(36).substring(2, 8).toUpperCase();
+    
+    const [created] = await db
+      .insert(carpoolBookings)
+      .values({
+        ...booking,
+        referenceId,
+        status: 'pending'
+      })
+      .returning();
+    return created;
+  }
+
+  async updateCarpoolBooking(booking: UpdateCarpoolBooking): Promise<CarpoolBooking> {
+    if (!booking.id) throw new Error('Booking ID is required');
+    const [updated] = await db
+      .update(carpoolBookings)
+      .set(booking)
+      .where(eq(carpoolBookings.id, booking.id))
+      .returning();
+    if (!updated) throw new Error('Booking not found');
+    return updated;
+  }
+
+  async assignDriverToCarpool(bookingId: string, driverId: string): Promise<CarpoolBooking> {
+    const [updated] = await db
+      .update(carpoolBookings)
+      .set({ 
+        driverId, 
+        status: 'confirmed',
+        statusUpdatedAt: new Date()
+      })
+      .where(eq(carpoolBookings.id, bookingId))
+      .returning();
+    if (!updated) throw new Error('Booking not found');
+    return updated;
+  }
+
+  async updateCarpoolBookingStatus(id: string, status: string): Promise<CarpoolBooking> {
+    const [updated] = await db
+      .update(carpoolBookings)
+      .set({ 
+        status,
+        statusUpdatedAt: new Date()
+      })
+      .where(eq(carpoolBookings.id, id))
+      .returning();
+    if (!updated) throw new Error('Booking not found');
+    return updated;
   }
 }
 

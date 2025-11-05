@@ -41,6 +41,12 @@ import {
   updateDriverSchema,
   updateRentalBookingSchema,
   updateCorporateBookingSchema,
+  insertCarpoolRouteSchema,
+  updateCarpoolRouteSchema,
+  insertCarpoolPickupPointSchema,
+  insertCarpoolTimeSlotSchema,
+  insertCarpoolBookingSchema,
+  updateCarpoolBookingSchema,
   type UserPermissions
 } from "@shared/schema";
 import { z } from "zod";
@@ -1820,6 +1826,308 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(bookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch rental bookings" });
+    }
+  });
+
+  // Carpool routes management routes
+  // Get all carpool routes (public - for customers to see available routes)
+  app.get("/api/carpool/routes", async (req, res) => {
+    try {
+      const routes = await storage.getActiveCarpoolRoutes();
+      res.json(routes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch carpool routes" });
+    }
+  });
+
+  // Get single carpool route (public)
+  app.get("/api/carpool/routes/:id", async (req, res) => {
+    try {
+      const route = await storage.getCarpoolRoute(req.params.id);
+      if (!route) {
+        return res.status(404).json({ message: "Route not found" });
+      }
+      res.json(route);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch route" });
+    }
+  });
+
+  // Get pickup points for a route (public)
+  app.get("/api/carpool/routes/:id/pickup-points", async (req, res) => {
+    try {
+      const points = await storage.getCarpoolPickupPoints(req.params.id);
+      res.json(points);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch pickup points" });
+    }
+  });
+
+  // Get time slots for a route (public)
+  app.get("/api/carpool/routes/:id/time-slots", async (req, res) => {
+    try {
+      const slots = await storage.getActiveCarpoolTimeSlots(req.params.id);
+      res.json(slots);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch time slots" });
+    }
+  });
+
+  // Admin: Get all routes (including inactive)
+  app.get("/api/admin/carpool/routes", hasPermission('carpoolRouteManagement', 'view'), async (req, res) => {
+    try {
+      const routes = await storage.getCarpoolRoutes();
+      res.json(routes);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch routes" });
+    }
+  });
+
+  // Admin: Create carpool route
+  app.post("/api/admin/carpool/routes", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const routeData = insertCarpoolRouteSchema.parse(req.body);
+      const route = await storage.createCarpoolRoute(routeData);
+      res.json(route);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid route data", errors: error.errors });
+      } else {
+        console.error("Create route error:", error);
+        res.status(500).json({ message: "Failed to create route" });
+      }
+    }
+  });
+
+  // Admin: Update carpool route
+  app.put("/api/admin/carpool/routes/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const routeData = updateCarpoolRouteSchema.parse({ ...req.body, id: req.params.id });
+      const route = await storage.updateCarpoolRoute(routeData);
+      res.json(route);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid route data", errors: error.errors });
+      } else {
+        console.error("Update route error:", error);
+        res.status(500).json({ message: "Failed to update route" });
+      }
+    }
+  });
+
+  // Admin: Delete carpool route
+  app.delete("/api/admin/carpool/routes/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      await storage.deleteCarpoolRoute(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete route error:", error);
+      res.status(500).json({ message: "Failed to delete route" });
+    }
+  });
+
+  // Admin: Get all pickup points for a route
+  app.get("/api/admin/carpool/routes/:id/pickup-points", hasPermission('carpoolRouteManagement', 'view'), async (req, res) => {
+    try {
+      const points = await storage.getCarpoolPickupPoints(req.params.id);
+      res.json(points);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch pickup points" });
+    }
+  });
+
+  // Admin: Create pickup point
+  app.post("/api/admin/carpool/pickup-points", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const pointData = insertCarpoolPickupPointSchema.parse(req.body);
+      const point = await storage.createCarpoolPickupPoint(pointData);
+      res.json(point);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid pickup point data", errors: error.errors });
+      } else {
+        console.error("Create pickup point error:", error);
+        res.status(500).json({ message: "Failed to create pickup point" });
+      }
+    }
+  });
+
+  // Admin: Update pickup point
+  app.put("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const point = await storage.updateCarpoolPickupPoint(req.params.id, req.body);
+      res.json(point);
+    } catch (error) {
+      console.error("Update pickup point error:", error);
+      res.status(500).json({ message: "Failed to update pickup point" });
+    }
+  });
+
+  // Admin: Delete pickup point
+  app.delete("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      await storage.deleteCarpoolPickupPoint(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete pickup point error:", error);
+      res.status(500).json({ message: "Failed to delete pickup point" });
+    }
+  });
+
+  // Admin: Get all time slots for a route
+  app.get("/api/admin/carpool/routes/:id/time-slots", hasPermission('carpoolRouteManagement', 'view'), async (req, res) => {
+    try {
+      const slots = await storage.getCarpoolTimeSlots(req.params.id);
+      res.json(slots);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch time slots" });
+    }
+  });
+
+  // Admin: Create time slot
+  app.post("/api/admin/carpool/time-slots", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const slotData = insertCarpoolTimeSlotSchema.parse(req.body);
+      const slot = await storage.createCarpoolTimeSlot(slotData);
+      res.json(slot);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid time slot data", errors: error.errors });
+      } else {
+        console.error("Create time slot error:", error);
+        res.status(500).json({ message: "Failed to create time slot" });
+      }
+    }
+  });
+
+  // Admin: Update time slot
+  app.put("/api/admin/carpool/time-slots/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const slot = await storage.updateCarpoolTimeSlot(req.params.id, req.body);
+      res.json(slot);
+    } catch (error) {
+      console.error("Update time slot error:", error);
+      res.status(500).json({ message: "Failed to update time slot" });
+    }
+  });
+
+  // Admin: Delete time slot
+  app.delete("/api/admin/carpool/time-slots/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      await storage.deleteCarpoolTimeSlot(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete time slot error:", error);
+      res.status(500).json({ message: "Failed to delete time slot" });
+    }
+  });
+
+  // Carpool booking routes
+  // Create carpool booking (public)
+  app.post("/api/carpool/bookings", async (req, res) => {
+    try {
+      const bookingData = insertCarpoolBookingSchema.parse(req.body);
+      const booking = await storage.createCarpoolBooking(bookingData);
+      
+      // TODO: Send booking confirmation email
+      
+      res.json(booking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid booking data", errors: error.errors });
+      } else {
+        console.error("Create carpool booking error:", error);
+        res.status(500).json({ message: "Failed to create booking" });
+      }
+    }
+  });
+
+  // Customer: Get own carpool bookings
+  app.get("/api/my/carpool-bookings", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const user = await storage.getUser(req.session.userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const bookings = await storage.getCarpoolBookingsByPhone(user.phone);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Get customer carpool bookings error:", error);
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin: Get all carpool bookings
+  app.get("/api/admin/carpool/bookings", hasPermission('carpoolBookings', 'view'), async (req, res) => {
+    try {
+      const bookings = await storage.getCarpoolBookings();
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin: Get bookings for specific route and date
+  app.get("/api/admin/carpool/bookings/by-route", hasPermission('carpoolBookings', 'view'), async (req, res) => {
+    try {
+      const { routeId, timeSlotId, travelDate } = req.query;
+      if (!routeId || !timeSlotId || !travelDate) {
+        return res.status(400).json({ message: "routeId, timeSlotId, and travelDate are required" });
+      }
+      const bookings = await storage.getCarpoolBookingsByRouteAndDate(
+        routeId as string,
+        timeSlotId as string,
+        travelDate as string
+      );
+      res.json(bookings);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin: Assign driver to carpool booking
+  app.put("/api/admin/carpool/bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { driverId } = req.body;
+      if (!driverId) {
+        return res.status(400).json({ message: "Driver ID is required" });
+      }
+      const booking = await storage.assignDriverToCarpool(req.params.id, driverId);
+      res.json(booking);
+    } catch (error) {
+      console.error("Assign driver error:", error);
+      res.status(500).json({ message: "Failed to assign driver" });
+    }
+  });
+
+  // Admin: Update carpool booking status
+  app.put("/api/admin/carpool/bookings/:id/status", hasPermission('carpoolBookings', 'edit'), async (req, res) => {
+    try {
+      const { status } = req.body;
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      const booking = await storage.updateCarpoolBookingStatus(req.params.id, status);
+      res.json(booking);
+    } catch (error) {
+      console.error("Update booking status error:", error);
+      res.status(500).json({ message: "Failed to update booking status" });
+    }
+  });
+
+  // Admin: Update carpool booking
+  app.put("/api/admin/carpool/bookings/:id", hasPermission('carpoolBookings', 'edit'), async (req, res) => {
+    try {
+      const bookingData = updateCarpoolBookingSchema.parse({ ...req.body, id: req.params.id });
+      const booking = await storage.updateCarpoolBooking(bookingData);
+      res.json(booking);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid booking data", errors: error.errors });
+      } else {
+        console.error("Update booking error:", error);
+        res.status(500).json({ message: "Failed to update booking" });
+      }
     }
   });
 

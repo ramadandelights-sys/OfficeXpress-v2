@@ -378,6 +378,9 @@ export const notifications = pgTable("notifications", {
 export const carpoolRoutes = pgTable("carpool_routes", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  fromLocation: text("from_location").notNull(),
+  toLocation: text("to_location").notNull(),
+  estimatedDistance: text("estimated_distance").notNull(),
   description: text("description"),
   pricePerSeat: numeric("price_per_seat", { precision: 10, scale: 2 }).notNull(),
   isActive: boolean("is_active").default(true),

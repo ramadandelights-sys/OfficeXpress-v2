@@ -8,6 +8,8 @@ import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
 import { MarketingSettingsForm, MarketingSettingsDisplay } from "@/components/marketing-settings";
 import { WebsiteSettingsForm, WebsiteSettingsDisplay } from "@/components/website-settings";
+import CarpoolRouteManagement from "@/components/carpool-route-management";
+import CarpoolBookingManagement from "@/components/carpool-booking-management";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -1115,6 +1117,20 @@ function AdminDashboard({ user }: { user: any }) {
             updateDriverMutation={updateDriverMutation}
             deleteDriverMutation={deleteDriverMutation}
           />
+        )}
+
+        {/* Carpool Route Management */}
+        {(hasPermission('carpoolRouteManagement', 'view')) && (
+          <div className="mb-8">
+            <CarpoolRouteManagement />
+          </div>
+        )}
+
+        {/* Carpool Booking Management */}
+        {(hasPermission('carpoolBookings', 'view')) && (
+          <div className="mb-8">
+            <CarpoolBookingManagement showDriverAssignment={hasPermission('driverAssignment')} />
+          </div>
         )}
 
         {/* Legal Pages Management */}
