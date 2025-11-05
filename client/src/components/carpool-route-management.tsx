@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -612,6 +612,24 @@ function PickupPointDialog({
     },
   });
 
+  // Reset form with routeId when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        routeId,
+        name: '',
+        sequenceOrder: 1,
+        latitude: null,
+        longitude: null,
+      });
+    }
+  }, [open, routeId, form]);
+
+  const handleSubmit = (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
+    // Ensure routeId is included in the submission
+    onSubmit({ ...data, routeId });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
@@ -622,7 +640,7 @@ function PickupPointDialog({
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
             <FormField
               control={form.control}
               name="name"
