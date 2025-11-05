@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Search, Menu, X, User, LogOut, Settings } from "lucide-react";
+import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
@@ -9,6 +9,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function Header() {
   const [location, navigate] = useLocation();
@@ -28,12 +34,16 @@ export default function Header() {
 
   const navigation = [
     { name: t('nav.home'), href: "/" },
-    { name: t('nav.about'), href: "/about" },
     { name: t('nav.corporate'), href: "/corporate" },
     { name: t('nav.rental'), href: "/rental" },
-    { name: t('nav.portfolio'), href: "/portfolio" },
+    { name: t('nav.carpool'), href: "/carpool" },
     { name: t('nav.vendors'), href: "/vendor" },
     { name: t('nav.contact'), href: "/contact" },
+  ];
+
+  const moreAboutItems = [
+    { name: t('nav.about'), href: "/about" },
+    { name: t('nav.portfolio'), href: "/portfolio" },
     { name: t('nav.blog'), href: "/blog" },
   ];
 
@@ -44,6 +54,7 @@ export default function Header() {
       items: [
         { name: t('nav.corporate'), href: "/corporate" },
         { name: t('nav.rental'), href: "/rental" },
+        { name: t('nav.carpool'), href: "/carpool" },
       ]
     },
     {
@@ -113,6 +124,39 @@ export default function Header() {
                 {item.name}
               </Link>
             ))}
+            
+            {/* More About OfficeXpress Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                    isActive("/about") || isActive("/portfolio") || isActive("/blog")
+                      ? "bg-brand-primary text-primary-foreground"
+                      : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                  }`}
+                  data-testid="nav-more-about"
+                >
+                  {t('nav.moreAbout')}
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {moreAboutItems.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <Link
+                      href={item.href}
+                      className={`cursor-pointer ${
+                        isActive(item.href) ? "bg-brand-primary/10" : ""
+                      }`}
+                      data-testid={`dropdown-${item.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      {item.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {/* Auth Navigation */}
             {!authLoading && (
@@ -226,21 +270,38 @@ export default function Header() {
                   </div>
                 ))
               ) : (
-                navigation.map((item) => (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-                      isActive(item.href)
-                        ? "bg-brand-primary text-primary-foreground"
-                        : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                    }`}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
-                  >
-                    {item.name}
-                  </Link>
-                ))
+                <>
+                  {navigation.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                        isActive(item.href)
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                  {moreAboutItems.map((item) => (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                        isActive(item.href)
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      {item.name}
+                    </Link>
+                  ))}
+                </>
               )}
               
               {/* Mobile Auth Navigation */}

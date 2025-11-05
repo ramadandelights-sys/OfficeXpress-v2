@@ -4,12 +4,14 @@
     "about": "সম্পর্কে",
     "corporate": "কর্পোরেট",
     "rental": "ভাড়া",
+    "carpool": "অফিস যাতায়াত",
     "portfolio": "পোর্টফোলিও",
     "vendors": "ভেন্ডর",
     "contact": "যোগাযোগ",
     "blog": "ব্লগ",
     "dashboard": "ড্যাশবোর্ড",
-    "adminPanel": "অ্যাডমিন প্যানেল"
+    "adminPanel": "অ্যাডমিন প্যানেল",
+    "moreAbout": "অফিসএক্সপ্রেস সম্পর্কে আরও জানুন"
   },
   "auth": {
     "login": "লগইন",

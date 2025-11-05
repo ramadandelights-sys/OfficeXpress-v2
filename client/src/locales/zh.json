@@ -4,12 +4,14 @@
     "about": "关于我们",
     "corporate": "企业服务",
     "rental": "租车服务",
+    "carpool": "办公通勤",
     "portfolio": "案例展示",
     "vendors": "供应商",
     "contact": "联系我们",
     "blog": "博客",
     "dashboard": "仪表板",
-    "adminPanel": "管理面板"
+    "adminPanel": "管理面板",
+    "moreAbout": "了解更多关于OfficeXpress"
   },
   "auth": {
     "login": "登录",

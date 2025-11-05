@@ -4,12 +4,14 @@
     "about": "会社概要",
     "corporate": "法人向け",
     "rental": "レンタル",
+    "carpool": "通勤サービス",
     "portfolio": "ポートフォリオ",
     "vendors": "ベンダー",
     "contact": "お問い合わせ",
     "blog": "ブログ",
     "dashboard": "ダッシュボード",
-    "adminPanel": "管理パネル"
+    "adminPanel": "管理パネル",
+    "moreAbout": "OfficeXpressについて"
   },
   "auth": {
     "login": "ログイン",

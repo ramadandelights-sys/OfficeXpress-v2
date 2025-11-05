@@ -4,12 +4,14 @@
     "about": "About",
     "corporate": "Corporate",
     "rental": "Rental",
+    "carpool": "Office Commute",
     "portfolio": "Portfolio",
     "vendors": "Vendors",
     "contact": "Contact",
     "blog": "Blog",
     "dashboard": "Dashboard",
-    "adminPanel": "Admin Panel"
+    "adminPanel": "Admin Panel",
+    "moreAbout": "More About OfficeXpress"
   },
   "auth": {
     "login": "Login",
