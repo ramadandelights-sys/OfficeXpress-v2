@@ -27,6 +27,8 @@ export type UserPermissions = {
   portfolioClients?: PermissionLevel;
   corporateBookings?: PermissionLevel;
   rentalBookings?: PermissionLevel;
+  carpoolBookings?: PermissionLevel;
+  carpoolRouteManagement?: PermissionLevel;
   vendorRegistrations?: PermissionLevel;
   contactMessages?: PermissionLevel;
   marketingSettings?: PermissionLevel;
@@ -372,6 +374,57 @@ export const notifications = pgTable("notifications", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Carpool Routes Table
+export const carpoolRoutes = pgTable("carpool_routes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description"),
+  pricePerSeat: numeric("price_per_seat", { precision: 10, scale: 2 }).notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Carpool Pickup Points Table
+export const carpoolPickupPoints = pgTable("carpool_pickup_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  name: text("name").notNull(),
+  latitude: numeric("latitude", { precision: 10, scale: 7 }),
+  longitude: numeric("longitude", { precision: 10, scale: 7 }),
+  sequenceOrder: integer("sequence_order").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Carpool Time Slots Table
+export const carpoolTimeSlots = pgTable("carpool_time_slots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  departureTime: text("departure_time").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Carpool Bookings Table
+export const carpoolBookings = pgTable("carpool_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
+  userId: varchar("user_id").references(() => users.id),
+  routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  timeSlotId: varchar("time_slot_id").notNull().references(() => carpoolTimeSlots.id),
+  driverId: varchar("driver_id").references(() => drivers.id),
+  customerName: text("customer_name").notNull(),
+  phone: text("phone").notNull(),
+  email: text("email"),
+  travelDate: text("travel_date").notNull(),
+  boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
+  dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  status: text("status").default("pending"),
+  completionEmailSentAt: timestamp("completion_email_sent_at"),
+  statusUpdatedAt: timestamp("status_updated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -555,6 +608,51 @@ export const updateCorporateBookingSchema = createInsertSchema(corporateBookings
   id: z.string(),
 }).partial();
 
+// Carpool Insert Schemas
+export const insertCarpoolRouteSchema = createInsertSchema(carpoolRoutes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateCarpoolRouteSchema = createInsertSchema(carpoolRoutes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
+});
+
+export const insertCarpoolPickupPointSchema = createInsertSchema(carpoolPickupPoints).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCarpoolTimeSlotSchema = createInsertSchema(carpoolTimeSlots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCarpoolBookingSchema = createInsertSchema(carpoolBookings).omit({
+  id: true,
+  referenceId: true,
+  userId: true,
+  driverId: true,
+  status: true,
+  completionEmailSentAt: true,
+  statusUpdatedAt: true,
+  createdAt: true,
+});
+
+export const updateCarpoolBookingSchema = createInsertSchema(carpoolBookings).omit({
+  id: true,
+  referenceId: true,
+  userId: true,
+  createdAt: true,
+}).extend({
+  id: z.string(),
+}).partial();
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -598,3 +696,13 @@ export type SubmissionStatusHistory = typeof submissionStatusHistory.$inferSelec
 export type InsertSubmissionStatusHistory = z.infer<typeof insertSubmissionStatusHistorySchema>;
 export type Survey = typeof surveys.$inferSelect;
 export type InsertSurvey = z.infer<typeof insertSurveySchema>;
+export type CarpoolRoute = typeof carpoolRoutes.$inferSelect;
+export type InsertCarpoolRoute = z.infer<typeof insertCarpoolRouteSchema>;
+export type UpdateCarpoolRoute = z.infer<typeof updateCarpoolRouteSchema>;
+export type CarpoolPickupPoint = typeof carpoolPickupPoints.$inferSelect;
+export type InsertCarpoolPickupPoint = z.infer<typeof insertCarpoolPickupPointSchema>;
+export type CarpoolTimeSlot = typeof carpoolTimeSlots.$inferSelect;
+export type InsertCarpoolTimeSlot = z.infer<typeof insertCarpoolTimeSlotSchema>;
+export type CarpoolBooking = typeof carpoolBookings.$inferSelect;
+export type InsertCarpoolBooking = z.infer<typeof insertCarpoolBookingSchema>;
+export type UpdateCarpoolBooking = z.infer<typeof updateCarpoolBookingSchema>;
