@@ -15,8 +15,10 @@ import { insertContactMessageSchema, type InsertContactMessage } from "@shared/s
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 export default function Contact() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -92,10 +94,10 @@ export default function Contact() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              Get in Touch
+              {t('contact.heroTitle')}
             </h1>
             <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-              Ready to book our services or have questions? Contact us today and let's discuss how we can meet your transportation needs.
+              {t('contact.heroDescription')}
             </p>
           </div>
         </div>
@@ -112,7 +114,7 @@ export default function Contact() {
                   <MapPin className="text-brand-primary w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-card-foreground mb-2">Office Address</h3>
+                  <h3 className="text-xl font-semibold text-card-foreground mb-2">{t('contact.officeAddress')}</h3>
                   <p className="text-muted-foreground">
                     House #123, Road #45<br />
                     Dhanmondi, Dhaka 1205<br />
@@ -126,7 +128,7 @@ export default function Contact() {
                   <Phone className="text-brand-secondary w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-card-foreground mb-2">Phone Numbers</h3>
+                  <h3 className="text-xl font-semibold text-card-foreground mb-2">{t('contact.phoneNumbers')}</h3>
                   <p className="text-muted-foreground">
                     +880 1XXX-XXXXXX (Main)<br />
                     +880 1XXX-XXXXXX (Emergency)
@@ -139,7 +141,7 @@ export default function Contact() {
                   <Mail className="text-accent-foreground w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-card-foreground mb-2">Email Address</h3>
+                  <h3 className="text-xl font-semibold text-card-foreground mb-2">{t('contact.emailAddress')}</h3>
                   <p className="text-muted-foreground">
                     info@officexpress.org<br />
                     booking@officexpress.org

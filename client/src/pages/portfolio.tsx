@@ -5,8 +5,10 @@ import PortfolioTile from "@/components/portfolio-tile";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { PortfolioClient } from "@shared/schema";
+import { useTranslation } from "react-i18next";
 
 export default function Portfolio() {
+  const { t } = useTranslation();
   const { data: portfolioClients = [], isLoading } = useQuery<PortfolioClient[]>({
     queryKey: ["/api/portfolio-clients"],
   });
@@ -31,10 +33,10 @@ export default function Portfolio() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              Our Valued Clients
+              {t('portfolio.heroTitle')}
             </h1>
             <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto">
-              Trusted by leading companies and satisfied customers across Bangladesh. See what our clients say about our services.
+              {t('portfolio.heroDescription')}
             </p>
           </div>
         </div>
@@ -44,9 +46,9 @@ export default function Portfolio() {
       <section className="py-16 bg-card">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">Client Portfolio</h2>
+            <h2 className="text-3xl lg:text-4xl font-bold text-card-foreground mb-4">{t('portfolio.sectionTitle')}</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Browse through our portfolio of trusted partners and valued clients who rely on our transportation services.
+              {t('portfolio.sectionDescription')}
             </p>
           </div>
 

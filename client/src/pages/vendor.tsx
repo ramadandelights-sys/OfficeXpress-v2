@@ -17,6 +17,7 @@ import { insertVendorRegistrationSchema, type InsertVendorRegistration } from "@
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 
 const vehicleTypes = [
   { id: "sedan", label: "Sedan" },
@@ -28,6 +29,7 @@ const vehicleTypes = [
 ];
 
 export default function Vendor() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -106,10 +108,10 @@ export default function Vendor() {
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
-              Partner With Us
+              {t('vendor.heroTitle')}
             </h1>
             <p className="text-xl text-primary-foreground/80 max-w-3xl mx-auto">
-              Join our network of professional drivers and vehicle owners. Expand your business opportunities with OfficeXpress and serve our growing client base.
+              {t('vendor.heroDescription')}
             </p>
           </div>
         </div>
@@ -123,7 +125,7 @@ export default function Vendor() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Handshake className="w-6 h-6" />
-                  Vendor Registration Form
+                  {t('vendor.formTitle')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -135,10 +137,10 @@ export default function Vendor() {
                         name="fullName"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Full Name *</FormLabel>
+                            <FormLabel>{t('vendor.fullName')} *</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Enter your full name" 
+                                placeholder={t('vendor.fullNamePlaceholder')} 
                                 {...field} 
                                 data-testid="input-full-name"
                               />
@@ -153,17 +155,17 @@ export default function Vendor() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Phone Number *</FormLabel>
+                            <FormLabel>{t('vendor.phoneNumber')} *</FormLabel>
                             <FormControl>
                               <div className="flex flex-col gap-1">
                                 <Input 
-                                  placeholder="01XXXXXXXXX"
+                                  placeholder={t('rental.phonePlaceholder')}
                                   {...field}
                                   onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
                                   data-testid="input-phone"
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                  Enter any format - auto-converts to 01XXXXXXXXX
+                                  {t('rental.phoneHelper')}
                                 </p>
                               </div>
                             </FormControl>
