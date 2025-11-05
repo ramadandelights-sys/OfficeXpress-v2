@@ -220,6 +220,7 @@ export interface IStorage {
   deleteCarpoolPickupPoint(id: string): Promise<void>;
   
   // Carpool time slot operations
+  getAllCarpoolTimeSlots(): Promise<CarpoolTimeSlot[]>;
   getCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]>;
   getActiveCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]>;
   getCarpoolTimeSlot(id: string): Promise<CarpoolTimeSlot | undefined>;
@@ -1169,6 +1170,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Carpool time slot operations
+  async getAllCarpoolTimeSlots(): Promise<CarpoolTimeSlot[]> {
+    return await db
+      .select()
+      .from(carpoolTimeSlots)
+      .orderBy(carpoolTimeSlots.departureTime);
+  }
+
   async getCarpoolTimeSlots(routeId: string): Promise<CarpoolTimeSlot[]> {
     return await db
       .select()

@@ -3,6 +3,8 @@ import rateLimit from "express-rate-limit";
 import helmet from "helmet";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { storage } from "./storage";
+import { startCarpoolNotificationService } from "./carpool-notifications";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -150,5 +152,8 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    
+    // Start carpool notification service for insufficient bookings
+    startCarpoolNotificationService(storage);
   });
 })();
