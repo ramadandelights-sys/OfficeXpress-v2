@@ -20,12 +20,12 @@ import { z } from "zod";
 import { useTranslation } from "react-i18next";
 
 const vehicleTypes = [
-  { id: "sedan", label: "Sedan" },
-  { id: "suv", label: "SUV" },
-  { id: "microbus", label: "Microbus" },
-  { id: "van", label: "Van" },
-  { id: "bus", label: "Bus" },
-  { id: "luxury-car", label: "Luxury Car" },
+  { id: "sedan", labelKey: "vendor.vehicleOwnership_sedan" },
+  { id: "suv", labelKey: "vendor.vehicleOwnership_suv" },
+  { id: "microbus", labelKey: "vendor.vehicleOwnership_microbus" },
+  { id: "van", labelKey: "vendor.vehicleOwnership_van" },
+  { id: "bus", labelKey: "vendor.vehicleOwnership_bus" },
+  { id: "luxury-car", labelKey: "vendor.vehicleOwnership_luxuryCar" },
 ];
 
 export default function Vendor() {
@@ -181,11 +181,11 @@ export default function Vendor() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email Address *</FormLabel>
+                            <FormLabel>{t('form.emailAddress')} *</FormLabel>
                             <FormControl>
                               <Input 
                                 type="email" 
-                                placeholder="your@email.com" 
+                                placeholder={t('form.emailPlaceholder')} 
                                 {...field} 
                                 data-testid="input-email"
                               />
@@ -200,10 +200,10 @@ export default function Vendor() {
                         name="location"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Location/City *</FormLabel>
+                            <FormLabel>{t('common.location')} *</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Enter your city" 
+                                placeholder={t('form.locationPlaceholder')} 
                                 {...field} 
                                 data-testid="input-location"
                               />
@@ -219,7 +219,7 @@ export default function Vendor() {
                       name="vehicleTypes"
                       render={() => (
                         <FormItem>
-                          <FormLabel>Vehicle Ownership (Select all that apply) *</FormLabel>
+                          <FormLabel>{t('vendor.vehicleOwnership')} *</FormLabel>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                             {vehicleTypes.map((vehicle) => (
                               <FormField
@@ -249,7 +249,7 @@ export default function Vendor() {
                                         />
                                       </FormControl>
                                       <FormLabel className="text-sm font-normal cursor-pointer">
-                                        {vehicle.label}
+                                        {t(vehicle.labelKey)}
                                       </FormLabel>
                                     </FormItem>
                                   );
@@ -267,11 +267,11 @@ export default function Vendor() {
                       name="serviceModality"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Service Modality *</FormLabel>
+                          <FormLabel>{t('vendor.serviceModality')} *</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-service-modality">
-                                <SelectValue placeholder="Select service type" />
+                                <SelectValue placeholder={t('vendor.selectServiceType')} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -291,11 +291,11 @@ export default function Vendor() {
                       name="experience"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Years of Experience *</FormLabel>
+                          <FormLabel>{t('vendor.yearsOfExperience')} *</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-experience">
-                                <SelectValue placeholder="Select experience" />
+                                <SelectValue placeholder={t('vendor.selectExperience')} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -316,11 +316,11 @@ export default function Vendor() {
                       name="additionalInfo"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Additional Information</FormLabel>
+                          <FormLabel>{t('form.additionalInfo')}</FormLabel>
                           <FormControl>
                             <Textarea 
                               className="h-24" 
-                              placeholder="Tell us about your experience, special services, or any additional information..."
+                              placeholder={t('form.additionalInfoPlaceholder')}
                               {...field}
                               value={field.value || ""}
                               data-testid="textarea-additional-info"
@@ -352,7 +352,7 @@ export default function Vendor() {
                       disabled={mutation.isPending}
                       data-testid="button-submit-vendor"
                     >
-                      {mutation.isPending ? "Submitting..." : "Submit Registration"}
+                      {mutation.isPending ? t('common.loading') : t('common.submitRegistration')}
                     </Button>
                   </form>
                 </Form>

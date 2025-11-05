@@ -187,7 +187,7 @@ export default function Contact() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Send className="w-6 h-6" />
-                  Send us a Message
+                  {t('contact.contactFormTitle')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -199,10 +199,10 @@ export default function Contact() {
                         name="name"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Name *</FormLabel>
+                            <FormLabel>{t('common.name')} *</FormLabel>
                             <FormControl>
                               <Input 
-                                placeholder="Your full name" 
+                                placeholder={t('form.namePlaceholder')} 
                                 {...field} 
                                 data-testid="input-name"
                               />
@@ -217,11 +217,11 @@ export default function Contact() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email *</FormLabel>
+                            <FormLabel>{t('common.email')} *</FormLabel>
                             <FormControl>
                               <Input 
                                 type="email" 
-                                placeholder="your@email.com" 
+                                placeholder={t('form.emailPlaceholder')} 
                                 {...field} 
                                 data-testid="input-email"
                               />
@@ -237,17 +237,17 @@ export default function Contact() {
                       name="phone"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Phone *</FormLabel>
+                          <FormLabel>{t('common.phone')} *</FormLabel>
                           <FormControl>
                             <div className="flex flex-col gap-1">
                               <Input 
-                                placeholder="01XXXXXXXXX"
+                                placeholder={t('rental.phonePlaceholder')}
                                 {...field}
                                 onChange={(e) => field.onChange(formatPhoneNumber(e.target.value))}
                                 data-testid="input-phone"
                               />
                               <p className="text-xs text-muted-foreground">
-                                Enter any format - auto-converts to 01XXXXXXXXX
+                                {t('rental.phoneHelper')}
                               </p>
                             </div>
                           </FormControl>
@@ -261,11 +261,11 @@ export default function Contact() {
                       name="subject"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Subject</FormLabel>
+                          <FormLabel>{t('common.subject')}</FormLabel>
                           <Select onValueChange={field.onChange} value={field.value || ""}>
                             <FormControl>
                               <SelectTrigger data-testid="select-subject">
-                                <SelectValue placeholder="Select inquiry type" />
+                                <SelectValue placeholder={t('form.selectInquiryType')} />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -286,11 +286,11 @@ export default function Contact() {
                       name="message"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Message *</FormLabel>
+                          <FormLabel>{t('common.message')} *</FormLabel>
                           <FormControl>
                             <Textarea 
                               className="h-32" 
-                              placeholder="Tell us about your transportation needs or ask any questions..."
+                              placeholder={t('form.messagePlaceholder')}
                               {...field} 
                               data-testid="textarea-message"
                             />
@@ -321,7 +321,7 @@ export default function Contact() {
                       disabled={mutation.isPending}
                       data-testid="button-submit-contact"
                     >
-                      {mutation.isPending ? "Sending..." : "Send Message"}
+                      {mutation.isPending ? t('common.loading') : t('common.sendMessage')}
                     </Button>
                   </form>
                 </Form>
