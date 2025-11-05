@@ -180,8 +180,16 @@
     "companyEmailPlaceholder": "company@example.com",
     "serviceType": "サービスタイプ",
     "selectServiceType": "サービスタイプを選択",
+    "serviceType_officePickDrop": "オフィス送迎",
+    "serviceType_rental": "レンタル",
+    "serviceType_airportTransfer": "空港送迎",
     "contractType": "契約タイプ",
-    "selectContractType": "契約タイプを選択"
+    "selectContractType": "契約タイプを選択",
+    "contractType_adHoc": "臨時",
+    "contractType_monthly": "月次契約",
+    "contractType_customDates": "カスタム日付",
+    "submitting": "送信中...",
+    "submitRequest": "リクエストを送信"
   },
   "rentalPage": {
     "heroTitle": "信頼できる輸送ソリューション",

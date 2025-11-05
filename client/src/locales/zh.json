@@ -180,8 +180,16 @@
     "companyEmailPlaceholder": "company@example.com",
     "serviceType": "服务类型",
     "selectServiceType": "选择服务类型",
+    "serviceType_officePickDrop": "办公室接送",
+    "serviceType_rental": "租车",
+    "serviceType_airportTransfer": "机场接送",
     "contractType": "合同类型",
-    "selectContractType": "选择合同类型"
+    "selectContractType": "选择合同类型",
+    "contractType_adHoc": "临时",
+    "contractType_monthly": "月度合同",
+    "contractType_customDates": "自定义日期",
+    "submitting": "提交中...",
+    "submitRequest": "提交请求"
   },
   "rentalPage": {
     "heroTitle": "可靠的交通解决方案",

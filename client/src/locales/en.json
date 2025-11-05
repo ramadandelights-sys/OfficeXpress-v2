@@ -180,8 +180,16 @@
     "companyEmailPlaceholder": "company@example.com",
     "serviceType": "Service Type",
     "selectServiceType": "Select service type",
+    "serviceType_officePickDrop": "Office Pick & Drop",
+    "serviceType_rental": "Rental",
+    "serviceType_airportTransfer": "Airport Transfer",
     "contractType": "Contract Type",
-    "selectContractType": "Select contract type"
+    "selectContractType": "Select contract type",
+    "contractType_adHoc": "Ad Hoc Basis",
+    "contractType_monthly": "Monthly Contract",
+    "contractType_customDates": "Custom Dates",
+    "submitting": "Submitting...",
+    "submitRequest": "Submit Request"
   },
   "rentalPage": {
     "heroTitle": "Reliable Transportation Solutions",

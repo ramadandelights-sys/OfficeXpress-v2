@@ -109,16 +109,16 @@ export default function Corporate() {
     },
     onSuccess: () => {
       toast({
-        title: "Booking Submitted Successfully",
-        description: "We will contact you soon to confirm your corporate transportation service.",
+        title: t('toast.corporateSuccess'),
+        description: t('toast.corporateSuccessDesc'),
       });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/corporate-bookings"] });
     },
     onError: (error) => {
       toast({
-        title: "Submission Failed",
-        description: error.message || "Please check your information and try again.",
+        title: t('toast.submissionFailed'),
+        description: error.message || t('toast.bookingFailedDesc'),
         variant: "destructive",
       });
     },
@@ -214,7 +214,7 @@ export default function Corporate() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Building className="w-6 h-6" />
-                  Request Corporate Service
+                  {t('corporate.formTitle')}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -225,10 +225,10 @@ export default function Corporate() {
                       name="companyName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Company Name *</FormLabel>
+                          <FormLabel>{t('corporate.companyName')} *</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Enter your company name" 
+                              placeholder={t('corporate.companyNamePlaceholder')}
                               {...field} 
                               data-testid="input-company-name"
                             />
@@ -243,10 +243,10 @@ export default function Corporate() {
                       name="officeAddress"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Office Address</FormLabel>
+                          <FormLabel>{t('corporate.officeAddress')}</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Enter office address" 
+                              placeholder={t('corporate.officeAddressPlaceholder')}
                               {...field}
                               value={field.value || ""}
                               data-testid="input-office-address"
@@ -262,10 +262,10 @@ export default function Corporate() {
                       name="customerName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Primary Contact Person's Name *</FormLabel>
+                          <FormLabel>{t('corporate.primaryContactName')} *</FormLabel>
                           <FormControl>
                             <Input 
-                              placeholder="Contact person full name" 
+                              placeholder={t('corporate.contactPersonPlaceholder')}
                               {...field} 
                               data-testid="input-customer-name"
                             />
@@ -281,7 +281,7 @@ export default function Corporate() {
                         name="phone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Primary Contact Person's Phone Number *</FormLabel>
+                            <FormLabel>{t('corporate.primaryContactPhone')} *</FormLabel>
                             <FormControl>
                               <div className="flex gap-1">
                                 <div className="bg-muted rounded-md px-3 py-2 text-sm text-muted-foreground flex items-center">
@@ -305,11 +305,11 @@ export default function Corporate() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Company Email Address *</FormLabel>
+                            <FormLabel>{t('corporate.companyEmail')} *</FormLabel>
                             <FormControl>
                               <Input 
                                 type="email" 
-                                placeholder="company@example.com" 
+                                placeholder={t('corporate.companyEmailPlaceholder')}
                                 {...field} 
                                 data-testid="input-email"
                               />
@@ -326,17 +326,17 @@ export default function Corporate() {
                         name="serviceType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Service Type *</FormLabel>
+                            <FormLabel>{t('corporate.serviceType')} *</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-service-type">
-                                  <SelectValue placeholder="Select service type" />
+                                  <SelectValue placeholder={t('corporate.selectServiceType')} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="office-pick-drop">Office Pick & Drop</SelectItem>
-                                <SelectItem value="rental">Rental</SelectItem>
-                                <SelectItem value="airport-transfer">Airport Transfer</SelectItem>
+                                <SelectItem value="office-pick-drop">{t('corporate.serviceType_officePickDrop')}</SelectItem>
+                                <SelectItem value="rental">{t('corporate.serviceType_rental')}</SelectItem>
+                                <SelectItem value="airport-transfer">{t('corporate.serviceType_airportTransfer')}</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -349,17 +349,17 @@ export default function Corporate() {
                         name="contractType"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Contract Type *</FormLabel>
+                            <FormLabel>{t('corporate.contractType')} *</FormLabel>
                             <Select onValueChange={field.onChange} value={field.value || ""}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-contract-type">
-                                  <SelectValue placeholder="Select contract type" />
+                                  <SelectValue placeholder={t('corporate.selectContractType')} />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="ad-hoc">Ad Hoc Basis</SelectItem>
-                                <SelectItem value="monthly">Monthly Contract</SelectItem>
-                                <SelectItem value="custom-dates">Custom Dates</SelectItem>
+                                <SelectItem value="ad-hoc">{t('corporate.contractType_adHoc')}</SelectItem>
+                                <SelectItem value="monthly">{t('corporate.contractType_monthly')}</SelectItem>
+                                <SelectItem value="custom-dates">{t('corporate.contractType_customDates')}</SelectItem>
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -389,7 +389,7 @@ export default function Corporate() {
                       disabled={mutation.isPending}
                       data-testid="button-submit-corporate"
                     >
-                      {mutation.isPending ? "Submitting..." : "Submit Request"}
+                      {mutation.isPending ? t('corporate.submitting') : t('corporate.submitRequest')}
                     </Button>
                   </form>
                 </Form>
