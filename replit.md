@@ -6,6 +6,26 @@ OfficeXpress is a comprehensive transportation services platform for businesses 
 
 ## Recent Changes
 
+### Office Carpool/Commute Service (November 2025)
+- **Complete Carpool Service**: Full-featured carpooling/office commute service for shared transportation on predefined routes
+- **Route Management**: Admins can create routes with from/to locations, distance, pricing, and multiple pickup points in sequence
+- **Time Slot Scheduling**: Flexible time slots for each route with departure times and availability management
+- **Customer Booking**: Customers select route, time slot, pickup/drop-off points, and passenger details for one-time bookings
+- **Booking Management**: Admin interface to view all bookings with route grouping and highlight routes with 3+ pending bookings for driver assignment
+- **Driver Assignment**: Assign drivers to confirmed trips; integrated with existing driver management system
+- **Automated Email Notifications**: Scheduled service runs every 5 minutes to check trips departing in 2 hours
+  - Counts both pending AND confirmed bookings toward minimum passenger requirement (3 passengers)
+  - Sends cancellation emails via Resend if insufficient passengers
+  - Updates booking status to 'insufficient_bookings' and deactivates time slot
+- **Dashboard Integration**: Customers can view their carpool bookings alongside other services
+- **Database Schema**: Four new tables (carpoolRoutes, carpoolPickupPoints, carpoolTimeSlots, carpoolBookings) with proper foreign key constraints
+- **Permission System**: Two new permissions - `carpoolRouteManagement` for route/time slot management, `carpoolBookings` for booking management
+- **Navigation**: New "Carpool" link in header navigation for easy access
+- **Technical Implementation**: 
+  - Backend: `server/email.ts` (Resend integration), `server/carpool-notifications.ts` (scheduled notification service)
+  - Frontend: `carpool-route-management.tsx` (admin), `carpool-booking-management.tsx` (admin), `carpool.tsx` (customer)
+  - Database migrations applied successfully via Drizzle Kit
+
 ### Multi-Language Support (October 2025)
 - **Four Languages**: Complete internationalization (i18n) support for English, Chinese (中文), Japanese (日本語), and Bangla (বাংলা)
 - **Language Selector**: Globe icon in header with dropdown menu showing language options with flags (🇺🇸 🇨🇳 🇯🇵 🇧🇩)
