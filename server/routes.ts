@@ -1940,6 +1940,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/admin/carpool/pickup-points", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
       const pointData = insertCarpoolPickupPointSchema.parse(req.body);
+      
+      // Get existing pickup points for this route
+      const existingPoints = await storage.getCarpoolPickupPoints(pointData.routeId);
+      
+      // Check for duplicate name
+      const duplicateName = existingPoints.find((p: CarpoolPickupPoint) => p.name.toLowerCase() === pointData.name.toLowerCase());
+      if (duplicateName) {
+        return res.status(400).json({ 
+          message: `A pickup point with the name "${pointData.name}" already exists on this route` 
+        });
+      }
+      
+      // Check for duplicate sequence order
+      const duplicateOrder = existingPoints.find((p: CarpoolPickupPoint) => p.sequenceOrder === pointData.sequenceOrder);
+      if (duplicateOrder) {
+        return res.status(400).json({ 
+          message: `A pickup point with sequence order ${pointData.sequenceOrder} already exists on this route` 
+        });
+      }
+      
       const point = await storage.createCarpoolPickupPoint(pointData);
       res.json(point);
     } catch (error) {
@@ -1955,6 +1975,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Update pickup point
   app.put("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
+      // Get the existing pickup point
+      const existingPoint = await storage.getCarpoolPickupPoint(req.params.id);
+      if (!existingPoint) {
+        return res.status(404).json({ message: "Pickup point not found" });
+      }
+
+      // If name or sequenceOrder is being updated, check for duplicates
+      if (req.body.name || req.body.sequenceOrder) {
+        const existingPoints = await storage.getCarpoolPickupPoints(existingPoint.routeId);
+        
+        // Check for duplicate name (excluding current point)
+        if (req.body.name) {
+          const duplicateName = existingPoints.find((p: CarpoolPickupPoint) => 
+            p.id !== req.params.id && 
+            p.name.toLowerCase() === req.body.name.toLowerCase()
+          );
+          if (duplicateName) {
+            return res.status(400).json({ 
+              message: `A pickup point with the name "${req.body.name}" already exists on this route` 
+            });
+          }
+        }
+        
+        // Check for duplicate sequence order (excluding current point)
+        if (req.body.sequenceOrder !== undefined) {
+          const duplicateOrder = existingPoints.find((p: CarpoolPickupPoint) => 
+            p.id !== req.params.id && 
+            p.sequenceOrder === req.body.sequenceOrder
+          );
+          if (duplicateOrder) {
+            return res.status(400).json({ 
+              message: `A pickup point with sequence order ${req.body.sequenceOrder} already exists on this route` 
+            });
+          }
+        }
+      }
+
       const point = await storage.updateCarpoolPickupPoint(req.params.id, req.body);
       res.json(point);
     } catch (error) {
