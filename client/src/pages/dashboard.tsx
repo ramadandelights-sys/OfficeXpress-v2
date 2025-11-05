@@ -4,10 +4,11 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, Package, Calendar, Bell, Check } from "lucide-react";
+import { LogOut, User, Package, Calendar, Bell, Check, Car } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CorporateBooking, RentalBooking, Notification } from "@shared/schema";
+import type { CorporateBooking, RentalBooking, CarpoolBooking, Notification } from "@shared/schema";
 import { useState } from "react";
+import { format } from "date-fns";
 
 export default function CustomerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -23,6 +24,11 @@ export default function CustomerDashboard() {
 
   const { data: rentalBookings } = useQuery<RentalBooking[]>({
     queryKey: ["/api/my/rental-bookings"],
+    enabled: !!user,
+  });
+
+  const { data: carpoolBookings } = useQuery<CarpoolBooking[]>({
+    queryKey: ["/api/my/carpool-bookings"],
     enabled: !!user,
   });
 
@@ -95,6 +101,7 @@ export default function CustomerDashboard() {
   // No need to filter - the API already returns only user's bookings
   const userCorporateBookings = corporateBookings || [];
   const userRentalBookings = rentalBookings || [];
+  const userCarpoolBookings = carpoolBookings || [];
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
   return (
@@ -115,7 +122,7 @@ export default function CustomerDashboard() {
           </Button>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-4 mb-8">
+        <div className="grid gap-6 md:grid-cols-5 mb-8">
           <Card data-testid="card-profile">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -155,12 +162,12 @@ export default function CustomerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Package className="mr-2 h-5 w-5" />
-                Corporate Bookings
+                Corporate
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold" data-testid="text-corporate-count">{userCorporateBookings.length}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total bookings</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Bookings</p>
             </CardContent>
           </Card>
 
@@ -168,12 +175,25 @@ export default function CustomerDashboard() {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Calendar className="mr-2 h-5 w-5" />
-                Rental Bookings
+                Rental
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold" data-testid="text-rental-count">{userRentalBookings.length}</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total rentals</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Bookings</p>
+            </CardContent>
+          </Card>
+
+          <Card data-testid="card-carpool-summary">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Car className="mr-2 h-5 w-5" />
+                Carpool
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-3xl font-bold" data-testid="text-carpool-count">{userCarpoolBookings.length}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Bookings</p>
             </CardContent>
           </Card>
 
@@ -258,18 +278,70 @@ export default function CustomerDashboard() {
             </Card>
           )}
 
-          {userCorporateBookings.length === 0 && userRentalBookings.length === 0 && (
+          {userCarpoolBookings.length > 0 && (
+            <Card data-testid="card-carpool-bookings">
+              <CardHeader>
+                <CardTitle>Recent Carpool Bookings</CardTitle>
+                <CardDescription>Your shared ride bookings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {userCarpoolBookings.map((booking) => (
+                    <div 
+                      key={booking.id} 
+                      className="border rounded-lg p-4"
+                      data-testid={`card-carpool-${booking.id}`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{booking.customerName}</p>
+                            <span className={`text-xs px-2 py-1 rounded ${
+                              booking.status === 'confirmed' 
+                                ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                                : booking.status === 'pending'
+                                ? 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+                                : booking.status === 'cancelled'
+                                ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200'
+                            }`}>
+                              {booking.status}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            Travel Date: {format(new Date(booking.travelDate), 'EEE, MMM d, yyyy')}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Phone: {booking.phone}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">Ref: {booking.referenceId}</p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          {new Date(booking.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {userCorporateBookings.length === 0 && userRentalBookings.length === 0 && userCarpoolBookings.length === 0 && (
             <Card data-testid="card-no-bookings">
               <CardContent className="py-12 text-center">
                 <p className="text-gray-600 dark:text-gray-400">
                   You don't have any bookings yet. Start by making a booking!
                 </p>
-                <div className="mt-4 space-x-4">
+                <div className="mt-4 flex flex-wrap justify-center gap-4">
                   <Button onClick={() => setLocation("/corporate")} data-testid="button-corporate">
                     Corporate Booking
                   </Button>
                   <Button onClick={() => setLocation("/rental")} variant="outline" data-testid="button-rental">
                     Rental Booking
+                  </Button>
+                  <Button onClick={() => setLocation("/carpool")} variant="outline" data-testid="button-carpool">
+                    Carpool Booking
                   </Button>
                 </div>
               </CardContent>
