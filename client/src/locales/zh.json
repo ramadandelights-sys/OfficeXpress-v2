@@ -35,7 +35,15 @@
     "name": "姓名",
     "email": "电子邮件",
     "phone": "电话",
-    "phoneNumber": "电话号码"
+    "phoneNumber": "电话号码",
+    "message": "[TODO: Message]",
+    "subject": "[TODO: Subject]",
+    "location": "[TODO: Location/City]",
+    "securityVerification": "[TODO: Security Verification]",
+    "submitRegistration": "[TODO: Submit Registration]",
+    "submitRequest": "[TODO: Submit Request]",
+    "sendMessage": "[TODO: Send Message]",
+    "followUs": "[TODO: Follow Us]"
   },
   "services": {
     "header": "服务",
@@ -76,7 +84,23 @@
     "namePlaceholder": "输入您的姓名",
     "phonePlaceholder": "01XXXXXXXXX",
     "phoneHelper": "输入任何格式 - 自动转换为 01XXXXXXXXX",
-    "emailPlaceholder": "your.email@example.com"
+    "emailPlaceholder": "your.email@example.com",
+    "serviceInformation": "[TODO: Service Information]",
+    "serviceType": "[TODO: Service Type]",
+    "vehicleType": "[TODO: Vehicle Type]",
+    "vehicleCapacity": "[TODO: Vehicle Capacity]",
+    "tripInformation": "[TODO: Trip Information]",
+    "rentalPeriod": "[TODO: Rental Period]",
+    "selectRentalDates": "[TODO: Select rental dates]",
+    "startTime": "[TODO: Start Time]",
+    "selectStartTime": "[TODO: Select start time]",
+    "from": "[TODO: From]",
+    "to": "[TODO: To]",
+    "pickupLocationPlaceholder": "[TODO: Type to search pickup location...]",
+    "destinationPlaceholder": "[TODO: Type to search destination...]",
+    "bothWayTrip": "[TODO: Both Way / Return Trip?]",
+    "bothWayTripHelper": "[TODO: Check this if you need transportation back to your pickup location after reaching your destination.]",
+    "submitRentalRequest": "[TODO: Submit Rental Request]"
   },
   "footer": {
     "tagline": "为孟加拉国的企业和个人提供专业的交通解决方案。",
@@ -133,7 +157,21 @@
     "adHocTitle": "按需（临时）用车需求",
     "adHocDesc": "为您即时的、未安排的业务需求提供即时、可靠的服务。随时访问我们的专业车队和司机，用于临时会议、紧急客户运输或紧急物流支持。该服务纯粹按使用付费计费，确保快速响应和优质质量，无需合同承诺。",
     "vipAirportTitle": "高管和VIP机场接送",
-    "vipAirportDesc": "确保为您最宝贵的旅行者提供完美的欢迎和离开。我们提供高级机场服务，注重为C级高管和外国客户代表团提供谨慎和个性化的照顾。享受由受过高管级服务和绝对保密培训的专业司机驾驶的高级车辆。"
+    "vipAirportDesc": "确保为您最宝贵的旅行者提供完美的欢迎和离开。我们提供高级机场服务，注重为C级高管和外国客户代表团提供谨慎和个性化的照顾。享受由受过高管级服务和绝对保密培训的专业司机驾驶的高级车辆。",
+    "formTitle": "[TODO: Request Corporate Service]",
+    "companyName": "[TODO: Company Name]",
+    "companyNamePlaceholder": "[TODO: Enter your company name]",
+    "officeAddress": "[TODO: Office Address]",
+    "officeAddressPlaceholder": "[TODO: Enter office address]",
+    "primaryContactName": "[TODO: Primary Contact Person's Name]",
+    "contactPersonPlaceholder": "[TODO: Contact person full name]",
+    "primaryContactPhone": "[TODO: Primary Contact Person's Phone Number]",
+    "companyEmail": "[TODO: Company Email Address]",
+    "companyEmailPlaceholder": "[TODO: company@example.com]",
+    "serviceType": "[TODO: Service Type]",
+    "selectServiceType": "[TODO: Select service type]",
+    "contractType": "[TODO: Contract Type]",
+    "selectContractType": "[TODO: Select contract type]"
   },
   "rentalPage": {
     "heroTitle": "可靠的交通解决方案",
@@ -184,7 +222,18 @@
     "availability_fullTime": "全职",
     "availability_partTime": "兼职",
     "availability_weekends": "仅周末",
-    "availability_other": "其他"
+    "availability_other": "其他",
+    "vehicleOwnership": "[TODO: Vehicle Ownership (Select all that apply)]",
+    "vehicleOwnership_sedan": "[TODO: Sedan]",
+    "vehicleOwnership_suv": "[TODO: SUV]",
+    "vehicleOwnership_van": "[TODO: Van]",
+    "vehicleOwnership_bus": "[TODO: Bus]",
+    "vehicleOwnership_microbus": "[TODO: Microbus]",
+    "vehicleOwnership_luxuryCar": "[TODO: Luxury Car]",
+    "serviceModality": "[TODO: Service Modality]",
+    "selectServiceType": "[TODO: Select service type]",
+    "yearsOfExperience": "[TODO: Years of Experience]",
+    "selectExperience": "[TODO: Select experience]"
   },
   "contact": {
     "heroTitle": "联系我们",
@@ -209,5 +258,15 @@
     "publishedOn": "发布于",
     "author": "作者",
     "noPostsFound": "未找到博客文章。"
+  },
+  "form": {
+    "emailAddress": "[TODO: Email Address]",
+    "emailPlaceholder": "[TODO: your@email.com]",
+    "locationPlaceholder": "[TODO: Enter your city]",
+    "namePlaceholder": "[TODO: Your full name]",
+    "messagePlaceholder": "[TODO: Tell us about your transportation needs or ask any questions...]",
+    "additionalInfo": "[TODO: Additional Information]",
+    "additionalInfoPlaceholder": "[TODO: Tell us about your experience, special services, or any additional information...]",
+    "selectInquiryType": "[TODO: Select inquiry type]"
   }
 }

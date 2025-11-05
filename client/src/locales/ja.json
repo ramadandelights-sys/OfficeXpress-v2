@@ -35,7 +35,15 @@
     "name": "名前",
     "email": "メール",
     "phone": "電話",
-    "phoneNumber": "電話番号"
+    "phoneNumber": "電話番号",
+    "message": "[TODO: Message]",
+    "subject": "[TODO: Subject]",
+    "location": "[TODO: Location/City]",
+    "securityVerification": "[TODO: Security Verification]",
+    "submitRegistration": "[TODO: Submit Registration]",
+    "submitRequest": "[TODO: Submit Request]",
+    "sendMessage": "[TODO: Send Message]",
+    "followUs": "[TODO: Follow Us]"
   },
   "services": {
     "header": "サービス",
@@ -76,7 +84,23 @@
     "namePlaceholder": "お名前を入力してください",
     "phonePlaceholder": "01XXXXXXXXX",
     "phoneHelper": "任意の形式を入力 - 自動的に01XXXXXXXXXに変換されます",
-    "emailPlaceholder": "your.email@example.com"
+    "emailPlaceholder": "your.email@example.com",
+    "serviceInformation": "[TODO: Service Information]",
+    "serviceType": "[TODO: Service Type]",
+    "vehicleType": "[TODO: Vehicle Type]",
+    "vehicleCapacity": "[TODO: Vehicle Capacity]",
+    "tripInformation": "[TODO: Trip Information]",
+    "rentalPeriod": "[TODO: Rental Period]",
+    "selectRentalDates": "[TODO: Select rental dates]",
+    "startTime": "[TODO: Start Time]",
+    "selectStartTime": "[TODO: Select start time]",
+    "from": "[TODO: From]",
+    "to": "[TODO: To]",
+    "pickupLocationPlaceholder": "[TODO: Type to search pickup location...]",
+    "destinationPlaceholder": "[TODO: Type to search destination...]",
+    "bothWayTrip": "[TODO: Both Way / Return Trip?]",
+    "bothWayTripHelper": "[TODO: Check this if you need transportation back to your pickup location after reaching your destination.]",
+    "submitRentalRequest": "[TODO: Submit Rental Request]"
   },
   "footer": {
     "tagline": "バングラデシュ全土の企業と個人向けのプロフェッショナルな輸送ソリューション。",
@@ -133,7 +157,21 @@
     "adHocTitle": "オンデマンド（臨時）車両要件",
     "adHocDesc": "即座の予定外のビジネスニーズに対する即時で信頼できるサービス。土壇場の会議、緊急のクライアント輸送、または緊急の物流サポートのために、いつでも当社のプロフェッショナルな車両とドライバーにアクセスできます。このサービスは純粋に従量制で請求され、契約上の約束なしに迅速な対応とプレミアム品質を保証します。",
     "vipAirportTitle": "エグゼクティブおよびVIP空港送迎",
-    "vipAirportDesc": "最も貴重な旅行者のために完璧な歓迎と出発を保証します。C-suiteの専門家や外国のクライアント代表団のために、裁量と個別のケアに焦点を当てたプレミアム空港サービスを提供します。エグゼクティブレベルのサービスと絶対的な機密性のために訓練されたプロのドライバーが運転するプレミアム車両をお楽しみください。"
+    "vipAirportDesc": "最も貴重な旅行者のために完璧な歓迎と出発を保証します。C-suiteの専門家や外国のクライアント代表団のために、裁量と個別のケアに焦点を当てたプレミアム空港サービスを提供します。エグゼクティブレベルのサービスと絶対的な機密性のために訓練されたプロのドライバーが運転するプレミアム車両をお楽しみください。",
+    "formTitle": "[TODO: Request Corporate Service]",
+    "companyName": "[TODO: Company Name]",
+    "companyNamePlaceholder": "[TODO: Enter your company name]",
+    "officeAddress": "[TODO: Office Address]",
+    "officeAddressPlaceholder": "[TODO: Enter office address]",
+    "primaryContactName": "[TODO: Primary Contact Person's Name]",
+    "contactPersonPlaceholder": "[TODO: Contact person full name]",
+    "primaryContactPhone": "[TODO: Primary Contact Person's Phone Number]",
+    "companyEmail": "[TODO: Company Email Address]",
+    "companyEmailPlaceholder": "[TODO: company@example.com]",
+    "serviceType": "[TODO: Service Type]",
+    "selectServiceType": "[TODO: Select service type]",
+    "contractType": "[TODO: Contract Type]",
+    "selectContractType": "[TODO: Select contract type]"
   },
   "rentalPage": {
     "heroTitle": "信頼できる輸送ソリューション",
@@ -184,7 +222,18 @@
     "availability_fullTime": "フルタイム",
     "availability_partTime": "パートタイム",
     "availability_weekends": "週末のみ",
-    "availability_other": "その他"
+    "availability_other": "その他",
+    "vehicleOwnership": "[TODO: Vehicle Ownership (Select all that apply)]",
+    "vehicleOwnership_sedan": "[TODO: Sedan]",
+    "vehicleOwnership_suv": "[TODO: SUV]",
+    "vehicleOwnership_van": "[TODO: Van]",
+    "vehicleOwnership_bus": "[TODO: Bus]",
+    "vehicleOwnership_microbus": "[TODO: Microbus]",
+    "vehicleOwnership_luxuryCar": "[TODO: Luxury Car]",
+    "serviceModality": "[TODO: Service Modality]",
+    "selectServiceType": "[TODO: Select service type]",
+    "yearsOfExperience": "[TODO: Years of Experience]",
+    "selectExperience": "[TODO: Select experience]"
   },
   "contact": {
     "heroTitle": "お問い合わせ",
@@ -209,5 +258,15 @@
     "publishedOn": "公開日",
     "author": "著者",
     "noPostsFound": "ブログ記事が見つかりません。"
+  },
+  "form": {
+    "emailAddress": "[TODO: Email Address]",
+    "emailPlaceholder": "[TODO: your@email.com]",
+    "locationPlaceholder": "[TODO: Enter your city]",
+    "namePlaceholder": "[TODO: Your full name]",
+    "messagePlaceholder": "[TODO: Tell us about your transportation needs or ask any questions...]",
+    "additionalInfo": "[TODO: Additional Information]",
+    "additionalInfoPlaceholder": "[TODO: Tell us about your experience, special services, or any additional information...]",
+    "selectInquiryType": "[TODO: Select inquiry type]"
   }
 }

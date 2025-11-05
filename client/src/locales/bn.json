@@ -35,7 +35,15 @@
     "name": "নাম",
     "email": "ইমেইল",
     "phone": "ফোন",
-    "phoneNumber": "ফোন নম্বর"
+    "phoneNumber": "ফোন নম্বর",
+    "message": "বার্তা",
+    "subject": "বিষয়",
+    "location": "অবস্থান/শহর",
+    "securityVerification": "নিরাপত্তা যাচাইকরণ",
+    "submitRegistration": "রেজিস্ট্রেশন জমা দিন",
+    "submitRequest": "অনুরোধ জমা দিন",
+    "sendMessage": "বার্তা পাঠান",
+    "followUs": "আমাদের ফলো করুন"
   },
   "home": {
     "heroTitle": "প্রফেশনাল ট্রান্সপোর্টেশন সলিউশন",
@@ -65,7 +73,23 @@
     "namePlaceholder": "আপনার নাম লিখুন",
     "phonePlaceholder": "01XXXXXXXXX",
     "phoneHelper": "যেকোনো ফরম্যাট - স্বয়ংক্রিয়ভাবে 01XXXXXXXXX এ রূপান্তরিত হয়",
-    "emailPlaceholder": "your.email@example.com"
+    "emailPlaceholder": "your.email@example.com",
+    "serviceInformation": "সার্ভিস তথ্য",
+    "serviceType": "সার্ভিসের ধরন",
+    "vehicleType": "গাড়ির ধরন",
+    "vehicleCapacity": "গাড়ির ধারণক্ষমতা",
+    "tripInformation": "ট্রিপ তথ্য",
+    "rentalPeriod": "রেন্টাল সময়কাল",
+    "selectRentalDates": "রেন্টাল তারিখ নির্বাচন করুন",
+    "startTime": "শুরুর সময়",
+    "selectStartTime": "শুরুর সময় নির্বাচন করুন",
+    "from": "থেকে",
+    "to": "পর্যন্ত",
+    "pickupLocationPlaceholder": "পিকআপ লোকেশন অনুসন্ধান করুন...",
+    "destinationPlaceholder": "গন্তব্য অনুসন্ধান করুন...",
+    "bothWayTrip": "উভয়মুখী / রিটার্ন ট্রিপ?",
+    "bothWayTripHelper": "আপনার গন্তব্যে পৌঁছানোর পর পিকআপ লোকেশনে ফিরে যাওয়ার প্রয়োজন হলে এটি চেক করুন।",
+    "submitRentalRequest": "রেন্টাল অনুরোধ জমা দিন"
   },
   "services": {
     "header": "সার্ভিস",
@@ -133,7 +157,21 @@
     "adHocTitle": "অন-ডিমান্ড (অ্যাড হক) গাড়ির প্রয়োজনীয়তা",
     "adHocDesc": "আপনার তাৎক্ষণিক, অপরিকল্পিত ব্যবসায়িক প্রয়োজনের জন্য তাৎক্ষণিক, নির্ভরযোগ্য সেবা। শেষ মুহূর্তের মিটিং, জরুরি ক্লায়েন্ট ট্রান্সপোর্ট বা জরুরি লজিস্টিক সাপোর্টের জন্য যেকোনো সময় আমাদের পেশাদার ফ্লিট এবং চালকদের অ্যাক্সেস করুন। এই সেবাটি শুধুমাত্র পে-পার-ইউজ ভিত্তিতে বিল করা হয়, চুক্তিবদ্ধ প্রতিশ্রুতি ছাড়াই দ্রুত প্রতিক্রিয়া এবং প্রিমিয়াম মান নিশ্চিত করে।",
     "vipAirportTitle": "এক্সিকিউটিভ এবং VIP এয়ারপোর্ট ট্রান্সফার",
-    "vipAirportDesc": "আপনার সবচেয়ে মূল্যবান ভ্রমণকারীদের জন্য একটি নিখুঁত স্বাগত এবং প্রস্থান নিশ্চিত করুন। আমরা C-suite পেশাদার এবং বিদেশী ক্লায়েন্ট প্রতিনিধিদলের জন্য বিচক্ষণতা এবং ব্যক্তিগত যত্নের উপর ফোকাস সহ প্রিমিয়াম এয়ারপোর্ট সেবা প্রদান করি। এক্সিকিউটিভ-লেভেল সেবা এবং সম্পূর্ণ গোপনীয়তার জন্য প্রশিক্ষিত পেশাদার চালকদের দ্বারা চালিত প্রিমিয়াম গাড়ি উপভোগ করুন।"
+    "vipAirportDesc": "আপনার সবচেয়ে মূল্যবান ভ্রমণকারীদের জন্য একটি নিখুঁত স্বাগত এবং প্রস্থান নিশ্চিত করুন। আমরা C-suite পেশাদার এবং বিদেশী ক্লায়েন্ট প্রতিনিধিদলের জন্য বিচক্ষণতা এবং ব্যক্তিগত যত্নের উপর ফোকাস সহ প্রিমিয়াম এয়ারপোর্ট সেবা প্রদান করি। এক্সিকিউটিভ-লেভেল সেবা এবং সম্পূর্ণ গোপনীয়তার জন্য প্রশিক্ষিত পেশাদার চালকদের দ্বারা চালিত প্রিমিয়াম গাড়ি উপভোগ করুন।",
+    "formTitle": "কর্পোরেট সার্ভিসের অনুরোধ করুন",
+    "companyName": "কোম্পানির নাম",
+    "companyNamePlaceholder": "আপনার কোম্পানির নাম লিখুন",
+    "officeAddress": "অফিস ঠিকানা",
+    "officeAddressPlaceholder": "অফিস ঠিকানা লিখুন",
+    "primaryContactName": "প্রাথমিক যোগাযোগ ব্যক্তির নাম",
+    "contactPersonPlaceholder": "যোগাযোগ ব্যক্তির পূর্ণ নাম",
+    "primaryContactPhone": "প্রাথমিক যোগাযোগ ব্যক্তির ফোন নম্বর",
+    "companyEmail": "কোম্পানির ইমেইল ঠিকানা",
+    "companyEmailPlaceholder": "company@example.com",
+    "serviceType": "সার্ভিসের ধরন",
+    "selectServiceType": "সার্ভিসের ধরন নির্বাচন করুন",
+    "contractType": "চুক্তির ধরন",
+    "selectContractType": "চুক্তির ধরন নির্বাচন করুন"
   },
   "rentalPage": {
     "heroTitle": "নির্ভরযোগ্য পরিবহন সমাধান",
@@ -184,7 +222,18 @@
     "availability_fullTime": "পূর্ণ সময়",
     "availability_partTime": "আংশিক সময়",
     "availability_weekends": "শুধু সপ্তাহান্তে",
-    "availability_other": "অন্যান্য"
+    "availability_other": "অন্যান্য",
+    "vehicleOwnership": "গাড়ির মালিকানা (সব প্রযোজ্য নির্বাচন করুন)",
+    "vehicleOwnership_sedan": "সেডান",
+    "vehicleOwnership_suv": "এসইউভি",
+    "vehicleOwnership_van": "ভ্যান",
+    "vehicleOwnership_bus": "বাস",
+    "vehicleOwnership_microbus": "মাইক্রোবাস",
+    "vehicleOwnership_luxuryCar": "লাক্সারি গাড়ি",
+    "serviceModality": "সার্ভিস পদ্ধতি",
+    "selectServiceType": "সার্ভিসের ধরন নির্বাচন করুন",
+    "yearsOfExperience": "অভিজ্ঞতার বছর",
+    "selectExperience": "অভিজ্ঞতা নির্বাচন করুন"
   },
   "contact": {
     "heroTitle": "যোগাযোগ করুন",
@@ -209,5 +258,15 @@
     "publishedOn": "প্রকাশিত",
     "author": "লেখক",
     "noPostsFound": "কোনো ব্লগ পোস্ট পাওয়া যায়নি।"
+  },
+  "form": {
+    "emailAddress": "ইমেইল ঠিকানা",
+    "emailPlaceholder": "your@email.com",
+    "locationPlaceholder": "আপনার শহর লিখুন",
+    "namePlaceholder": "আপনার পূর্ণ নাম",
+    "messagePlaceholder": "আপনার পরিবহন প্রয়োজন সম্পর্কে জানান বা কোনো প্রশ্ন করুন...",
+    "additionalInfo": "অতিরিক্ত তথ্য",
+    "additionalInfoPlaceholder": "আপনার অভিজ্ঞতা, বিশেষ সেবা বা অন্যান্য তথ্য সম্পর্কে বলুন...",
+    "selectInquiryType": "অনুসন্ধানের ধরন নির্বাচন করুন"
   }
 }
