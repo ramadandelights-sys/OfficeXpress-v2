@@ -493,11 +493,10 @@ export default function Rental() {
       <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-            Reliable Transportation<br />Solutions
+            {t('rentalPage.heroTitle')}
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            Book quality vehicles for your personal and business transportation needs. 
-            From daily commutes to special events, we have the perfect solution.
+            {t('rentalPage.heroDescription')}
           </p>
         </div>
       </section>
