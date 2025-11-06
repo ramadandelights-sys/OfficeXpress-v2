@@ -392,6 +392,7 @@ export const carpoolRoutes = pgTable("carpool_routes", {
 export const carpoolPickupPoints = pgTable("carpool_pickup_points", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  pointType: text("point_type").notNull().default("pickup"), // "pickup" or "dropoff"
   name: text("name").notNull(),
   latitude: numeric("latitude", { precision: 10, scale: 7 }),
   longitude: numeric("longitude", { precision: 10, scale: 7 }),

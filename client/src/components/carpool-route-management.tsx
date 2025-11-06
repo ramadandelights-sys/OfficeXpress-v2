@@ -40,9 +40,11 @@ export default function CarpoolRouteManagement() {
   const [editingRoute, setEditingRoute] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [showPickupPointDialog, setShowPickupPointDialog] = useState(false);
+  const [showDropOffPointDialog, setShowDropOffPointDialog] = useState(false);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
   const [deleteRouteId, setDeleteRouteId] = useState<string | null>(null);
   const [deletePickupPointId, setDeletePickupPointId] = useState<string | null>(null);
+  const [deleteDropOffPointId, setDeleteDropOffPointId] = useState<string | null>(null);
   const [deleteTimeSlotId, setDeleteTimeSlotId] = useState<string | null>(null);
 
   // Fetch all routes
@@ -52,7 +54,13 @@ export default function CarpoolRouteManagement() {
 
   // Fetch pickup points for selected route
   const { data: pickupPoints = [], isLoading: loadingPickupPoints } = useQuery<CarpoolPickupPoint[]>({
-    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points'],
+    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'],
+    enabled: !!selectedRoute,
+  });
+
+  // Fetch drop-off points for selected route
+  const { data: dropOffPoints = [], isLoading: loadingDropOffPoints } = useQuery<CarpoolPickupPoint[]>({
+    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'],
     enabled: !!selectedRoute,
   });
 
@@ -111,10 +119,10 @@ export default function CarpoolRouteManagement() {
   // Create pickup point mutation
   const createPickupPointMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
-      return await apiRequest('POST', '/api/admin/carpool/pickup-points', data);
+      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'pickup' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'] });
       toast({ title: "Success", description: "Pickup point created successfully" });
       setShowPickupPointDialog(false);
     },
@@ -129,13 +137,44 @@ export default function CarpoolRouteManagement() {
       return await apiRequest('DELETE', `/api/admin/carpool/pickup-points/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'] });
       toast({ title: "Success", description: "Pickup point deleted successfully" });
       setDeletePickupPointId(null);
     },
     onError: (error) => {
       toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
       setDeletePickupPointId(null);
+    },
+  });
+
+  // Create drop-off point mutation
+  const createDropOffPointMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
+      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'dropoff' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'] });
+      toast({ title: "Success", description: "Drop-off point created successfully" });
+      setShowDropOffPointDialog(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+    },
+  });
+
+  // Delete drop-off point mutation
+  const deleteDropOffPointMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/admin/carpool/pickup-points/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'] });
+      toast({ title: "Success", description: "Drop-off point deleted successfully" });
+      setDeleteDropOffPointId(null);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+      setDeleteDropOffPointId(null);
     },
   });
 
@@ -253,9 +292,9 @@ export default function CarpoolRouteManagement() {
         </CardContent>
       </Card>
 
-      {/* Pickup Points and Time Slots for Selected Route */}
+      {/* Pickup Points, Drop-off Points, and Time Slots for Selected Route */}
       {selectedRoute && (
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           {/* Pickup Points */}
           <Card>
             <CardHeader>
@@ -290,6 +329,50 @@ export default function CarpoolRouteManagement() {
                         size="sm"
                         onClick={() => setDeletePickupPointId(point.id)}
                         data-testid={`button-delete-pickup-point-${point.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Drop-off Points */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2" data-testid="heading-dropoff-points">
+                  <MapPin className="h-5 w-5" />
+                  Drop-off Points
+                </CardTitle>
+                <Button onClick={() => setShowDropOffPointDialog(true)} size="sm" data-testid="button-create-dropoff-point">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Point
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {loadingDropOffPoints ? (
+                <div className="text-center py-4">Loading...</div>
+              ) : dropOffPoints.length === 0 ? (
+                <div className="text-center py-4 text-gray-500">
+                  No drop-off points yet
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {dropOffPoints.map((point) => (
+                    <div key={point.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`dropoff-point-${point.id}`}>
+                      <div>
+                        <div className="font-medium">{point.name}</div>
+                        <div className="text-sm text-gray-500">Order: {point.sequenceOrder}</div>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => setDeleteDropOffPointId(point.id)}
+                        data-testid={`button-delete-dropoff-point-${point.id}`}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -374,6 +457,19 @@ export default function CarpoolRouteManagement() {
           routeId={selectedRoute}
           onSubmit={(data) => createPickupPointMutation.mutate(data)}
           isPending={createPickupPointMutation.isPending}
+          title="Add Pickup Point"
+        />
+      )}
+
+      {/* Drop-off Point Dialog */}
+      {selectedRoute && (
+        <PickupPointDialog
+          open={showDropOffPointDialog}
+          onClose={() => setShowDropOffPointDialog(false)}
+          routeId={selectedRoute}
+          onSubmit={(data) => createDropOffPointMutation.mutate(data)}
+          isPending={createDropOffPointMutation.isPending}
+          title="Add Drop-off Point"
         />
       )}
 
@@ -421,6 +517,25 @@ export default function CarpoolRouteManagement() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletePickupPointId && deletePickupPointMutation.mutate(deletePickupPointId)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteDropOffPointId !== null} onOpenChange={() => setDeleteDropOffPointId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Drop-off Point</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this drop-off point?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteDropOffPointId && deleteDropOffPointMutation.mutate(deleteDropOffPointId)}
             >
               Delete
             </AlertDialogAction>
@@ -613,13 +728,15 @@ function PickupPointDialog({
   onClose,
   routeId,
   onSubmit,
-  isPending
+  isPending,
+  title = "Add Pickup Point"
 }: {
   open: boolean;
   onClose: () => void;
   routeId: string;
   onSubmit: (data: z.infer<typeof insertCarpoolPickupPointSchema>) => void;
   isPending: boolean;
+  title?: string;
 }) {
   const form = useForm<z.infer<typeof insertCarpoolPickupPointSchema>>({
     resolver: zodResolver(insertCarpoolPickupPointSchema),
@@ -654,9 +771,9 @@ function PickupPointDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle data-testid="dialog-title-pickup-point">Add Pickup Point</DialogTitle>
+          <DialogTitle data-testid="dialog-title-pickup-point">{title}</DialogTitle>
           <DialogDescription>
-            Add a new pickup point for this route
+            Add a new {title.toLowerCase().includes('pickup') ? 'pickup' : 'drop-off'} point for this route
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

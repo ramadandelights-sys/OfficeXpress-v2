@@ -1131,11 +1131,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Carpool pickup point operations
-  async getCarpoolPickupPoints(routeId: string): Promise<CarpoolPickupPoint[]> {
+  async getCarpoolPickupPoints(routeId: string, pointType?: string): Promise<CarpoolPickupPoint[]> {
+    const baseCondition = eq(carpoolPickupPoints.routeId, routeId);
+    const whereCondition = pointType 
+      ? and(baseCondition, eq(carpoolPickupPoints.pointType, pointType))
+      : baseCondition;
+    
     return await db
       .select()
       .from(carpoolPickupPoints)
-      .where(eq(carpoolPickupPoints.routeId, routeId))
+      .where(whereCondition)
       .orderBy(carpoolPickupPoints.sequenceOrder);
   }
 

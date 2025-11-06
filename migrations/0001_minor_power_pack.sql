@@ -1,0 +1,1 @@
+ALTER TABLE "carpool_pickup_points" ADD COLUMN "point_type" text DEFAULT 'pickup' NOT NULL;

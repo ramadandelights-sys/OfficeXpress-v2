@@ -1927,10 +1927,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all pickup points for a route
+  // Admin: Get all pickup points for a route (with optional pointType filter)
   app.get("/api/admin/carpool/routes/:id/pickup-points", hasPermission('carpoolRouteManagement', 'view'), async (req, res) => {
     try {
-      const points = await storage.getCarpoolPickupPoints(req.params.id);
+      const pointType = req.query.pointType as string | undefined;
+      const points = await storage.getCarpoolPickupPoints(req.params.id, pointType);
       res.json(points);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch pickup points" });
@@ -1942,22 +1943,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pointData = insertCarpoolPickupPointSchema.parse(req.body);
       
-      // Get existing pickup points for this route
-      const existingPoints = await storage.getCarpoolPickupPoints(pointData.routeId);
+      // Get existing points of the same type for this route
+      const pointType = pointData.pointType || "pickup";
+      const existingPoints = await storage.getCarpoolPickupPoints(pointData.routeId, pointType);
       
-      // Check for duplicate name
+      // Check for duplicate name within the same point type
       const duplicateName = existingPoints.find((p: CarpoolPickupPoint) => p.name.toLowerCase() === pointData.name.toLowerCase());
       if (duplicateName) {
+        const typeName = pointType === "dropoff" ? "drop-off point" : "pickup point";
         return res.status(400).json({ 
-          message: `A pickup point with the name "${pointData.name}" already exists on this route` 
+          message: `A ${typeName} with the name "${pointData.name}" already exists on this route` 
         });
       }
       
-      // Check for duplicate sequence order
+      // Check for duplicate sequence order within the same point type
       const duplicateOrder = existingPoints.find((p: CarpoolPickupPoint) => p.sequenceOrder === pointData.sequenceOrder);
       if (duplicateOrder) {
+        const typeName = pointType === "dropoff" ? "drop-off point" : "pickup point";
         return res.status(400).json({ 
-          message: `A pickup point with sequence order ${pointData.sequenceOrder} already exists on this route` 
+          message: `A ${typeName} with sequence order ${pointData.sequenceOrder} already exists on this route` 
         });
       }
       
