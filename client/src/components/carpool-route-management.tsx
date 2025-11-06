@@ -671,7 +671,14 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>Estimated Distance (km)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" placeholder="e.g., 200" data-testid="input-distance" />
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        value={field.value || ''} 
+                        onChange={(e) => field.onChange(e.target.value)} 
+                        placeholder="e.g., 200" 
+                        data-testid="input-distance" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -685,7 +692,14 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>Price Per Seat (BDT)</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" placeholder="e.g., 200" data-testid="input-price" />
+                      <Input 
+                        {...field} 
+                        type="number" 
+                        value={field.value || ''} 
+                        onChange={(e) => field.onChange(e.target.value)} 
+                        placeholder="e.g., 200" 
+                        data-testid="input-price" 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -815,7 +829,16 @@ function PickupPointDialog({
                 <FormItem>
                   <FormLabel>Sequence Order</FormLabel>
                   <FormControl>
-                    <Input {...field} type="number" onChange={(e) => field.onChange(parseInt(e.target.value))} data-testid="input-sequence-order" />
+                    <Input 
+                      {...field} 
+                      type="number" 
+                      value={field.value || ''} 
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        field.onChange(value === '' ? 1 : parseInt(value) || 1);
+                      }} 
+                      data-testid="input-sequence-order" 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
