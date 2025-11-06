@@ -213,7 +213,7 @@ export interface IStorage {
   deleteCarpoolRoute(id: string): Promise<void>;
   
   // Carpool pickup point operations
-  getCarpoolPickupPoints(routeId: string): Promise<CarpoolPickupPoint[]>;
+  getCarpoolPickupPoints(routeId: string, pointType?: string): Promise<CarpoolPickupPoint[]>;
   getCarpoolPickupPoint(id: string): Promise<CarpoolPickupPoint | undefined>;
   createCarpoolPickupPoint(pickupPoint: InsertCarpoolPickupPoint): Promise<CarpoolPickupPoint>;
   updateCarpoolPickupPoint(id: string, data: Partial<Omit<CarpoolPickupPoint, 'id' | 'createdAt'>>): Promise<CarpoolPickupPoint>;
