@@ -110,11 +110,8 @@ export default function CarpoolPage() {
   const handleTimeSlotChange = (timeSlotId: string) => {
     setSelectedTimeSlot(timeSlotId);
     form.setValue('timeSlotId', timeSlotId);
-    // Auto-populate travelDate from selected time slot
-    const slot = timeSlots.find(ts => ts.id === timeSlotId);
-    if (slot) {
-      form.setValue('travelDate', format(new Date(slot.departureTime), 'yyyy-MM-dd'));
-    }
+    // Auto-populate travelDate to today
+    form.setValue('travelDate', format(new Date(), 'yyyy-MM-dd'));
   };
 
   if (bookingComplete) {
@@ -265,8 +262,7 @@ export default function CarpoolPage() {
                                 ) : (
                                   timeSlots.map((slot) => (
                                     <SelectItem key={slot.id} value={slot.id} data-testid={`option-timeslot-${slot.id}`}>
-                                      {format(new Date(slot.departureTime), 'EEE, MMM d, yyyy')} at{' '}
-                                      {format(new Date(slot.departureTime), 'h:mm a')}
+                                      Departure: {slot.departureTime}
                                     </SelectItem>
                                   ))
                                 )}
@@ -482,8 +478,7 @@ export default function CarpoolPage() {
                     <div>
                       <p className="text-muted-foreground">Departure</p>
                       <p className="font-medium">
-                        {format(new Date(selectedTimeSlotDetails.departureTime), 'EEE, MMM d')} at{' '}
-                        {format(new Date(selectedTimeSlotDetails.departureTime), 'h:mm a')}
+                        Time: {selectedTimeSlotDetails.departureTime}
                       </p>
                     </div>
                   )}
