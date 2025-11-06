@@ -54,13 +54,29 @@ export default function CarpoolRouteManagement() {
 
   // Fetch pickup points for selected route
   const { data: pickupPoints = [], isLoading: loadingPickupPoints } = useQuery<CarpoolPickupPoint[]>({
-    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'],
+    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'],
+    queryFn: async () => {
+      if (!selectedRoute) return [];
+      const response = await fetch(`/api/admin/carpool/routes/${selectedRoute}/pickup-points?pointType=pickup`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch pickup points');
+      return response.json();
+    },
     enabled: !!selectedRoute,
   });
 
   // Fetch drop-off points for selected route
   const { data: dropOffPoints = [], isLoading: loadingDropOffPoints } = useQuery<CarpoolPickupPoint[]>({
-    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'],
+    queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'],
+    queryFn: async () => {
+      if (!selectedRoute) return [];
+      const response = await fetch(`/api/admin/carpool/routes/${selectedRoute}/pickup-points?pointType=dropoff`, {
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to fetch drop-off points');
+      return response.json();
+    },
     enabled: !!selectedRoute,
   });
 
@@ -122,7 +138,7 @@ export default function CarpoolRouteManagement() {
       return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'pickup' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
       toast({ title: "Success", description: "Pickup point created successfully" });
       setShowPickupPointDialog(false);
     },
@@ -137,7 +153,7 @@ export default function CarpoolRouteManagement() {
       return await apiRequest('DELETE', `/api/admin/carpool/pickup-points/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=pickup'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
       toast({ title: "Success", description: "Pickup point deleted successfully" });
       setDeletePickupPointId(null);
     },
@@ -153,7 +169,7 @@ export default function CarpoolRouteManagement() {
       return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'dropoff' });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'] });
       toast({ title: "Success", description: "Drop-off point created successfully" });
       setShowDropOffPointDialog(false);
     },
@@ -168,7 +184,7 @@ export default function CarpoolRouteManagement() {
       return await apiRequest('DELETE', `/api/admin/carpool/pickup-points/${id}`);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points?pointType=dropoff'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'] });
       toast({ title: "Success", description: "Drop-off point deleted successfully" });
       setDeleteDropOffPointId(null);
     },
