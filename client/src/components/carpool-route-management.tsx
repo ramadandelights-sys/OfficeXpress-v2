@@ -18,6 +18,22 @@ import type { CarpoolRoute, CarpoolPickupPoint, CarpoolTimeSlot } from "@shared/
 import { insertCarpoolRouteSchema, updateCarpoolRouteSchema, insertCarpoolPickupPointSchema, insertCarpoolTimeSlotSchema } from "@shared/schema";
 import { z } from "zod";
 
+function extractErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    const match = error.message.match(/^\d{3}:\s*(.+)$/);
+    if (match) {
+      try {
+        const parsed = JSON.parse(match[1]);
+        return parsed.message || match[1];
+      } catch {
+        return match[1];
+      }
+    }
+    return error.message;
+  }
+  return "An unexpected error occurred";
+}
+
 export default function CarpoolRouteManagement() {
   const { toast } = useToast();
   const [showRouteCreator, setShowRouteCreator] = useState(false);
@@ -56,8 +72,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Route created successfully" });
       setShowRouteCreator(false);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create route", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
     },
   });
 
@@ -71,8 +87,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Route updated successfully" });
       setEditingRoute(null);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to update route", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
     },
   });
 
@@ -86,8 +102,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Route deleted successfully" });
       setDeleteRouteId(null);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete route", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
       setDeleteRouteId(null);
     },
   });
@@ -102,8 +118,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Pickup point created successfully" });
       setShowPickupPointDialog(false);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create pickup point", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
     },
   });
 
@@ -117,8 +133,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Pickup point deleted successfully" });
       setDeletePickupPointId(null);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete pickup point", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
       setDeletePickupPointId(null);
     },
   });
@@ -133,8 +149,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Time slot created successfully" });
       setShowTimeSlotDialog(false);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to create time slot", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
     },
   });
 
@@ -148,8 +164,8 @@ export default function CarpoolRouteManagement() {
       toast({ title: "Success", description: "Time slot deleted successfully" });
       setDeleteTimeSlotId(null);
     },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete time slot", variant: "destructive" });
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
       setDeleteTimeSlotId(null);
     },
   });
@@ -351,22 +367,26 @@ export default function CarpoolRouteManagement() {
       />
 
       {/* Pickup Point Dialog */}
-      <PickupPointDialog
-        open={showPickupPointDialog}
-        onClose={() => setShowPickupPointDialog(false)}
-        routeId={selectedRoute || ''}
-        onSubmit={(data) => createPickupPointMutation.mutate(data)}
-        isPending={createPickupPointMutation.isPending}
-      />
+      {selectedRoute && (
+        <PickupPointDialog
+          open={showPickupPointDialog}
+          onClose={() => setShowPickupPointDialog(false)}
+          routeId={selectedRoute}
+          onSubmit={(data) => createPickupPointMutation.mutate(data)}
+          isPending={createPickupPointMutation.isPending}
+        />
+      )}
 
       {/* Time Slot Dialog */}
-      <TimeSlotDialog
-        open={showTimeSlotDialog}
-        onClose={() => setShowTimeSlotDialog(false)}
-        routeId={selectedRoute || ''}
-        onSubmit={(data) => createTimeSlotMutation.mutate(data)}
-        isPending={createTimeSlotMutation.isPending}
-      />
+      {selectedRoute && (
+        <TimeSlotDialog
+          open={showTimeSlotDialog}
+          onClose={() => setShowTimeSlotDialog(false)}
+          routeId={selectedRoute}
+          onSubmit={(data) => createTimeSlotMutation.mutate(data)}
+          isPending={createTimeSlotMutation.isPending}
+        />
+      )}
 
       {/* Delete Confirmations */}
       <AlertDialog open={deleteRouteId !== null} onOpenChange={() => setDeleteRouteId(null)}>
@@ -566,7 +586,7 @@ function RouteDialog({
                     <div className="text-sm text-gray-500">Make this route available for bookings</div>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-is-active" />
+                    <Switch checked={field.value ?? undefined} onCheckedChange={field.onChange} data-testid="switch-is-active" />
                   </FormControl>
                 </FormItem>
               )}
@@ -758,7 +778,7 @@ function TimeSlotDialog({
                     <div className="text-sm text-gray-500">Available for booking</div>
                   </div>
                   <FormControl>
-                    <Switch checked={field.value} onCheckedChange={field.onChange} data-testid="switch-time-slot-active" />
+                    <Switch checked={field.value ?? undefined} onCheckedChange={field.onChange} data-testid="switch-time-slot-active" />
                   </FormControl>
                 </FormItem>
               )}
