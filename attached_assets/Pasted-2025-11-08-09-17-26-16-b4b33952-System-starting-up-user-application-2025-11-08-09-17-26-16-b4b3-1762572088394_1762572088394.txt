@@ -1,0 +1,96 @@
+2025-11-08 09:17:26.16
+b4b33952
+System
+starting up user application
+2025-11-08 09:17:26.16
+b4b33952
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-11-08 09:17:26.16
+b4b33952
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-11-08 09:17:27.77
+b4b33952
+User
+> rest-express@1.0.0 start
+2025-11-08 09:17:27.77
+b4b33952
+User
+> NODE_ENV=production node dist/index.js
+2025-11-08 09:19:13.20
+b4b33952
+User
+3:19:13 AM [express] GET /api/auth/user 200 in 2245ms :: {"id":"3f4c74c2-71dd-435f-82b2-664dc69bd519…
+2025-11-08 09:19:13.27
+b4b33952
+User
+3:19:13 AM [express] GET /api/admin/marketing-settings 200 in 2312ms :: {"id":"8bbd8fd2-bc05-48b0-ba…
+2025-11-08 09:19:13.30
+b4b33952
+User
+3:19:13 AM [express] GET /api/logo 200 in 2345ms :: {"src":"/logo.jpg?v=default","hasCustomLogo":fal…
+2025-11-08 09:19:13.71
+b4b33952
+User
+3:19:13 AM [express] GET /api/admin/corporate-bookings 200 in 119ms :: []
+2025-11-08 09:19:13.83
+b4b33952
+User
+3:19:13 AM [express] GET /api/portfolio-clients 200 in 244ms :: []
+2025-11-08 09:19:13.84
+b4b33952
+User
+3:19:13 AM [express] GET /api/admin/carpool/routes 200 in 247ms :: [{"id":"8e3ae87a-9f98-4668-b6b6-2…
+2025-11-08 09:19:13.88
+b4b33952
+User
+3:19:13 AM [express] GET /api/admin/contact-messages 200 in 266ms :: []
+2025-11-08 09:19:13.88
+b4b33952
+User
+3:19:13 AM [express] GET /api/admin/carpool/bookings 200 in 274ms :: []
+2025-11-08 09:19:13.88
+b4b33952
+User
+3:19:13 AM [express] GET /api/drivers 200 in 274ms :: [{"id":"937f4495-d726-4271-a978-8464292ee34d",…
+2025-11-08 09:19:13.95
+b4b33952
+User
+3:19:13 AM [express] GET /api/drivers/active 200 in 355ms :: [{"id":"159e4535-0800-45fe-a5f7-9dfa7b5…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/admin/blog-posts 200 in 433ms :: [{"id":"76dccc59-8ba9-4c30-8481-60abf…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/admin/website-settings 200 in 446ms :: {"id":"e624228f-0912-41df-be7f-…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/admin/vendor-registrations 200 in 454ms :: [{"id":"17dacafb-ae8f-4ee3-…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/users 200 in 447ms :: [{"id":"59e4e149-86e9-40d0-a8be-6b3c0a36ffb7","p…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/admin/legal-pages 200 in 452ms :: [{"id":"dedae10b-209b-4dc9-8ab4-d348…
+2025-11-08 09:19:14.05
+b4b33952
+User
+3:19:14 AM [express] GET /api/admin/rental-bookings 200 in 451ms :: [{"id":"ef5d6353-aac6-405a-9ca2-…
+2025-11-08 09:20:36.98
+76660178
+User
+[Carpool Notifications] Running scheduled check...
+2025-11-08 09:20:36.98
+76660178
+User
+[Carpool Notifications] Checking trips between 2025-11-08T05:05:36.981Z and 2025-11-08T05:35:36.981Z
+2025-11-08 09:20:40.51
+76660178
+User
+[Carpool Notifications] Found 0 time slots in notification window
