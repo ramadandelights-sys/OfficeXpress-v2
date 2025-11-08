@@ -29,6 +29,7 @@ export type UserPermissions = {
   rentalBookings?: PermissionLevel;
   carpoolBookings?: PermissionLevel;
   carpoolRouteManagement?: PermissionLevel;
+  carpoolBlackoutDates?: PermissionLevel;
   vendorRegistrations?: PermissionLevel;
   contactMessages?: PermissionLevel;
   marketingSettings?: PermissionLevel;
@@ -48,6 +49,8 @@ export const users = pgTable("users", {
   role: text("role").notNull().default("customer"), // customer, employee, superadmin
   permissions: json("permissions").$type<UserPermissions>().default({}),
   temporaryPassword: boolean("temporary_password").default(false),
+  officeLocation: text("office_location"),
+  homeLocation: text("home_location"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
 });
@@ -383,6 +386,7 @@ export const carpoolRoutes = pgTable("carpool_routes", {
   estimatedDistance: text("estimated_distance").notNull(),
   description: text("description"),
   pricePerSeat: numeric("price_per_seat", { precision: 10, scale: 2 }).notNull(),
+  weekdays: json("weekdays").$type<number[]>().default([1, 2, 3, 4, 5]), // 0=Sunday, 1=Monday, etc.
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -423,11 +427,27 @@ export const carpoolBookings = pgTable("carpool_bookings", {
   travelDate: text("travel_date").notNull(),
   boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
   dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  shareToken: varchar("share_token", { length: 32 }).unique(),
+  shareTokenExpiry: timestamp("share_token_expiry"),
   status: text("status").default("pending"),
   completionEmailSentAt: timestamp("completion_email_sent_at"),
   statusUpdatedAt: timestamp("status_updated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  index("idx_booking_counts").on(table.routeId, table.timeSlotId, table.travelDate, table.status),
+]);
+
+// Carpool Blackout Dates Table (for holidays and service closures)
+export const carpoolBlackoutDates = pgTable("carpool_blackout_dates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_blackout_active_dates").on(table.isActive, table.startDate, table.endDate),
+]);
 
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
@@ -642,9 +662,16 @@ export const insertCarpoolBookingSchema = createInsertSchema(carpoolBookings).om
   referenceId: true,
   userId: true,
   driverId: true,
+  shareToken: true,
+  shareTokenExpiry: true,
   status: true,
   completionEmailSentAt: true,
   statusUpdatedAt: true,
+  createdAt: true,
+});
+
+export const insertCarpoolBlackoutDateSchema = createInsertSchema(carpoolBlackoutDates).omit({
+  id: true,
   createdAt: true,
 });
 
@@ -710,3 +737,5 @@ export type InsertCarpoolTimeSlot = z.infer<typeof insertCarpoolTimeSlotSchema>;
 export type CarpoolBooking = typeof carpoolBookings.$inferSelect;
 export type InsertCarpoolBooking = z.infer<typeof insertCarpoolBookingSchema>;
 export type UpdateCarpoolBooking = z.infer<typeof updateCarpoolBookingSchema>;
+export type CarpoolBlackoutDate = typeof carpoolBlackoutDates.$inferSelect;
+export type InsertCarpoolBlackoutDate = z.infer<typeof insertCarpoolBlackoutDateSchema>;

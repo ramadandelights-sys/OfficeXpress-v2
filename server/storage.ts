@@ -20,6 +20,7 @@ import {
   carpoolPickupPoints,
   carpoolTimeSlots,
   carpoolBookings,
+  carpoolBlackoutDates,
   type User, 
   type InsertUser,
   type Driver,
@@ -69,7 +70,9 @@ import {
   type InsertCarpoolTimeSlot,
   type CarpoolBooking,
   type InsertCarpoolBooking,
-  type UpdateCarpoolBooking
+  type UpdateCarpoolBooking,
+  type CarpoolBlackoutDate,
+  type InsertCarpoolBlackoutDate
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
@@ -231,6 +234,7 @@ export interface IStorage {
   // Carpool booking operations
   getCarpoolBookings(): Promise<CarpoolBooking[]>;
   getCarpoolBooking(id: string): Promise<CarpoolBooking | undefined>;
+  getCarpoolBookingByShareToken(token: string): Promise<CarpoolBooking | undefined>;
   getCarpoolBookingsByUser(userId: string): Promise<CarpoolBooking[]>;
   getCarpoolBookingsByPhone(phone: string): Promise<CarpoolBooking[]>;
   getCarpoolBookingsByRouteAndDate(routeId: string, timeSlotId: string, travelDate: string): Promise<CarpoolBooking[]>;
@@ -238,6 +242,14 @@ export interface IStorage {
   updateCarpoolBooking(booking: UpdateCarpoolBooking): Promise<CarpoolBooking>;
   assignDriverToCarpool(bookingId: string, driverId: string): Promise<CarpoolBooking>;
   updateCarpoolBookingStatus(id: string, status: string): Promise<CarpoolBooking>;
+  
+  // Carpool blackout date operations
+  getCarpoolBlackoutDates(): Promise<CarpoolBlackoutDate[]>;
+  getActiveCarpoolBlackoutDates(): Promise<CarpoolBlackoutDate[]>;
+  getCarpoolBlackoutDate(id: string): Promise<CarpoolBlackoutDate | undefined>;
+  createCarpoolBlackoutDate(blackoutDate: InsertCarpoolBlackoutDate): Promise<CarpoolBlackoutDate>;
+  updateCarpoolBlackoutDate(id: string, data: Partial<Omit<CarpoolBlackoutDate, 'id' | 'createdAt'>>): Promise<CarpoolBlackoutDate>;
+  deleteCarpoolBlackoutDate(id: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1247,6 +1259,17 @@ export class DatabaseStorage implements IStorage {
     return booking || undefined;
   }
 
+  async getCarpoolBookingByShareToken(token: string): Promise<CarpoolBooking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(carpoolBookings)
+      .where(and(
+        eq(carpoolBookings.shareToken, token),
+        sql`${carpoolBookings.shareTokenExpiry} > NOW()` // Token not expired
+      ));
+    return booking || undefined;
+  }
+
   async getCarpoolBookingsByUser(userId: string): Promise<CarpoolBooking[]> {
     return await db
       .select()
@@ -1279,11 +1302,18 @@ export class DatabaseStorage implements IStorage {
     // Generate a unique 6-character reference ID
     const referenceId = Math.random().toString(36).substring(2, 8).toUpperCase();
     
+    // Generate a shareable link token (32 characters) and set expiry to 30 days
+    const shareToken = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+    const shareTokenExpiry = new Date();
+    shareTokenExpiry.setDate(shareTokenExpiry.getDate() + 30); // 30 days from now
+    
     const [created] = await db
       .insert(carpoolBookings)
       .values({
         ...booking,
         referenceId,
+        shareToken,
+        shareTokenExpiry,
         status: 'pending'
       })
       .returning();
@@ -1326,6 +1356,52 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Booking not found');
     return updated;
+  }
+
+  // Carpool blackout date operations
+  async getCarpoolBlackoutDates(): Promise<CarpoolBlackoutDate[]> {
+    return await db
+      .select()
+      .from(carpoolBlackoutDates)
+      .orderBy(desc(carpoolBlackoutDates.startDate));
+  }
+
+  async getActiveCarpoolBlackoutDates(): Promise<CarpoolBlackoutDate[]> {
+    return await db
+      .select()
+      .from(carpoolBlackoutDates)
+      .where(eq(carpoolBlackoutDates.isActive, true))
+      .orderBy(desc(carpoolBlackoutDates.startDate));
+  }
+
+  async getCarpoolBlackoutDate(id: string): Promise<CarpoolBlackoutDate | undefined> {
+    const [blackoutDate] = await db
+      .select()
+      .from(carpoolBlackoutDates)
+      .where(eq(carpoolBlackoutDates.id, id));
+    return blackoutDate || undefined;
+  }
+
+  async createCarpoolBlackoutDate(blackoutDate: InsertCarpoolBlackoutDate): Promise<CarpoolBlackoutDate> {
+    const [created] = await db
+      .insert(carpoolBlackoutDates)
+      .values(blackoutDate)
+      .returning();
+    return created;
+  }
+
+  async updateCarpoolBlackoutDate(id: string, data: Partial<Omit<CarpoolBlackoutDate, 'id' | 'createdAt'>>): Promise<CarpoolBlackoutDate> {
+    const [updated] = await db
+      .update(carpoolBlackoutDates)
+      .set(data)
+      .where(eq(carpoolBlackoutDates.id, id))
+      .returning();
+    if (!updated) throw new Error('Blackout date not found');
+    return updated;
+  }
+
+  async deleteCarpoolBlackoutDate(id: string): Promise<void> {
+    await db.delete(carpoolBlackoutDates).where(eq(carpoolBlackoutDates.id, id));
   }
 }
 

@@ -47,6 +47,7 @@ import {
   insertCarpoolTimeSlotSchema,
   insertCarpoolBookingSchema,
   updateCarpoolBookingSchema,
+  insertCarpoolBlackoutDateSchema,
   type UserPermissions,
   type CarpoolPickupPoint
 } from "@shared/schema";
@@ -1832,9 +1833,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Carpool routes management routes
   // Get all carpool routes (public - for customers to see available routes)
+  // Supports optional ?date=YYYY-MM-DD parameter to filter by weekday and blackout dates
   app.get("/api/carpool/routes", async (req, res) => {
     try {
-      const routes = await storage.getActiveCarpoolRoutes();
+      let routes = await storage.getActiveCarpoolRoutes();
+      
+      // If a date is provided, filter routes by weekday and blackout dates
+      const dateParam = req.query.date as string | undefined;
+      if (dateParam) {
+        const selectedDate = new Date(dateParam);
+        const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        
+        // Filter routes that operate on the selected day of week
+        routes = routes.filter(route => {
+          const weekdays = route.weekdays as number[] || [1, 2, 3, 4, 5]; // Default to weekdays
+          return weekdays.includes(dayOfWeek);
+        });
+        
+        // Check if the selected date falls within any active blackout period
+        const blackoutDates = await storage.getActiveCarpoolBlackoutDates();
+        const isBlackedOut = blackoutDates.some(blackout => {
+          const start = new Date(blackout.startDate);
+          const end = new Date(blackout.endDate);
+          return selectedDate >= start && selectedDate <= end;
+        });
+        
+        // If date is blacked out, return empty array
+        if (isBlackedOut) {
+          return res.json([]);
+        }
+      }
+      
       res.json(routes);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch carpool routes" });
@@ -1871,6 +1900,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(slots);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch time slots" });
+    }
+  });
+
+  // Get booking counts for time slots (public)
+  // Returns the number of existing bookings for each time slot on a specific date
+  app.get("/api/carpool/routes/:id/booking-counts", async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date) {
+        return res.status(400).json({ message: "Date parameter is required" });
+      }
+      
+      const slots = await storage.getActiveCarpoolTimeSlots(req.params.id);
+      const bookingCounts: Record<string, number> = {};
+      
+      // Get booking counts for each time slot
+      for (const slot of slots) {
+        const bookings = await storage.getCarpoolBookingsByRouteAndDate(
+          req.params.id,
+          slot.id,
+          date as string
+        );
+        // Count only confirmed and pending bookings (not cancelled or insufficient)
+        const activeBookings = bookings.filter(b => 
+          b.status === 'pending' || b.status === 'confirmed'
+        );
+        bookingCounts[slot.id] = activeBookings.length;
+      }
+      
+      res.json(bookingCounts);
+    } catch (error) {
+      console.error("Get booking counts error:", error);
+      res.status(500).json({ message: "Failed to fetch booking counts" });
     }
   });
 
@@ -2190,6 +2252,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Update booking error:", error);
         res.status(500).json({ message: "Failed to update booking" });
       }
+    }
+  });
+
+  // Carpool blackout date routes (for holidays and service closures)
+  // Admin: Get all blackout dates
+  app.get("/api/admin/carpool/blackout-dates", hasPermission('carpoolBlackoutDates', 'view'), async (req, res) => {
+    try {
+      const blackoutDates = await storage.getCarpoolBlackoutDates();
+      res.json(blackoutDates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch blackout dates" });
+    }
+  });
+
+  // Public: Get active blackout dates (for checking availability)
+  app.get("/api/carpool/blackout-dates/active", async (req, res) => {
+    try {
+      const blackoutDates = await storage.getActiveCarpoolBlackoutDates();
+      res.json(blackoutDates);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch active blackout dates" });
+    }
+  });
+
+  // Admin: Create blackout date
+  app.post("/api/admin/carpool/blackout-dates", hasPermission('carpoolBlackoutDates', 'edit'), async (req, res) => {
+    try {
+      const blackoutDateData = insertCarpoolBlackoutDateSchema.parse(req.body);
+      const blackoutDate = await storage.createCarpoolBlackoutDate(blackoutDateData);
+      res.json(blackoutDate);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: "Invalid blackout date data", errors: error.errors });
+      } else {
+        console.error("Create blackout date error:", error);
+        res.status(500).json({ message: "Failed to create blackout date" });
+      }
+    }
+  });
+
+  // Admin: Update blackout date
+  app.put("/api/admin/carpool/blackout-dates/:id", hasPermission('carpoolBlackoutDates', 'edit'), async (req, res) => {
+    try {
+      const blackoutDate = await storage.updateCarpoolBlackoutDate(req.params.id, req.body);
+      res.json(blackoutDate);
+    } catch (error) {
+      console.error("Update blackout date error:", error);
+      res.status(500).json({ message: "Failed to update blackout date" });
+    }
+  });
+
+  // Admin: Delete blackout date
+  app.delete("/api/admin/carpool/blackout-dates/:id", hasPermission('carpoolBlackoutDates', 'edit'), async (req, res) => {
+    try {
+      await storage.deleteCarpoolBlackoutDate(req.params.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Delete blackout date error:", error);
+      res.status(500).json({ message: "Failed to delete blackout date" });
     }
   });
 
