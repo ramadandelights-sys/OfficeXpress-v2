@@ -1,0 +1,116 @@
+2025-11-08 09:11:36.63
+76660178
+User
+at async DatabaseStorage.getCarpoolPickupPoints (file:///home/runner/workspace/dist/index.js:1324:12)
+2025-11-08 09:11:36.63
+76660178
+User
+at async file:///home/runner/workspace/dist/index.js:4116:30 {
+2025-11-08 09:11:36.63
+76660178
+User
+length: 110,
+2025-11-08 09:11:36.63
+76660178
+User
+severity: 'ERROR',
+2025-11-08 09:11:36.63
+76660178
+User
+code: '42703',
+2025-11-08 09:11:36.63
+76660178
+User
+detail: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+hint: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+position: '26',
+2025-11-08 09:11:36.63
+76660178
+User
+internalPosition: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+internalQuery: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+where: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+schema: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+table: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+column: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+dataType: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+constraint: undefined,
+2025-11-08 09:11:36.63
+76660178
+User
+file: 'parse_relation.c',
+2025-11-08 09:11:36.63
+76660178
+User
+line: '3722',
+2025-11-08 09:11:36.63
+76660178
+User
+routine: 'errorMissingColumn'
+2025-11-08 09:11:36.63
+76660178
+User
+}
+2025-11-08 09:11:36.67
+76660178
+User
+3:11:36 AM [express] POST /api/admin/carpool/pickup-points 500 in 431ms :: {"message":"Failed to cre…
+2025-11-08 09:15:36.98
+76660178
+User
+[Carpool Notifications] Running scheduled check...
+2025-11-08 09:15:36.98
+76660178
+User
+[Carpool Notifications] Checking trips between 2025-11-08T05:00:36.980Z and 2025-11-08T05:30:36.980Z
+2025-11-08 09:15:38.47
+76660178
+User
+[Carpool Notifications] Found 0 time slots in notification window
+2025-11-08 09:17:26.16
+b4b33952
+System
+starting up user application
+2025-11-08 09:17:26.16
+b4b33952
+System
+metasidecar: loaded enterprise status from environment is_enterprise=false
+2025-11-08 09:17:26.16
+b4b33952
+System
+forwarding local port 5000 to external port 80 (mapped as 1104)
+2025-11-08 09:17:27.77
+b4b33952
+User
+> rest-express@1.0.0 start
+2025-11-08 09:17:27.77
+b4b33952
+User
+> NODE_ENV=production node dist/index.js
