@@ -830,13 +830,20 @@ function PickupPointDialog({
                   <FormLabel>Sequence Order</FormLabel>
                   <FormControl>
                     <Input 
-                      {...field} 
                       type="number" 
-                      value={field.value || ''} 
+                      min="1"
+                      value={field.value ?? ''} 
                       onChange={(e) => {
                         const value = e.target.value;
-                        field.onChange(value === '' ? 1 : parseInt(value) || 1);
-                      }} 
+                        field.onChange(value === '' ? '' : parseInt(value) || '');
+                      }}
+                      onBlur={(e) => {
+                        const value = e.target.value;
+                        if (value === '' || !value) {
+                          field.onChange(1);
+                        }
+                      }}
+                      placeholder="Enter order number"
                       data-testid="input-sequence-order" 
                     />
                   </FormControl>

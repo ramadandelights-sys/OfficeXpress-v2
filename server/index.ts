@@ -52,6 +52,7 @@ app.use(helmet({
         "https://www.gstatic.com",
         "https://www.facebook.com"
       ],
+      formAction: ["'self'", "https://www.facebook.com"],
     },
   },
   crossOriginEmbedderPolicy: false
