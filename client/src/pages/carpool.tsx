@@ -363,7 +363,7 @@ export default function CarpoolPage() {
                         name="timeSlotId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Time Slot *</FormLabel>
+                            <FormLabel>Office Entry Time *</FormLabel>
                             <Select 
                               onValueChange={(value) => {
                                 field.onChange(value);
@@ -373,14 +373,14 @@ export default function CarpoolPage() {
                             >
                               <FormControl>
                                 <SelectTrigger data-testid="select-timeslot">
-                                  <SelectValue placeholder="Select departure time" />
+                                  <SelectValue placeholder="Select office entry time" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
                                 {loadingTimeSlots ? (
                                   <SelectItem value="loading" disabled>Loading...</SelectItem>
                                 ) : timeSlots.length === 0 ? (
-                                  <SelectItem value="none" disabled>No time slots available</SelectItem>
+                                  <SelectItem value="none" disabled>No office entry times available</SelectItem>
                                 ) : (
                                   timeSlots.map((slot) => {
                                     const bookingCount = bookingCounts[slot.id] || 0;

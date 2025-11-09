@@ -204,7 +204,7 @@ export default function CarpoolRouteManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'time-slots'] });
-      toast({ title: "Success", description: "Time slot created successfully" });
+      toast({ title: "Success", description: "Office entry time created successfully" });
       setShowTimeSlotDialog(false);
     },
     onError: (error) => {
@@ -219,7 +219,7 @@ export default function CarpoolRouteManagement() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'time-slots'] });
-      toast({ title: "Success", description: "Time slot deleted successfully" });
+      toast({ title: "Success", description: "Office entry time deleted successfully" });
       setDeleteTimeSlotId(null);
     },
     onError: (error) => {
@@ -499,17 +499,17 @@ export default function CarpoolRouteManagement() {
             </CardContent>
           </Card>
 
-          {/* Time Slots */}
+          {/* Office Entry Times */}
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2" data-testid="heading-time-slots">
                   <Clock className="h-5 w-5" />
-                  Time Slots
+                  Office Entry Times
                 </CardTitle>
                 <Button onClick={() => setShowTimeSlotDialog(true)} size="sm" data-testid="button-create-time-slot">
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Slot
+                  Add Office Entry Time
                 </Button>
               </div>
             </CardHeader>
@@ -518,7 +518,7 @@ export default function CarpoolRouteManagement() {
                 <div className="text-center py-4">Loading...</div>
               ) : timeSlots.length === 0 ? (
                 <div className="text-center py-4 text-gray-500">
-                  No time slots yet
+                  No office entry times yet
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -606,7 +606,7 @@ export default function CarpoolRouteManagement() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Route</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this route? This will also delete all associated pickup points and time slots.
+              Are you sure you want to delete this route? This will also delete all associated pickup points and office entry times.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -662,9 +662,9 @@ export default function CarpoolRouteManagement() {
       <AlertDialog open={deleteTimeSlotId !== null} onOpenChange={() => setDeleteTimeSlotId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Time Slot</AlertDialogTitle>
+            <AlertDialogTitle>Delete Office Entry Time</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this time slot?
+              Are you sure you want to delete this office entry time?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1081,7 +1081,7 @@ function TimeSlotDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle data-testid="dialog-title-time-slot">Add Time Slot</DialogTitle>
+          <DialogTitle data-testid="dialog-title-time-slot">Add Office Entry Time</DialogTitle>
           <DialogDescription>
             Add a new departure time for this route
           </DialogDescription>
