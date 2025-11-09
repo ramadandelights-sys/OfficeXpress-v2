@@ -4,15 +4,20 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { Calendar, MapPin, Clock, Users, DollarSign } from "lucide-react";
+import { Calendar, MapPin, Clock, Users, DollarSign, CalendarIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { insertCarpoolBookingSchema } from "@shared/schema";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation as useWouterLocation } from "wouter";
+import { cn } from "@/lib/utils";
 
 import type { 
   CarpoolRoute, 
@@ -21,10 +26,18 @@ import type {
 } from "@shared/schema";
 
 export default function CarpoolPage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const [, setLocation] = useWouterLocation();
   const { toast } = useToast();
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [bookingComplete, setBookingComplete] = useState(false);
+  
+  // Redirect to login if not authenticated
+  if (!authLoading && !user) {
+    setLocation("/login");
+    return null;
+  }
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -53,6 +66,8 @@ export default function CarpoolPage() {
   const bookingFormSchema = insertCarpoolBookingSchema.extend({
     customerName: z.string().min(2, "Name must be at least 2 characters"),
     phone: z.string().min(10, "Phone number must be at least 10 digits"),
+    email: z.string().email("Valid email is required").min(1, "Email is required"),
+    travelDate: z.string().min(1, "Travel date is required"),
   });
 
   const form = useForm<z.infer<typeof bookingFormSchema>>({
@@ -110,8 +125,6 @@ export default function CarpoolPage() {
   const handleTimeSlotChange = (timeSlotId: string) => {
     setSelectedTimeSlot(timeSlotId);
     form.setValue('timeSlotId', timeSlotId);
-    // Auto-populate travelDate to today
-    form.setValue('travelDate', format(new Date(), 'yyyy-MM-dd'));
   };
 
   if (bookingComplete) {
@@ -335,6 +348,51 @@ export default function CarpoolPage() {
                         )}
                       />
 
+                      <FormField
+                        control={form.control}
+                        name="travelDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Travel Date *</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                    data-testid="button-travel-date"
+                                  >
+                                    {field.value ? (
+                                      format(new Date(field.value), "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={field.value ? new Date(field.value) : undefined}
+                                  onSelect={(date) => {
+                                    field.onChange(date ? format(date, 'yyyy-MM-dd') : '');
+                                  }}
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
                       <div className="grid md:grid-cols-2 gap-6">
                         <FormField
                           control={form.control}
@@ -381,7 +439,7 @@ export default function CarpoolPage() {
                         name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email (optional)</FormLabel>
+                            <FormLabel>Email *</FormLabel>
                             <FormControl>
                               <input
                                 {...field}
