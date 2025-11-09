@@ -25,7 +25,8 @@ import {
   Settings, 
   FileCheck,
   UserPlus,
-  Info
+  Info,
+  CalendarOff
 } from "lucide-react";
 
 export type PermissionLevel = {
@@ -46,6 +47,7 @@ export type UserPermissions = {
   legalPages?: PermissionLevel;
   driverManagement?: PermissionLevel;
   driverAssignment?: boolean;
+  carpoolBlackoutDates?: PermissionLevel;
   employeeManagement?: PermissionLevel;
 };
 
@@ -141,6 +143,13 @@ const permissionSections: PermissionSection[] = [
     description: "Assign drivers to rental bookings",
     hasCsv: false,
     isSpecial: true,
+  },
+  {
+    key: "carpoolBlackoutDates",
+    label: "Carpool Blackout Dates",
+    icon: <CalendarOff className="h-4 w-4" />,
+    description: "Manage service blackout dates for carpool routes",
+    hasCsv: false,
   },
   {
     key: "employeeManagement",
