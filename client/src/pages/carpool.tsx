@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -32,12 +32,28 @@ export default function CarpoolPage() {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [bookingComplete, setBookingComplete] = useState(false);
+  const [shareToken, setShareToken] = useState<string | null>(null);
+  
+  // Extract share token from URL on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('share');
+    if (token) {
+      setShareToken(token);
+    }
+  }, []);
   
   // Redirect to login if not authenticated
   if (!authLoading && !user) {
     setLocation("/login");
     return null;
   }
+
+  // Fetch shared booking details if share token exists
+  const { data: sharedBooking } = useQuery({
+    queryKey: ['/api/carpool/bookings/shared', shareToken],
+    enabled: !!shareToken,
+  });
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -53,6 +69,12 @@ export default function CarpoolPage() {
   // Fetch time slots for selected route
   const { data: timeSlots = [], isLoading: loadingTimeSlots } = useQuery<CarpoolTimeSlot[]>({
     queryKey: [`/api/carpool/routes/${selectedRoute}/time-slots`],
+    enabled: !!selectedRoute,
+  });
+
+  // Fetch booking counts for selected route
+  const { data: bookingCounts = {} } = useQuery<Record<string, number>>({
+    queryKey: [`/api/carpool/routes/${selectedRoute}/booking-counts`],
     enabled: !!selectedRoute,
   });
 
@@ -126,6 +148,43 @@ export default function CarpoolPage() {
     setSelectedTimeSlot(timeSlotId);
     form.setValue('timeSlotId', timeSlotId);
   };
+
+  // Pre-populate form from shared booking
+  useEffect(() => {
+    if (sharedBooking && routes.length > 0) {
+      const booking = sharedBooking as any;
+      
+      // Set route
+      if (booking.routeId) {
+        setSelectedRoute(booking.routeId);
+        form.setValue('routeId', booking.routeId);
+      }
+      
+      // Set time slot
+      if (booking.timeSlotId) {
+        setSelectedTimeSlot(booking.timeSlotId);
+        form.setValue('timeSlotId', booking.timeSlotId);
+      }
+      
+      // Set travel date
+      if (booking.travelDate) {
+        form.setValue('travelDate', booking.travelDate);
+      }
+      
+      // Set pickup and drop-off points
+      if (booking.boardingPointId) {
+        form.setValue('boardingPointId', booking.boardingPointId);
+      }
+      if (booking.dropOffPointId) {
+        form.setValue('dropOffPointId', booking.dropOffPointId);
+      }
+      
+      toast({
+        title: "Booking pre-filled",
+        description: "Form has been pre-filled from shared link. Update your details and confirm.",
+      });
+    }
+  }, [sharedBooking, routes, form, toast]);
 
   if (bookingComplete) {
     return (
@@ -273,11 +332,21 @@ export default function CarpoolPage() {
                                 ) : timeSlots.length === 0 ? (
                                   <SelectItem value="none" disabled>No time slots available</SelectItem>
                                 ) : (
-                                  timeSlots.map((slot) => (
-                                    <SelectItem key={slot.id} value={slot.id} data-testid={`option-timeslot-${slot.id}`}>
-                                      Departure: {slot.departureTime}
-                                    </SelectItem>
-                                  ))
+                                  timeSlots.map((slot) => {
+                                    const bookingCount = bookingCounts[slot.id] || 0;
+                                    return (
+                                      <SelectItem key={slot.id} value={slot.id} data-testid={`option-timeslot-${slot.id}`}>
+                                        <div className="flex items-center justify-between w-full">
+                                          <span>Departure: {slot.departureTime}</span>
+                                          {bookingCount > 0 && (
+                                            <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                                              {bookingCount} {bookingCount === 1 ? 'booking' : 'bookings'}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </SelectItem>
+                                    );
+                                  })
                                 )}
                               </SelectContent>
                             </Select>
