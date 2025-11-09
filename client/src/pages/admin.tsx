@@ -1751,6 +1751,7 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
       vehicleMake: '',
       vehicleModel: '',
       vehicleYear: '',
+      vehicleCapacity: '4',
       isActive: true,
     },
   });
@@ -2031,6 +2032,32 @@ function DriverAssignmentDialog({ booking, open, onOpenChange, onSuccess }: Driv
                           <FormControl>
                             <Input {...field} placeholder="e.g., 2022" data-testid="input-vehicle-year" />
                           </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={driverForm.control}
+                      name="vehicleCapacity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Vehicle Capacity *</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-vehicle-capacity">
+                                <SelectValue placeholder="Select capacity" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="4">4 seats</SelectItem>
+                              <SelectItem value="6">6 seats</SelectItem>
+                              <SelectItem value="7">7 seats</SelectItem>
+                              <SelectItem value="10">10 seats</SelectItem>
+                              <SelectItem value="15">15 seats</SelectItem>
+                              <SelectItem value="20">20 seats</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -3605,6 +3632,7 @@ function DriverManagementSection({
     vehicleMake: '',
     vehicleModel: '',
     vehicleYear: '',
+    vehicleCapacity: '4',
     isActive: true,
   });
 
@@ -3618,6 +3646,7 @@ function DriverManagementSection({
       vehicleMake: '',
       vehicleModel: '',
       vehicleYear: '',
+      vehicleCapacity: '4',
       isActive: true,
     });
     setShowDriverCreator(false);
@@ -3632,6 +3661,7 @@ function DriverManagementSection({
       vehicleMake: driver.vehicleMake,
       vehicleModel: driver.vehicleModel,
       vehicleYear: driver.vehicleYear,
+      vehicleCapacity: driver.vehicleCapacity || '4',
       isActive: driver.isActive,
     });
     setEditingDriver(driver.id);
@@ -3751,6 +3781,27 @@ function DriverManagementSection({
                       {year}
                     </SelectItem>
                   ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">Vehicle Capacity *</label>
+              <Select
+                value={formData.vehicleCapacity}
+                onValueChange={(value) => setFormData({ ...formData, vehicleCapacity: value })}
+                required
+              >
+                <SelectTrigger data-testid="select-driver-capacity">
+                  <SelectValue placeholder="Select capacity" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="4">4 seats</SelectItem>
+                  <SelectItem value="6">6 seats</SelectItem>
+                  <SelectItem value="7">7 seats</SelectItem>
+                  <SelectItem value="10">10 seats</SelectItem>
+                  <SelectItem value="15">15 seats</SelectItem>
+                  <SelectItem value="20">20 seats</SelectItem>
                 </SelectContent>
               </Select>
             </div>
