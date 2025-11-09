@@ -33,6 +33,7 @@ export default function CarpoolPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
   const [bookingComplete, setBookingComplete] = useState(false);
   const [shareToken, setShareToken] = useState<string | null>(null);
+  const [bookingResponse, setBookingResponse] = useState<{referenceId: string; shareToken: string; shareUrl: string} | null>(null);
   
   // Extract share token from URL on mount
   useEffect(() => {
@@ -112,9 +113,17 @@ export default function CarpoolPage() {
       const response = await apiRequest('POST', '/api/carpool/bookings', data);
       return await response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/carpool/routes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/my/carpool-bookings'] });
+      
+      // Store booking response data
+      setBookingResponse({
+        referenceId: data.referenceId,
+        shareToken: data.shareToken,
+        shareUrl: `${window.location.origin}/carpool?share=${data.shareToken}`
+      });
+      
       toast({ 
         title: "Success", 
         description: "Your carpool booking has been confirmed! You'll receive an email with details." 
@@ -204,12 +213,53 @@ export default function CarpoolPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
+                {bookingResponse && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Booking Reference</p>
+                      <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-reference-id">
+                        {bookingResponse.referenceId}
+                      </p>
+                    </div>
+                    
+                    <div className="border-t pt-3">
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Share this trip</p>
+                      <p className="text-xs text-gray-500 mb-2">Invite friends or colleagues to join you on this route!</p>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          value={bookingResponse.shareUrl}
+                          className="flex-1 px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+                          data-testid="input-share-url"
+                        />
+                        <Button
+                          onClick={() => {
+                            navigator.clipboard.writeText(bookingResponse.shareUrl);
+                            toast({
+                              title: "Link copied!",
+                              description: "Share this link with others to join your ride",
+                            });
+                          }}
+                          variant="outline"
+                          data-testid="button-copy-link"
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 <p className="text-sm text-muted-foreground">
                   Please note: Your trip will be confirmed once we have at least 3 passengers. 
                   You'll receive an email 2 hours before departure if the minimum isn't met.
                 </p>
                 <Button 
-                  onClick={() => setBookingComplete(false)} 
+                  onClick={() => {
+                    setBookingComplete(false);
+                    setBookingResponse(null);
+                  }} 
                   className="w-full"
                   data-testid="button-book-another"
                 >
