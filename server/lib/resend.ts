@@ -796,6 +796,62 @@ export const emailTemplates = {
         <strong style="color: #374151;">OfficeXpress Team</strong>
       </p>
     `, false)
+  }),
+
+  carpoolDriverAssigned: (data: any) => ({
+    subject: `🚗 Driver Assigned - Carpool Trip #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        🎉 Your Carpool Ride is Ready!
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Great news! We've reached the minimum number of passengers and assigned a driver to your carpool trip <strong>#${data.referenceId}</strong>. Get ready to ride!
+      </p>
+      
+      ${detailSection('Driver Information', [
+        { label: 'Driver Name', value: data.driverName },
+        { label: 'Phone', value: data.driverPhone },
+        { label: 'Vehicle', value: `${data.vehicleMake} ${data.vehicleModel} (${data.vehicleYear})` },
+        { label: 'License Plate', value: data.licensePlate },
+        { label: 'Vehicle Capacity', value: `${data.vehicleCapacity} seats` }
+      ])}
+      
+      ${detailSection('Trip Details', [
+        { label: 'Reference ID', value: `#${data.referenceId}` },
+        { label: 'Route', value: data.routeName },
+        { label: 'From', value: data.fromLocation },
+        { label: 'To', value: data.toLocation },
+        { label: 'Travel Date', value: data.travelDate },
+        { label: 'Departure Time', value: data.departureTime },
+        { label: 'Pickup Point', value: data.pickupPoint },
+        { label: 'Drop-off Point', value: data.dropOffPoint }
+      ])}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+        <p style="margin: 0 0 8px 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+          📞 Next Steps
+        </p>
+        <p style="margin: 0; color: #1e3a8a; font-size: 13px; line-height: 1.6;">
+          Your driver will contact you before the scheduled departure time. Please be ready at your pickup point 5 minutes early.
+        </p>
+      </div>
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #dcfce7; border-left: 4px solid #22c55e; border-radius: 4px;">
+        <p style="margin: 0; color: #166534; font-size: 14px; line-height: 1.6;">
+          ✓ Have a great trip! We hope you enjoy sharing the ride.
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Safe travels,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
   })
 };
 
@@ -913,6 +969,31 @@ export async function sendCarpoolBookingConfirmation(data: any) {
   } catch (error) {
     console.error('Error sending carpool booking confirmation:', error);
     // Don't throw - we don't want to fail the booking if email fails
+  }
+}
+
+// Send carpool driver assignment email
+export async function sendCarpoolDriverAssignmentEmail(data: any) {
+  try {
+    if (!data.email) {
+      console.log('No email provided for carpool driver assignment notification');
+      return;
+    }
+    
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.carpoolDriverAssigned(data);
+    
+    await client.emails.send({
+      from: `OfficeXpress <${fromEmail}>`,
+      to: data.email,
+      subject: template.subject,
+      html: template.html
+    });
+    
+    console.log(`Carpool driver assignment email sent to ${data.email} for booking #${data.referenceId}`);
+  } catch (error) {
+    console.error('Error sending carpool driver assignment email:', error);
+    // Don't throw - we don't want to fail the driver assignment if email fails
   }
 }
 

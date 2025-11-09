@@ -54,7 +54,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey, sendCarpoolBookingConfirmation } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey, sendCarpoolBookingConfirmation, sendCarpoolDriverAssignmentEmail } from "./lib/resend";
 import { getUncachableResendClient } from "./resend-client";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
@@ -2308,6 +2308,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Driver ID is required" });
       }
       const booking = await storage.assignDriverToCarpool(req.params.id, driverId);
+      
+      // Send email notification to customer
+      try {
+        const driver = await storage.getDriver(driverId);
+        const route = await storage.getCarpoolRoute(booking.routeId);
+        const timeSlot = await storage.getCarpoolTimeSlot(booking.timeSlotId);
+        const pickupPoint = await storage.getCarpoolPickupPoint(booking.boardingPointId);
+        const dropOffPoint = await storage.getCarpoolPickupPoint(booking.dropOffPointId);
+        
+        if (booking.email && driver && route && timeSlot && pickupPoint && dropOffPoint) {
+          await sendCarpoolDriverAssignmentEmail({
+            email: booking.email,
+            customerName: booking.customerName,
+            referenceId: booking.referenceId,
+            driverName: driver.name,
+            driverPhone: driver.phone,
+            vehicleMake: driver.vehicleMake,
+            vehicleModel: driver.vehicleModel,
+            vehicleYear: driver.vehicleYear,
+            licensePlate: driver.licensePlate,
+            vehicleCapacity: driver.vehicleCapacity,
+            routeName: route.name,
+            fromLocation: route.fromLocation,
+            toLocation: route.toLocation,
+            travelDate: booking.travelDate,
+            departureTime: timeSlot.departureTime,
+            pickupPoint: pickupPoint.name,
+            dropOffPoint: dropOffPoint.name
+          });
+        }
+      } catch (emailError) {
+        console.error("Error sending driver assignment email:", emailError);
+        // Don't fail the assignment if email fails
+      }
+      
       res.json(booking);
     } catch (error) {
       console.error("Assign driver error:", error);
