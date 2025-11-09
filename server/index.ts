@@ -125,12 +125,41 @@ app.use((req, res, next) => {
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  // API 404 handler - catches unmatched API routes before Vite
+  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+    // If no route handled this request, return 404 JSON
+    if (!res.headersSent) {
+      res.status(404).json({ 
+        message: `API endpoint not found: ${req.method} ${req.path}` 
+      });
+    } else {
+      next();
+    }
+  });
+
+  // Global error handler for API routes - ensures JSON responses
+  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+    // Only handle API routes, let Vite handle others
+    if (!req.path.startsWith('/api')) {
+      return next(err);
+    }
+
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    // Log error details in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Error:', {
+        path: req.path,
+        method: req.method,
+        status,
+        message,
+        stack: err.stack
+      });
+    }
+
+    // Always return JSON for API routes - do not rethrow
     res.status(status).json({ message });
-    throw err;
   });
 
   // importantly only setup vite in development and after
