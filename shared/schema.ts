@@ -358,6 +358,7 @@ export const drivers = pgTable("drivers", {
   vehicleMake: text("vehicle_make").notNull(),
   vehicleModel: text("vehicle_model").notNull(),
   vehicleYear: text("vehicle_year").notNull(),
+  vehicleCapacity: text("vehicle_capacity").notNull().default('4'),
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -673,6 +674,9 @@ export const insertCarpoolBookingSchema = createInsertSchema(carpoolBookings).om
 export const insertCarpoolBlackoutDateSchema = createInsertSchema(carpoolBlackoutDates).omit({
   id: true,
   createdAt: true,
+}).extend({
+  startDate: z.coerce.date(),
+  endDate: z.coerce.date(),
 });
 
 export const updateCarpoolBookingSchema = createInsertSchema(carpoolBookings).omit({
