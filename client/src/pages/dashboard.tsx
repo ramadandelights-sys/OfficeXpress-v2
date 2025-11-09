@@ -3,12 +3,25 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { LogOut, User, Package, Calendar, Bell, Check, Car } from "lucide-react";
+import { LogOut, User, Package, Calendar, Bell, Check, Car, Edit } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { CorporateBooking, RentalBooking, CarpoolBooking, Notification } from "@shared/schema";
 import { useState } from "react";
 import { format } from "date-fns";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+
+const profileFormSchema = z.object({
+  officeLocation: z.string().optional(),
+  homeLocation: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileFormSchema>;
 
 export default function CustomerDashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -16,6 +29,15 @@ export default function CustomerDashboard() {
   const { toast } = useToast();
   const logout = useLogout();
   const [markingAsReadIds, setMarkingAsReadIds] = useState<Set<string>>(new Set());
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileFormSchema),
+    defaultValues: {
+      officeLocation: user?.officeLocation || "",
+      homeLocation: user?.homeLocation || "",
+    },
+  });
 
   const { data: corporateBookings } = useQuery<CorporateBooking[]>({
     queryKey: ["/api/my/corporate-bookings"],
@@ -67,6 +89,31 @@ export default function CustomerDashboard() {
       });
     },
   });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: ProfileFormValues) => {
+      await apiRequest("PUT", "/api/my/profile", data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setEditProfileOpen(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const onProfileSubmit = (data: ProfileFormValues) => {
+    updateProfileMutation.mutate(data);
+  };
 
   const handleLogout = async () => {
     try {
@@ -125,9 +172,92 @@ export default function CustomerDashboard() {
         <div className="grid gap-6 md:grid-cols-5 mb-8">
           <Card data-testid="card-profile">
             <CardHeader>
-              <CardTitle className="flex items-center">
-                <User className="mr-2 h-5 w-5" />
-                Profile
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <User className="mr-2 h-5 w-5" />
+                  Profile
+                </div>
+                <Dialog open={editProfileOpen} onOpenChange={setEditProfileOpen}>
+                  <DialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      data-testid="button-edit-profile"
+                      onClick={() => {
+                        form.reset({
+                          officeLocation: user?.officeLocation || "",
+                          homeLocation: user?.homeLocation || "",
+                        });
+                      }}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent data-testid="dialog-edit-profile">
+                    <DialogHeader>
+                      <DialogTitle>Edit Profile</DialogTitle>
+                      <DialogDescription>
+                        Update your office and home location information
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...form}>
+                      <form onSubmit={form.handleSubmit(onProfileSubmit)} className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="officeLocation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Office Location</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="e.g., Gulshan, Dhaka" 
+                                  data-testid="input-office-location"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="homeLocation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Home Location</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  {...field} 
+                                  placeholder="e.g., Uttara, Dhaka" 
+                                  data-testid="input-home-location"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="flex gap-2">
+                          <Button 
+                            type="submit" 
+                            className="flex-1"
+                            disabled={updateProfileMutation.isPending}
+                            data-testid="button-save-profile"
+                          >
+                            {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
+                          </Button>
+                          <Button 
+                            type="button" 
+                            variant="outline"
+                            onClick={() => setEditProfileOpen(false)}
+                            data-testid="button-cancel-profile"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -143,6 +273,18 @@ export default function CustomerDashboard() {
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">Email</p>
                   <p className="font-medium" data-testid="text-profile-email">{user.email}</p>
+                </div>
+              )}
+              {user.officeLocation && (
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Office Location</p>
+                  <p className="font-medium" data-testid="text-profile-office">{user.officeLocation}</p>
+                </div>
+              )}
+              {user.homeLocation && (
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Home Location</p>
+                  <p className="font-medium" data-testid="text-profile-home">{user.homeLocation}</p>
                 </div>
               )}
               {user.temporaryPassword && (

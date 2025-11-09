@@ -11,6 +11,8 @@ export interface AuthUser {
   role: 'customer' | 'employee' | 'superadmin';
   permissions?: UserPermissions;
   temporaryPassword?: boolean;
+  officeLocation?: string | null;
+  homeLocation?: string | null;
 }
 
 export function useAuth() {

@@ -1600,6 +1600,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Customer profile update endpoint
+  app.put("/api/my/profile", isAuthenticated, async (req: any, res: any) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const { officeLocation, homeLocation } = req.body;
+      
+      // Validate input
+      if (officeLocation !== undefined && typeof officeLocation !== 'string') {
+        return res.status(400).json({ message: "Office location must be a string" });
+      }
+      if (homeLocation !== undefined && typeof homeLocation !== 'string') {
+        return res.status(400).json({ message: "Home location must be a string" });
+      }
+      
+      const updatedUser = await storage.updateUser(userId, {
+        officeLocation: officeLocation || null,
+        homeLocation: homeLocation || null,
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
+    }
+  });
+
   // Admin endpoint - returns all bookings (protected)
   app.get("/api/corporate-bookings", isEmployeeOrAdmin, async (req, res) => {
     try {
