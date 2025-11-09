@@ -92,14 +92,27 @@ export async function sendCarpoolInsufficientBookingEmail(data: CarpoolInsuffici
               
               <p>Unfortunately, we were unable to meet the minimum requirement of 3 passengers for this trip. As per our policy, trips with fewer than 3 confirmed bookings are cancelled 2 hours before departure.</p>
               
+              <div style="background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin: 20px 0; border-radius: 4px;">
+                <h3 style="margin-top: 0; color: #007bff;">📊 We're Building Demand for This Route</h3>
+                <p style="margin-bottom: 10px;"><strong>Good news!</strong> We're keeping your booking information to help match you with future passengers on similar routes.</p>
+                <p style="margin-bottom: 0;"><strong>What this means for you:</strong></p>
+                <ul style="margin: 10px 0;">
+                  <li>We'll analyze demand patterns for your preferred route and timing</li>
+                  <li>When enough interest builds up, we'll notify you via email</li>
+                  <li>Your information helps us identify popular routes and expand service</li>
+                  <li>No action needed - we'll reach out when a match is found</li>
+                </ul>
+              </div>
+              
               <p><strong>What happens next:</strong></p>
               <ul>
-                <li>Your booking has been automatically cancelled</li>
+                <li>Your booking status has been updated to "insufficient_bookings"</li>
                 <li>If you made any payment, a full refund will be processed within 5-7 business days</li>
+                <li>We'll keep your route preference and notify you when demand increases</li>
                 <li>You can book another trip on our platform at any time</li>
               </ul>
               
-              <p>We apologize for any inconvenience this may cause. Please feel free to browse our other available routes and time slots for your commute needs.</p>
+              <p>We apologize for the inconvenience and appreciate your patience as we work to build a robust carpool network. Your participation helps us understand demand and improve service coverage!</p>
             </div>
             
             <div class="footer">

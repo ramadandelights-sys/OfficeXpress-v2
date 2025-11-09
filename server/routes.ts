@@ -54,7 +54,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey, sendCarpoolBookingConfirmation } from "./lib/resend";
 import { getUncachableResendClient } from "./resend-client";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
@@ -2147,13 +2147,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Carpool booking routes
+  // Get booking details from shareable link token (public)
+  app.get("/api/carpool/bookings/shared/:token", async (req, res) => {
+    try {
+      const booking = await storage.getCarpoolBookingByShareToken(req.params.token);
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found or share link expired" });
+      }
+      
+      // Fetch related data for pre-populating the booking form
+      const route = await storage.getCarpoolRoute(booking.routeId);
+      const timeSlot = await storage.getCarpoolTimeSlot(booking.timeSlotId);
+      
+      res.json({
+        routeId: booking.routeId,
+        timeSlotId: booking.timeSlotId,
+        travelDate: booking.travelDate,
+        route,
+        timeSlot
+      });
+    } catch (error) {
+      console.error("Get shared booking error:", error);
+      res.status(500).json({ message: "Failed to fetch booking details" });
+    }
+  });
+
   // Create carpool booking (public)
   app.post("/api/carpool/bookings", async (req, res) => {
     try {
       const bookingData = insertCarpoolBookingSchema.parse(req.body);
       const booking = await storage.createCarpoolBooking(bookingData);
       
-      // TODO: Send booking confirmation email
+      // Fetch related data for the email
+      const route = await storage.getCarpoolRoute(booking.routeId);
+      const timeSlot = await storage.getCarpoolTimeSlot(booking.timeSlotId);
+      const pickupPoint = await storage.getCarpoolPickupPoint(booking.pickupPointId);
+      const dropOffPoint = await storage.getCarpoolPickupPoint(booking.dropOffPointId);
+      
+      if (route && timeSlot && pickupPoint && dropOffPoint) {
+        // Construct shareable link
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? 'https://officexpress.org'
+          : `http://localhost:5000`;
+        const shareLink = `${baseUrl}/carpool?share=${booking.shareToken}`;
+        
+        // Format travel date
+        const travelDateFormatted = new Date(booking.travelDate).toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+        
+        // Send confirmation email
+        await sendCarpoolBookingConfirmation({
+          referenceId: booking.referenceId,
+          customerName: booking.customerName,
+          email: booking.email,
+          phone: booking.phone,
+          routeName: route.routeName,
+          fromLocation: route.fromLocation,
+          toLocation: route.toLocation,
+          travelDate: travelDateFormatted,
+          departureTime: timeSlot.departureTime,
+          pickupPoint: pickupPoint.locationName,
+          dropOffPoint: dropOffPoint.locationName,
+          shareLink
+        });
+      }
       
       res.json(booking);
     } catch (error) {

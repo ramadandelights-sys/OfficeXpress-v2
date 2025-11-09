@@ -2,20 +2,21 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, MapPin, Clock, Save, X } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { CarpoolRoute, CarpoolPickupPoint, CarpoolTimeSlot } from "@shared/schema";
-import { insertCarpoolRouteSchema, updateCarpoolRouteSchema, insertCarpoolPickupPointSchema, insertCarpoolTimeSlotSchema } from "@shared/schema";
+import type { CarpoolRoute, CarpoolPickupPoint, CarpoolTimeSlot, CarpoolBlackoutDate } from "@shared/schema";
+import { insertCarpoolRouteSchema, updateCarpoolRouteSchema, insertCarpoolPickupPointSchema, insertCarpoolTimeSlotSchema, insertCarpoolBlackoutDateSchema } from "@shared/schema";
 import { z } from "zod";
 
 function extractErrorMessage(error: unknown): string {
@@ -46,6 +47,8 @@ export default function CarpoolRouteManagement() {
   const [deletePickupPointId, setDeletePickupPointId] = useState<string | null>(null);
   const [deleteDropOffPointId, setDeleteDropOffPointId] = useState<string | null>(null);
   const [deleteTimeSlotId, setDeleteTimeSlotId] = useState<string | null>(null);
+  const [showBlackoutDateDialog, setShowBlackoutDateDialog] = useState(false);
+  const [deleteBlackoutDateId, setDeleteBlackoutDateId] = useState<string | null>(null);
 
   // Fetch all routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -225,8 +228,105 @@ export default function CarpoolRouteManagement() {
     },
   });
 
+  // Fetch blackout dates
+  const { data: blackoutDates = [], isLoading: loadingBlackoutDates } = useQuery<CarpoolBlackoutDate[]>({
+    queryKey: ['/api/admin/carpool/blackout-dates'],
+  });
+
+  // Create blackout date mutation
+  const createBlackoutDateMutation = useMutation({
+    mutationFn: async (data: z.infer<typeof insertCarpoolBlackoutDateSchema>) => {
+      return await apiRequest('POST', '/api/admin/carpool/blackout-dates', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/blackout-dates'] });
+      toast({ title: "Success", description: "Blackout date created successfully" });
+      setShowBlackoutDateDialog(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+    },
+  });
+
+  // Delete blackout date mutation
+  const deleteBlackoutDateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      return await apiRequest('DELETE', `/api/admin/carpool/blackout-dates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/blackout-dates'] });
+      toast({ title: "Success", description: "Blackout date deleted successfully" });
+      setDeleteBlackoutDateId(null);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+      setDeleteBlackoutDateId(null);
+    },
+  });
+
   return (
     <div className="space-y-6">
+      {/* Blackout Dates */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2" data-testid="heading-blackout-dates">
+              <CalendarOff className="h-5 w-5" />
+              Service Blackout Dates
+            </CardTitle>
+            <Button onClick={() => setShowBlackoutDateDialog(true)} data-testid="button-create-blackout-date">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Blackout Date
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loadingBlackoutDates ? (
+            <div className="text-center py-8">Loading blackout dates...</div>
+          ) : blackoutDates.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No blackout dates configured. Add blackout dates to block service during holidays or maintenance periods.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Start Date & Time</TableHead>
+                  <TableHead>End Date & Time</TableHead>
+                  <TableHead>Active</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {blackoutDates.map((blackoutDate) => (
+                  <TableRow key={blackoutDate.id} data-testid={`row-blackout-date-${blackoutDate.id}`}>
+                    <TableCell className="font-medium">{blackoutDate.name}</TableCell>
+                    <TableCell>{new Date(blackoutDate.startDate).toLocaleString()}</TableCell>
+                    <TableCell>{new Date(blackoutDate.endDate).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded-full text-xs ${blackoutDate.isActive ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {blackoutDate.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeleteBlackoutDateId(blackoutDate.id)}
+                        data-testid={`button-delete-blackout-date-${blackoutDate.id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Routes List */}
       <Card>
         <CardHeader>
@@ -577,6 +677,34 @@ export default function CarpoolRouteManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Blackout Date Dialog */}
+      <BlackoutDateDialog
+        open={showBlackoutDateDialog}
+        onClose={() => setShowBlackoutDateDialog(false)}
+        onSubmit={(data) => createBlackoutDateMutation.mutate(data)}
+        isPending={createBlackoutDateMutation.isPending}
+      />
+
+      <AlertDialog open={deleteBlackoutDateId !== null} onOpenChange={() => setDeleteBlackoutDateId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Blackout Date</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this blackout date? This will allow bookings during this period again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-blackout-date">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteBlackoutDateId && deleteBlackoutDateMutation.mutate(deleteBlackoutDateId)}
+              data-testid="button-confirm-delete-blackout-date"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -604,6 +732,7 @@ function RouteDialog({
       estimatedDistance: '0',
       pricePerSeat: '200',
       description: '',
+      weekdays: [0, 1, 2, 3, 4, 5, 6], // All days by default
       isActive: true,
     },
   });
@@ -719,6 +848,48 @@ function RouteDialog({
                   <FormMessage />
                 </FormItem>
               )}
+            />
+
+            <FormField
+              control={form.control}
+              name="weekdays"
+              render={({ field }) => {
+                const daysOfWeek = [
+                  { label: 'Mon', value: 1 },
+                  { label: 'Tue', value: 2 },
+                  { label: 'Wed', value: 3 },
+                  { label: 'Thu', value: 4 },
+                  { label: 'Fri', value: 5 },
+                  { label: 'Sat', value: 6 },
+                  { label: 'Sun', value: 0 },
+                ];
+
+                return (
+                  <FormItem>
+                    <FormLabel>Operating Days</FormLabel>
+                    <div className="flex flex-wrap gap-3">
+                      {daysOfWeek.map((day) => (
+                        <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={field.value?.includes(day.value)}
+                            onCheckedChange={(checked) => {
+                              const currentDays = (field.value || []) as number[];
+                              if (checked) {
+                                field.onChange([...currentDays, day.value].sort((a, b) => a - b));
+                              } else {
+                                field.onChange(currentDays.filter((d) => d !== day.value));
+                              }
+                            }}
+                            data-testid={`checkbox-weekday-${day.value}`}
+                          />
+                          <span className="text-sm font-medium">{day.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <FormMessage />
+                  </FormItem>
+                );
+              }}
             />
 
             <FormField
@@ -953,6 +1124,138 @@ function TimeSlotDialog({
               </Button>
               <Button type="submit" disabled={isPending} data-testid="button-submit-time-slot">
                 {isPending ? 'Adding...' : 'Add'}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Blackout Date Dialog Component
+function BlackoutDateDialog({
+  open,
+  onClose,
+  onSubmit,
+  isPending
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (data: z.infer<typeof insertCarpoolBlackoutDateSchema>) => void;
+  isPending: boolean;
+}) {
+  const form = useForm<z.infer<typeof insertCarpoolBlackoutDateSchema>>({
+    resolver: zodResolver(insertCarpoolBlackoutDateSchema),
+    defaultValues: {
+      name: '',
+      startDate: new Date(),
+      endDate: new Date(),
+      isActive: true,
+    },
+  });
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: '',
+        startDate: new Date(),
+        endDate: new Date(),
+        isActive: true,
+      });
+    }
+  }, [open, form]);
+
+  const handleSubmit = (data: z.infer<typeof insertCarpoolBlackoutDateSchema>) => {
+    onSubmit(data);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle data-testid="dialog-title-blackout-date">Add Blackout Date</DialogTitle>
+          <DialogDescription>
+            Block carpool service during holidays or maintenance periods
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="e.g., Eid Holiday, Maintenance Day" data-testid="input-blackout-date-name" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Date & Time</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                      data-testid="input-start-date"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date & Time</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="datetime-local"
+                      value={field.value ? new Date(field.value).toISOString().slice(0, 16) : ''}
+                      onChange={(e) => field.onChange(new Date(e.target.value))}
+                      data-testid="input-end-date"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <FormLabel>Active</FormLabel>
+                    <div className="text-sm text-gray-500">Block bookings during this period</div>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value ?? undefined} onCheckedChange={field.onChange} data-testid="switch-blackout-date-active" />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={onClose} data-testid="button-cancel-blackout-date">
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isPending} data-testid="button-submit-blackout-date">
+                {isPending ? 'Adding...' : 'Add Blackout Date'}
               </Button>
             </div>
           </form>

@@ -720,6 +720,82 @@ export const emailTemplates = {
         <strong style="color: #374151;">OfficeXpress Team</strong>
       </p>
     `, false)
+  }),
+
+  carpoolBooking: (data: any) => ({
+    subject: `Carpool Booking Confirmed - #${data.referenceId}`,
+    html: emailWrapper(`
+      <h2 style="margin: 0 0 16px 0; color: #374151; font-size: 24px; font-weight: 700;">
+        🚗 Your Carpool Ride is Confirmed!
+      </h2>
+      
+      <p style="margin: 0 0 16px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Dear ${data.customerName},
+      </p>
+      
+      <p style="margin: 0 0 24px 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Your carpool booking has been confirmed. We'll notify you once enough passengers join this ride and a driver is assigned.
+      </p>
+      
+      <div style="margin: 24px 0; padding: 16px; background-color: #f3f4f6; border-radius: 8px;">
+        <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px; font-weight: 600;">
+          Booking Reference: <span style="color: #059669;">#${data.referenceId}</span>
+        </p>
+      </div>
+      
+      ${detailSection('Trip Details', [
+        { label: 'Route', value: `${data.routeName}` },
+        { label: 'From', value: data.fromLocation },
+        { label: 'To', value: data.toLocation },
+        { label: 'Travel Date', value: data.travelDate },
+        { label: 'Departure Time', value: data.departureTime },
+        { label: 'Pickup Point', value: data.pickupPoint },
+        { label: 'Drop-off Point', value: data.dropOffPoint }
+      ])}
+      
+      ${detailSection('Passenger Information', [
+        { label: 'Name', value: data.customerName },
+        { label: 'Phone', value: data.phone },
+        { label: 'Email', value: data.email }
+      ])}
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #dbeafe; border-left: 4px solid #3b82f6; border-radius: 4px;">
+        <p style="margin: 0 0 12px 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+          📢 Help us fill this ride!
+        </p>
+        <p style="margin: 0 0 16px 0; color: #1e3a8a; font-size: 13px; line-height: 1.6;">
+          Share this link with friends, colleagues, or on social media to help reach the minimum 3 passengers required for this trip:
+        </p>
+        <div style="text-align: center;">
+          <a href="${data.shareLink}" 
+             style="display: inline-block; background-color: #3b82f6; color: #ffffff; 
+                    text-decoration: none; padding: 12px 28px; border-radius: 6px; 
+                    font-weight: 600; font-size: 14px; margin-bottom: 12px;">
+            Share This Ride
+          </a>
+        </div>
+        <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 11px; text-align: center; font-family: monospace; word-break: break-all;">
+          ${data.shareLink}
+        </p>
+        <p style="margin: 8px 0 0 0; color: #9ca3af; font-size: 11px; text-align: center;">
+          This link is valid for 30 days
+        </p>
+      </div>
+      
+      <div style="margin: 30px 0; padding: 20px; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+        <p style="margin: 0 0 8px 0; color: #92400e; font-size: 14px; font-weight: 600;">
+          ⚠️ Important Notice
+        </p>
+        <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.6;">
+          This trip requires a minimum of 3 passengers. If we don't reach this minimum 2 hours before departure, you'll receive an email notification and the trip will be cancelled. Don't worry - we'll keep your information and notify you when there's enough interest!
+        </p>
+      </div>
+      
+      <p style="margin: 32px 0 0 0; color: #6b7280; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong style="color: #374151;">OfficeXpress Team</strong>
+      </p>
+    `, false)
   })
 };
 
@@ -812,6 +888,31 @@ export async function sendBookingNotificationEmail(
   } catch (error) {
     console.error(`Error sending ${type} email:`, error);
     // Don't throw - we don't want to fail the operation if email fails
+  }
+}
+
+// Send carpool booking confirmation email
+export async function sendCarpoolBookingConfirmation(data: any) {
+  try {
+    if (!data.email) {
+      console.log('No email provided for carpool booking confirmation');
+      return;
+    }
+    
+    const { client, fromEmail } = await getUncachableResendClient();
+    const template = emailTemplates.carpoolBooking(data);
+    
+    await client.emails.send({
+      from: `OfficeXpress <${fromEmail}>`,
+      to: data.email,
+      subject: template.subject,
+      html: template.html
+    });
+    
+    console.log(`Carpool booking confirmation sent to ${data.email} for booking #${data.referenceId}`);
+  } catch (error) {
+    console.error('Error sending carpool booking confirmation:', error);
+    // Don't throw - we don't want to fail the booking if email fails
   }
 }
 
