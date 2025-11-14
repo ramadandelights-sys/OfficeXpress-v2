@@ -21,6 +21,13 @@ import {
   carpoolTimeSlots,
   carpoolBookings,
   carpoolBlackoutDates,
+  userWallets,
+  walletTransactions,
+  subscriptions,
+  subscriptionInvoices,
+  vehicleTrips,
+  tripBookings,
+  complaints,
   type User, 
   type InsertUser,
   type Driver,
@@ -72,7 +79,21 @@ import {
   type InsertCarpoolBooking,
   type UpdateCarpoolBooking,
   type CarpoolBlackoutDate,
-  type InsertCarpoolBlackoutDate
+  type InsertCarpoolBlackoutDate,
+  type UserWallet,
+  type InsertUserWallet,
+  type WalletTransaction,
+  type InsertWalletTransaction,
+  type Subscription,
+  type InsertSubscription,
+  type SubscriptionInvoice,
+  type InsertSubscriptionInvoice,
+  type VehicleTrip,
+  type InsertVehicleTrip,
+  type TripBooking,
+  type InsertTripBooking,
+  type Complaint,
+  type InsertComplaint
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
@@ -250,6 +271,55 @@ export interface IStorage {
   createCarpoolBlackoutDate(blackoutDate: InsertCarpoolBlackoutDate): Promise<CarpoolBlackoutDate>;
   updateCarpoolBlackoutDate(id: string, data: Partial<Omit<CarpoolBlackoutDate, 'id' | 'createdAt'>>): Promise<CarpoolBlackoutDate>;
   deleteCarpoolBlackoutDate(id: string): Promise<void>;
+  
+  // Wallet operations
+  getUserWallet(userId: string): Promise<UserWallet | undefined>;
+  createUserWallet(wallet: InsertUserWallet): Promise<UserWallet>;
+  updateWalletBalance(walletId: string, amount: number): Promise<UserWallet>;
+  
+  // Wallet transaction operations
+  createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
+  getWalletTransactions(walletId: string): Promise<WalletTransaction[]>;
+  getWalletTransactionsByUser(userId: string): Promise<WalletTransaction[]>;
+  
+  // Subscription operations
+  createSubscription(subscription: InsertSubscription): Promise<Subscription>;
+  getSubscription(id: string): Promise<Subscription | undefined>;
+  getActiveSubscriptionsByUser(userId: string): Promise<Subscription[]>;
+  getAllSubscriptionsByUser(userId: string): Promise<Subscription[]>;
+  getActiveSubscriptions(): Promise<Subscription[]>;
+  updateSubscription(id: string, data: Partial<Omit<Subscription, 'id' | 'userId' | 'createdAt'>>): Promise<Subscription>;
+  cancelSubscription(id: string): Promise<Subscription>;
+  
+  // Subscription invoice operations
+  createSubscriptionInvoice(invoice: InsertSubscriptionInvoice): Promise<SubscriptionInvoice>;
+  getSubscriptionInvoice(id: string): Promise<SubscriptionInvoice | undefined>;
+  getInvoicesByUser(userId: string): Promise<SubscriptionInvoice[]>;
+  getInvoicesBySubscription(subscriptionId: string): Promise<SubscriptionInvoice[]>;
+  updateInvoice(id: string, data: Partial<Omit<SubscriptionInvoice, 'id' | 'createdAt'>>): Promise<SubscriptionInvoice>;
+  generateInvoiceNumber(): Promise<string>;
+  
+  // Vehicle trip operations
+  createVehicleTrip(trip: InsertVehicleTrip): Promise<VehicleTrip>;
+  getVehicleTrip(id: string): Promise<VehicleTrip | undefined>;
+  getVehicleTripsByDate(tripDate: string): Promise<VehicleTrip[]>;
+  getVehicleTripsByRouteAndDate(routeId: string, tripDate: string): Promise<VehicleTrip[]>;
+  updateVehicleTrip(id: string, data: Partial<Omit<VehicleTrip, 'id' | 'createdAt'>>): Promise<VehicleTrip>;
+  assignDriverToVehicleTrip(tripId: string, driverId: string): Promise<VehicleTrip>;
+  
+  // Trip booking operations
+  createTripBooking(booking: InsertTripBooking): Promise<TripBooking>;
+  getTripBooking(id: string): Promise<TripBooking | undefined>;
+  getTripBookingsByUser(userId: string): Promise<TripBooking[]>;
+  getTripBookingsByVehicleTrip(vehicleTripId: string): Promise<TripBooking[]>;
+  updateTripBooking(id: string, data: Partial<Omit<TripBooking, 'id' | 'createdAt'>>): Promise<TripBooking>;
+  
+  // Complaint operations
+  createComplaint(complaint: InsertComplaint): Promise<Complaint>;
+  getComplaint(id: string): Promise<Complaint | undefined>;
+  getComplaintsByUser(userId: string): Promise<Complaint[]>;
+  getComplaintsByStatus(status: string): Promise<Complaint[]>;
+  updateComplaint(id: string, data: Partial<Omit<Complaint, 'id' | 'createdAt'>>): Promise<Complaint>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1165,14 +1235,30 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createCarpoolPickupPoint(pickupPoint: InsertCarpoolPickupPoint): Promise<CarpoolPickupPoint> {
+    // Validate pointType - must be either "pickup" or "dropoff"
+    if (pickupPoint.pointType && !['pickup', 'dropoff'].includes(pickupPoint.pointType)) {
+      throw new Error(`Invalid pointType: ${pickupPoint.pointType}. Must be either "pickup" or "dropoff"`);
+    }
+    
+    // Set default pointType if not provided
+    const pointData = {
+      ...pickupPoint,
+      pointType: pickupPoint.pointType || 'pickup'
+    };
+    
     const [created] = await db
       .insert(carpoolPickupPoints)
-      .values(pickupPoint)
+      .values(pointData)
       .returning();
     return created;
   }
 
   async updateCarpoolPickupPoint(id: string, data: Partial<Omit<CarpoolPickupPoint, 'id' | 'createdAt'>>): Promise<CarpoolPickupPoint> {
+    // Validate pointType if provided in update
+    if (data.pointType && !['pickup', 'dropoff'].includes(data.pointType)) {
+      throw new Error(`Invalid pointType: ${data.pointType}. Must be either "pickup" or "dropoff"`);
+    }
+    
     const [updated] = await db
       .update(carpoolPickupPoints)
       .set(data)
@@ -1402,6 +1488,423 @@ export class DatabaseStorage implements IStorage {
 
   async deleteCarpoolBlackoutDate(id: string): Promise<void> {
     await db.delete(carpoolBlackoutDates).where(eq(carpoolBlackoutDates.id, id));
+  }
+  
+  // Wallet operations
+  async getUserWallet(userId: string): Promise<UserWallet | undefined> {
+    const [wallet] = await db
+      .select()
+      .from(userWallets)
+      .where(eq(userWallets.userId, userId));
+    return wallet || undefined;
+  }
+  
+  async createUserWallet(wallet: InsertUserWallet): Promise<UserWallet> {
+    const [created] = await db
+      .insert(userWallets)
+      .values(wallet)
+      .returning();
+    return created;
+  }
+  
+  async updateWalletBalance(walletId: string, amount: number): Promise<UserWallet> {
+    // Start a transaction for atomic operations
+    return await db.transaction(async (tx) => {
+      // Fetch current wallet to get current balance
+      const [currentWallet] = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.id, walletId));
+      
+      if (!currentWallet) {
+        throw new Error('Wallet not found');
+      }
+      
+      // Calculate new balance (amount is delta: positive for credit, negative for debit)
+      const currentBalance = parseFloat(currentWallet.balance);
+      const newBalance = currentBalance + amount;
+      
+      // Overdraft protection: prevent negative balance
+      if (newBalance < 0) {
+        throw new Error(`Insufficient funds. Current balance: ${currentBalance}, Attempted debit: ${Math.abs(amount)}`);
+      }
+      
+      // Update wallet balance
+      const [updatedWallet] = await tx
+        .update(userWallets)
+        .set({
+          balance: newBalance.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(userWallets.id, walletId))
+        .returning();
+      
+      // Create wallet transaction record atomically
+      const transactionType = amount >= 0 ? 'credit' : 'debit';
+      const description = amount >= 0 
+        ? `Wallet credited with ${Math.abs(amount)}`
+        : `Wallet debited with ${Math.abs(amount)}`;
+      
+      await tx
+        .insert(walletTransactions)
+        .values({
+          walletId: walletId,
+          userId: currentWallet.userId,
+          amount: Math.abs(amount).toString(),
+          type: transactionType,
+          description: description,
+          balanceAfter: newBalance.toString(),
+          status: 'completed',
+          createdAt: new Date()
+        });
+      
+      return updatedWallet;
+    });
+  }
+  
+  // Wallet transaction operations
+  async createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction> {
+    const [created] = await db
+      .insert(walletTransactions)
+      .values(transaction)
+      .returning();
+    return created;
+  }
+  
+  async getWalletTransactions(walletId: string): Promise<WalletTransaction[]> {
+    return await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, walletId))
+      .orderBy(desc(walletTransactions.createdAt));
+  }
+  
+  async getWalletTransactionsByUser(userId: string): Promise<WalletTransaction[]> {
+    const wallet = await this.getUserWallet(userId);
+    if (!wallet) return [];
+    return this.getWalletTransactions(wallet.id);
+  }
+  
+  // Subscription operations
+  async createSubscription(subscription: InsertSubscription): Promise<Subscription> {
+    const [created] = await db
+      .insert(subscriptions)
+      .values(subscription)
+      .returning();
+    return created;
+  }
+  
+  async getSubscription(id: string): Promise<Subscription | undefined> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id));
+    return subscription || undefined;
+  }
+  
+  async getActiveSubscriptionsByUser(userId: string): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.userId, userId),
+          eq(subscriptions.status, 'active')
+        )
+      )
+      .orderBy(desc(subscriptions.createdAt));
+  }
+  
+  async getAllSubscriptionsByUser(userId: string): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.userId, userId))
+      .orderBy(desc(subscriptions.createdAt));
+  }
+  
+  async getActiveSubscriptions(): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.status, 'active'))
+      .orderBy(desc(subscriptions.createdAt));
+  }
+  
+  async updateSubscription(id: string, data: Partial<Omit<Subscription, 'id' | 'userId' | 'createdAt'>>): Promise<Subscription> {
+    const [updated] = await db
+      .update(subscriptions)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    if (!updated) throw new Error('Subscription not found');
+    return updated;
+  }
+  
+  async cancelSubscription(id: string): Promise<Subscription> {
+    return this.updateSubscription(id, {
+      status: 'cancelled',
+      cancellationDate: new Date()
+    });
+  }
+  
+  // Subscription invoice operations
+  async createSubscriptionInvoice(invoice: InsertSubscriptionInvoice): Promise<SubscriptionInvoice> {
+    const invoiceNumber = await this.generateInvoiceNumber();
+    const [created] = await db
+      .insert(subscriptionInvoices)
+      .values({
+        ...invoice,
+        invoiceNumber
+      })
+      .returning();
+    return created;
+  }
+  
+  async getSubscriptionInvoice(id: string): Promise<SubscriptionInvoice | undefined> {
+    const [invoice] = await db
+      .select()
+      .from(subscriptionInvoices)
+      .where(eq(subscriptionInvoices.id, id));
+    return invoice || undefined;
+  }
+  
+  async getInvoicesByUser(userId: string): Promise<SubscriptionInvoice[]> {
+    return await db
+      .select()
+      .from(subscriptionInvoices)
+      .where(eq(subscriptionInvoices.userId, userId))
+      .orderBy(desc(subscriptionInvoices.createdAt));
+  }
+  
+  async getInvoicesBySubscription(subscriptionId: string): Promise<SubscriptionInvoice[]> {
+    return await db
+      .select()
+      .from(subscriptionInvoices)
+      .where(eq(subscriptionInvoices.subscriptionId, subscriptionId))
+      .orderBy(desc(subscriptionInvoices.createdAt));
+  }
+  
+  async updateInvoice(id: string, data: Partial<Omit<SubscriptionInvoice, 'id' | 'createdAt'>>): Promise<SubscriptionInvoice> {
+    const [updated] = await db
+      .update(subscriptionInvoices)
+      .set(data)
+      .where(eq(subscriptionInvoices.id, id))
+      .returning();
+    if (!updated) throw new Error('Invoice not found');
+    return updated;
+  }
+  
+  async generateInvoiceNumber(): Promise<string> {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const count = await db
+      .select({ count: sql`COUNT(*)` })
+      .from(subscriptionInvoices);
+    const invoiceCount = Number(count[0].count) + 1;
+    return `INV-${year}${month}-${String(invoiceCount).padStart(5, '0')}`;
+  }
+  
+  // Vehicle trip operations
+  async createVehicleTrip(trip: InsertVehicleTrip): Promise<VehicleTrip> {
+    const [created] = await db
+      .insert(vehicleTrips)
+      .values(trip)
+      .returning();
+    return created;
+  }
+  
+  async getVehicleTrip(id: string): Promise<VehicleTrip | undefined> {
+    const [trip] = await db
+      .select()
+      .from(vehicleTrips)
+      .where(eq(vehicleTrips.id, id));
+    return trip || undefined;
+  }
+  
+  async getVehicleTripsByDate(tripDate: string): Promise<VehicleTrip[]> {
+    return await db
+      .select()
+      .from(vehicleTrips)
+      .where(eq(vehicleTrips.tripDate, tripDate))
+      .orderBy(vehicleTrips.departureTime);
+  }
+  
+  async getVehicleTripsByRouteAndDate(routeId: string, tripDate: string): Promise<VehicleTrip[]> {
+    return await db
+      .select()
+      .from(vehicleTrips)
+      .where(
+        and(
+          eq(vehicleTrips.routeId, routeId),
+          eq(vehicleTrips.tripDate, tripDate)
+        )
+      )
+      .orderBy(vehicleTrips.departureTime);
+  }
+  
+  async updateVehicleTrip(id: string, data: Partial<Omit<VehicleTrip, 'id' | 'createdAt'>>): Promise<VehicleTrip> {
+    const [updated] = await db
+      .update(vehicleTrips)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(vehicleTrips.id, id))
+      .returning();
+    if (!updated) throw new Error('Vehicle trip not found');
+    return updated;
+  }
+  
+  async assignDriverToVehicleTrip(tripId: string, driverId: string): Promise<VehicleTrip> {
+    return this.updateVehicleTrip(tripId, {
+      driverId,
+      status: 'assigned'
+    });
+  }
+  
+  // Trip booking operations
+  async createTripBooking(booking: InsertTripBooking): Promise<TripBooking> {
+    // Validate capacity if vehicle trip is specified
+    if (booking.vehicleTripId) {
+      // Get the vehicle trip to check capacity
+      const vehicleTrip = await this.getVehicleTrip(booking.vehicleTripId);
+      
+      if (!vehicleTrip) {
+        throw new Error(`Vehicle trip not found: ${booking.vehicleTripId}`);
+      }
+      
+      // Get existing bookings for this vehicle trip
+      const existingBookings = await this.getTripBookingsByVehicleTrip(booking.vehicleTripId);
+      
+      // Calculate current passenger count
+      const currentPassengers = existingBookings.reduce((sum, b) => {
+        return sum + (b.numberOfPassengers || 1);
+      }, 0);
+      
+      // Check if adding this booking would exceed capacity
+      const newPassengers = booking.numberOfPassengers || 1;
+      const totalPassengers = currentPassengers + newPassengers;
+      
+      if (vehicleTrip.vehicleCapacity && totalPassengers > vehicleTrip.vehicleCapacity) {
+        throw new Error(
+          `Vehicle capacity exceeded. Vehicle capacity: ${vehicleTrip.vehicleCapacity}, ` +
+          `Current passengers: ${currentPassengers}, ` +
+          `Requested passengers: ${newPassengers}`
+        );
+      }
+    }
+    
+    // Verify subscription reference if provided
+    if (booking.subscriptionId) {
+      const subscription = await this.getSubscription(booking.subscriptionId);
+      
+      if (!subscription) {
+        throw new Error(`Subscription not found: ${booking.subscriptionId}`);
+      }
+      
+      if (subscription.status !== 'active') {
+        throw new Error(`Subscription ${booking.subscriptionId} is not active. Current status: ${subscription.status}`);
+      }
+      
+      // Ensure the subscription belongs to the same user
+      if (booking.userId && subscription.userId !== booking.userId) {
+        throw new Error(`Subscription ${booking.subscriptionId} does not belong to user ${booking.userId}`);
+      }
+    }
+    
+    const [created] = await db
+      .insert(tripBookings)
+      .values(booking)
+      .returning();
+    return created;
+  }
+  
+  async getTripBooking(id: string): Promise<TripBooking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(tripBookings)
+      .where(eq(tripBookings.id, id));
+    return booking || undefined;
+  }
+  
+  async getTripBookingsByUser(userId: string): Promise<TripBooking[]> {
+    return await db
+      .select()
+      .from(tripBookings)
+      .where(eq(tripBookings.userId, userId))
+      .orderBy(desc(tripBookings.createdAt));
+  }
+  
+  async getTripBookingsByVehicleTrip(vehicleTripId: string): Promise<TripBooking[]> {
+    return await db
+      .select()
+      .from(tripBookings)
+      .where(eq(tripBookings.vehicleTripId, vehicleTripId))
+      .orderBy(tripBookings.createdAt);
+  }
+  
+  async updateTripBooking(id: string, data: Partial<Omit<TripBooking, 'id' | 'createdAt'>>): Promise<TripBooking> {
+    const [updated] = await db
+      .update(tripBookings)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(tripBookings.id, id))
+      .returning();
+    if (!updated) throw new Error('Trip booking not found');
+    return updated;
+  }
+  
+  // Complaint operations
+  async createComplaint(complaint: InsertComplaint): Promise<Complaint> {
+    const [created] = await db
+      .insert(complaints)
+      .values(complaint)
+      .returning();
+    return created;
+  }
+  
+  async getComplaint(id: string): Promise<Complaint | undefined> {
+    const [complaint] = await db
+      .select()
+      .from(complaints)
+      .where(eq(complaints.id, id));
+    return complaint || undefined;
+  }
+  
+  async getComplaintsByUser(userId: string): Promise<Complaint[]> {
+    return await db
+      .select()
+      .from(complaints)
+      .where(eq(complaints.userId, userId))
+      .orderBy(desc(complaints.createdAt));
+  }
+  
+  async getComplaintsByStatus(status: string): Promise<Complaint[]> {
+    return await db
+      .select()
+      .from(complaints)
+      .where(eq(complaints.status, status))
+      .orderBy(desc(complaints.createdAt));
+  }
+  
+  async updateComplaint(id: string, data: Partial<Omit<Complaint, 'id' | 'createdAt'>>): Promise<Complaint> {
+    const [updated] = await db
+      .update(complaints)
+      .set({
+        ...data,
+        updatedAt: new Date()
+      })
+      .where(eq(complaints.id, id))
+      .returning();
+    if (!updated) throw new Error('Complaint not found');
+    return updated;
   }
 }
 

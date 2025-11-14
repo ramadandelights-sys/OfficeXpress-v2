@@ -450,6 +450,126 @@ export const carpoolBlackoutDates = pgTable("carpool_blackout_dates", {
   index("idx_blackout_active_dates").on(table.isActive, table.startDate, table.endDate),
 ]);
 
+// User Wallets Table - For tracking user balance
+export const userWallets = pgTable("user_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id),
+  balance: numeric("balance", { precision: 10, scale: 2 }).notNull().default('0.00'),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Wallet Transactions Table - Ledger for all money in/out
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletId: varchar("wallet_id").notNull().references(() => userWallets.id),
+  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(), // Positive for credits, negative for debits
+  type: text("type").notNull(), // 'credit' or 'debit'
+  reason: text("reason").notNull(), // 'top_up', 'subscription_purchase', 'refund_failed_trip', 'withdrawal', etc.
+  description: text("description"),
+  metadata: json("metadata").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_wallet_transactions").on(table.walletId, table.createdAt),
+]);
+
+// Subscriptions Table - Monthly route subscriptions
+export const subscriptions = pgTable("subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  timeSlotId: varchar("time_slot_id").notNull().references(() => carpoolTimeSlots.id),
+  boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
+  dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date").notNull(),
+  pricePerTrip: numeric("price_per_trip", { precision: 10, scale: 2 }).notNull(),
+  totalMonthlyPrice: numeric("total_monthly_price", { precision: 10, scale: 2 }).notNull(),
+  discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }).default('0.00'),
+  status: text("status").notNull().default("active"), // 'active', 'cancelled', 'expired'
+  cancellationDate: timestamp("cancellation_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_subscription_user").on(table.userId, table.status),
+  index("idx_subscription_dates").on(table.startDate, table.endDate, table.status),
+]);
+
+// Subscription Invoices Table - Monthly billing records
+export const subscriptionInvoices = pgTable("subscription_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").notNull().references(() => subscriptions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  invoiceNumber: varchar("invoice_number", { length: 20 }).notNull().unique(),
+  billingMonth: text("billing_month").notNull(), // Format: "2024-11"
+  amountDue: numeric("amount_due", { precision: 10, scale: 2 }).notNull(),
+  amountPaid: numeric("amount_paid", { precision: 10, scale: 2 }).default('0.00'),
+  walletTransactionId: varchar("wallet_transaction_id").references(() => walletTransactions.id),
+  status: text("status").notNull().default("pending"), // 'pending', 'paid', 'failed', 'refunded'
+  dueDate: timestamp("due_date").notNull(),
+  paidAt: timestamp("paid_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_invoice_subscription").on(table.subscriptionId, table.billingMonth),
+  index("idx_invoice_user").on(table.userId, table.status),
+]);
+
+// Vehicle Trips Table - Daily shared trip instances
+export const vehicleTrips = pgTable("vehicle_trips", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
+  timeSlotId: varchar("time_slot_id").notNull().references(() => carpoolTimeSlots.id),
+  tripDate: text("trip_date").notNull(), // Format: "2024-11-14"
+  driverId: varchar("driver_id").references(() => drivers.id),
+  vehicleCapacity: integer("vehicle_capacity").notNull().default(4),
+  bookedSeats: integer("booked_seats").notNull().default(0),
+  status: text("status").notNull().default("pending_assignment"), // 'pending_assignment', 'assigned', 'in_progress', 'completed', 'cancelled'
+  departureTime: text("departure_time"),
+  completionTime: text("completion_time"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_vehicle_trip_date").on(table.tripDate, table.routeId, table.timeSlotId),
+  index("idx_vehicle_trip_status").on(table.status, table.tripDate),
+]);
+
+// Trip Bookings Table - Individual user bookings on vehicle trips
+export const tripBookings = pgTable("trip_bookings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vehicleTripId: varchar("vehicle_trip_id").notNull().references(() => vehicleTrips.id),
+  subscriptionId: varchar("subscription_id").notNull().references(() => subscriptions.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
+  dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  status: text("status").notNull().default("expected"), // 'expected', 'picked_up', 'completed', 'no_show', 'cancelled'
+  pickupTime: text("pickup_time"),
+  dropoffTime: text("dropoff_time"),
+  refundProcessed: boolean("refund_processed").default(false),
+  refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_trip_booking_vehicle").on(table.vehicleTripId, table.status),
+  index("idx_trip_booking_user").on(table.userId, table.createdAt),
+]);
+
+// Complaints Table - User complaints for specific trips
+export const complaints = pgTable("complaints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tripBookingId: varchar("trip_booking_id").notNull().references(() => tripBookings.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: text("status").notNull().default("open"), // 'open', 'in_progress', 'resolved', 'closed'
+  resolution: text("resolution"),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_complaint_user").on(table.userId, table.status),
+  index("idx_complaint_booking").on(table.tripBookingId),
+]);
+
 // Insert schemas
 export const insertCorporateBookingSchema = createInsertSchema(corporateBookings).omit({
   id: true,
@@ -688,6 +808,58 @@ export const updateCarpoolBookingSchema = createInsertSchema(carpoolBookings).om
   id: z.string(),
 }).partial();
 
+// Wallet and Subscription Insert Schemas
+export const insertUserWalletSchema = createInsertSchema(userWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertWalletTransactionSchema = createInsertSchema(walletTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSubscriptionSchema = createInsertSchema(subscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSubscriptionInvoiceSchema = createInsertSchema(subscriptionInvoices).omit({
+  id: true,
+  invoiceNumber: true,
+  amountPaid: true,
+  walletTransactionId: true,
+  status: true,
+  paidAt: true,
+  createdAt: true,
+});
+
+export const insertVehicleTripSchema = createInsertSchema(vehicleTrips).omit({
+  id: true,
+  bookedSeats: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTripBookingSchema = createInsertSchema(tripBookings).omit({
+  id: true,
+  status: true,
+  refundProcessed: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertComplaintSchema = createInsertSchema(complaints).omit({
+  id: true,
+  status: true,
+  resolvedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -743,3 +915,17 @@ export type InsertCarpoolBooking = z.infer<typeof insertCarpoolBookingSchema>;
 export type UpdateCarpoolBooking = z.infer<typeof updateCarpoolBookingSchema>;
 export type CarpoolBlackoutDate = typeof carpoolBlackoutDates.$inferSelect;
 export type InsertCarpoolBlackoutDate = z.infer<typeof insertCarpoolBlackoutDateSchema>;
+export type UserWallet = typeof userWallets.$inferSelect;
+export type InsertUserWallet = z.infer<typeof insertUserWalletSchema>;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type InsertWalletTransaction = z.infer<typeof insertWalletTransactionSchema>;
+export type Subscription = typeof subscriptions.$inferSelect;
+export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
+export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
+export type InsertSubscriptionInvoice = z.infer<typeof insertSubscriptionInvoiceSchema>;
+export type VehicleTrip = typeof vehicleTrips.$inferSelect;
+export type InsertVehicleTrip = z.infer<typeof insertVehicleTripSchema>;
+export type TripBooking = typeof tripBookings.$inferSelect;
+export type InsertTripBooking = z.infer<typeof insertTripBookingSchema>;
+export type Complaint = typeof complaints.$inferSelect;
+export type InsertComplaint = z.infer<typeof insertComplaintSchema>;
