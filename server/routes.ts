@@ -3281,6 +3281,265 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to submit survey response" });
     }
   });
+  
+  // =====================================
+  // Wallet & Subscription API Routes
+  // =====================================
+  
+  // Get user wallet (creates one if doesn't exist)
+  app.get("/api/wallet", isAuthenticated, async (req, res) => {
+    try {
+      let wallet = await storage.getUserWallet(req.session.userId!);
+      
+      // Create wallet if it doesn't exist
+      if (!wallet) {
+        wallet = await storage.createUserWallet({
+          userId: req.session.userId!,
+          balance: "0",
+        });
+      }
+      
+      res.json(wallet);
+    } catch (error) {
+      console.error('Get wallet error:', error);
+      res.status(500).json({ message: "Failed to fetch wallet" });
+    }
+  });
+  
+  // Get wallet transactions
+  app.get("/api/wallet/transactions", isAuthenticated, async (req, res) => {
+    try {
+      const transactions = await storage.getWalletTransactionsByUser(req.session.userId!);
+      res.json(transactions);
+    } catch (error) {
+      console.error('Get transactions error:', error);
+      res.status(500).json({ message: "Failed to fetch transactions" });
+    }
+  });
+  
+  // Mock wallet top-up (for testing)
+  app.post("/api/wallet/topup", isAuthenticated, async (req, res) => {
+    try {
+      const { amount } = req.body;
+      
+      if (!amount || amount <= 0) {
+        return res.status(400).json({ message: "Invalid amount" });
+      }
+      
+      // Get or create wallet
+      let wallet = await storage.getUserWallet(req.session.userId!);
+      if (!wallet) {
+        wallet = await storage.createUserWallet({
+          userId: req.session.userId!,
+          balance: "0",
+        });
+      }
+      
+      // Add funds to wallet
+      const updatedWallet = await storage.updateWalletBalance(wallet.id, amount);
+      
+      res.json({ 
+        wallet: updatedWallet,
+        message: `Successfully added ৳${amount} to your wallet` 
+      });
+    } catch (error) {
+      console.error('Wallet top-up error:', error);
+      res.status(500).json({ message: "Failed to top up wallet" });
+    }
+  });
+  
+  // Calculate subscription cost
+  app.post("/api/subscriptions/calculate-cost", isAuthenticated, async (req, res) => {
+    try {
+      const { routeId, weekdays } = req.body;
+      
+      if (!routeId || !weekdays || !Array.isArray(weekdays)) {
+        return res.status(400).json({ message: "Route ID and weekdays are required" });
+      }
+      
+      const route = await storage.getCarpoolRoute(routeId);
+      if (!route) {
+        return res.status(404).json({ message: "Route not found" });
+      }
+      
+      // Calculate monthly cost based on weekdays
+      const weeksPerMonth = 4.33; // Average weeks per month
+      const daysPerWeek = weekdays.length;
+      const totalDays = Math.round(daysPerWeek * weeksPerMonth);
+      const pricePerSeat = parseFloat(route.pricePerSeat);
+      const monthlyCost = totalDays * pricePerSeat;
+      
+      res.json({
+        pricePerSeat,
+        selectedWeekdays: weekdays,
+        daysPerWeek,
+        estimatedDaysPerMonth: totalDays,
+        monthlyCost,
+        currency: "BDT"
+      });
+    } catch (error) {
+      console.error('Calculate cost error:', error);
+      res.status(500).json({ message: "Failed to calculate subscription cost" });
+    }
+  });
+  
+  // Purchase subscription
+  app.post("/api/subscriptions/purchase", isAuthenticated, async (req, res) => {
+    try {
+      const { 
+        routeId, 
+        timeSlotId, 
+        pickupPointId,
+        dropOffPointId,
+        weekdays,
+        startDate
+      } = req.body;
+      
+      // Validate required fields
+      if (!routeId || !timeSlotId || !pickupPointId || !dropOffPointId || !weekdays || !startDate) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      // Get route and time slot details
+      const route = await storage.getCarpoolRoute(routeId);
+      const timeSlot = await storage.getCarpoolTimeSlot(timeSlotId);
+      
+      if (!route || !timeSlot) {
+        return res.status(404).json({ message: "Route or time slot not found" });
+      }
+      
+      // Calculate monthly cost
+      const weeksPerMonth = 4.33;
+      const daysPerWeek = weekdays.length;
+      const totalDays = Math.round(daysPerWeek * weeksPerMonth);
+      const pricePerSeat = parseFloat(route.pricePerSeat);
+      const monthlyCost = totalDays * pricePerSeat;
+      
+      // Get or create wallet
+      let wallet = await storage.getUserWallet(req.session.userId!);
+      if (!wallet) {
+        wallet = await storage.createUserWallet({
+          userId: req.session.userId!,
+          balance: "0",
+        });
+      }
+      
+      // Check wallet balance
+      const currentBalance = parseFloat(wallet.balance);
+      if (currentBalance < monthlyCost) {
+        return res.status(400).json({ 
+          message: "Insufficient wallet balance",
+          required: monthlyCost,
+          current: currentBalance
+        });
+      }
+      
+      // Calculate end date (1 month from start)
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setMonth(endDateObj.getMonth() + 1);
+      
+      // Create subscription
+      const subscription = await storage.createSubscription({
+        userId: req.session.userId!,
+        routeId,
+        timeSlotId,
+        boardingPointId: pickupPointId,
+        dropOffPointId,
+        weekdays: weekdays.join(','),
+        startDate,
+        endDate: endDateObj.toISOString().split('T')[0],
+        monthlyFee: monthlyCost.toString(),
+        status: 'active'
+      });
+      
+      // Create invoice
+      const invoice = await storage.createSubscriptionInvoice({
+        subscriptionId: subscription.id,
+        userId: req.session.userId!,
+        amount: monthlyCost.toString(),
+        status: 'paid',
+        paidAt: new Date()
+      });
+      
+      // Deduct from wallet
+      await storage.updateWalletBalance(wallet.id, -monthlyCost);
+      
+      res.json({
+        subscription,
+        invoice,
+        message: "Subscription purchased successfully"
+      });
+    } catch (error: any) {
+      console.error('Subscription purchase error:', error);
+      if (error.message?.includes('Insufficient funds')) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to purchase subscription" });
+    }
+  });
+  
+  // Get user subscriptions
+  app.get("/api/subscriptions", isAuthenticated, async (req, res) => {
+    try {
+      const subscriptions = await storage.getAllSubscriptionsByUser(req.session.userId!);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Get subscriptions error:', error);
+      res.status(500).json({ message: "Failed to fetch subscriptions" });
+    }
+  });
+  
+  // Get active subscriptions
+  app.get("/api/subscriptions/active", isAuthenticated, async (req, res) => {
+    try {
+      const subscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
+      res.json(subscriptions);
+    } catch (error) {
+      console.error('Get active subscriptions error:', error);
+      res.status(500).json({ message: "Failed to fetch active subscriptions" });
+    }
+  });
+  
+  // Cancel subscription (at month end)
+  app.post("/api/subscriptions/:id/cancel", isAuthenticated, async (req, res) => {
+    try {
+      const subscription = await storage.getSubscription(req.params.id);
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Subscription not found" });
+      }
+      
+      if (subscription.userId !== req.session.userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+      
+      // Mark as pending cancellation (will be cancelled at end date)
+      const updated = await storage.updateSubscription(subscription.id, {
+        status: 'pending_cancellation',
+        cancellationDate: new Date()
+      });
+      
+      res.json({
+        subscription: updated,
+        message: `Subscription will be cancelled on ${subscription.endDate}`
+      });
+    } catch (error) {
+      console.error('Cancel subscription error:', error);
+      res.status(500).json({ message: "Failed to cancel subscription" });
+    }
+  });
+  
+  // Get user invoices
+  app.get("/api/invoices", isAuthenticated, async (req, res) => {
+    try {
+      const invoices = await storage.getInvoicesByUser(req.session.userId!);
+      res.json(invoices);
+    } catch (error) {
+      console.error('Get invoices error:', error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
 
 
   const httpServer = createServer(app);

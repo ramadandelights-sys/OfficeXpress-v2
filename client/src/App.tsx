@@ -27,6 +27,8 @@ import ResetPasswordPage from "@/pages/reset-password";
 import OnboardingPage from "@/pages/onboarding";
 import CustomerDashboard from "@/pages/dashboard";
 import Survey from "@/pages/survey";
+import WalletPage from "@/pages/wallet";
+import MySubscriptionsPage from "@/pages/my-subscriptions";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -57,6 +59,8 @@ function Router() {
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/dashboard" component={CustomerDashboard} />
+      <Route path="/wallet" component={WalletPage} />
+      <Route path="/my-subscriptions" component={MySubscriptionsPage} />
       <Route path="/survey" component={Survey} />
       <Route path="/terms-and-conditions" component={LegalPageView} />
       <Route path="/privacy-policy" component={LegalPageView} />

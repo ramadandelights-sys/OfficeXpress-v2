@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown, Wallet, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
@@ -163,6 +163,34 @@ export default function Header() {
               <>
                 {user ? (
                   <>
+                    {/* Wallet Link for all logged-in users */}
+                    <Link
+                      href="/wallet"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                        isActive("/wallet")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-wallet"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      My Wallet
+                    </Link>
+                    
+                    {/* Subscriptions Link for all logged-in users */}
+                    <Link
+                      href="/my-subscriptions"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                        isActive("/my-subscriptions")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-subscriptions"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Subscriptions
+                    </Link>
+                    
                     {user.role === 'customer' && (
                       <Link
                         href="/dashboard"
@@ -309,6 +337,36 @@ export default function Header() {
                 <>
                   {user ? (
                     <>
+                      {/* Wallet Link for all logged-in users */}
+                      <Link
+                        href="/wallet"
+                        className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                          isActive("/wallet")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        data-testid="mobile-nav-wallet"
+                      >
+                        <Wallet className="w-4 h-4" />
+                        My Wallet
+                      </Link>
+                      
+                      {/* Subscriptions Link for all logged-in users */}
+                      <Link
+                        href="/my-subscriptions"
+                        className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 ${
+                          isActive("/my-subscriptions")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        data-testid="mobile-nav-subscriptions"
+                      >
+                        <Calendar className="w-4 h-4" />
+                        My Subscriptions
+                      </Link>
+                      
                       {user.role === 'customer' && (
                         <Link
                           href="/dashboard"

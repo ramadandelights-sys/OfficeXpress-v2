@@ -1,23 +1,32 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { format } from "date-fns";
-import { Calendar, MapPin, Clock, Users, DollarSign, CalendarIcon } from "lucide-react";
+import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { insertCarpoolBookingSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation as useWouterLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { 
+  useWallet, 
+  usePurchaseSubscription, 
+  useCalculateCost, 
+  useTopUpWallet,
+  type PurchaseSubscriptionData 
+} from "@/hooks/useSubscriptions";
 
 import type { 
   CarpoolRoute, 
@@ -25,36 +34,45 @@ import type {
   CarpoolTimeSlot 
 } from "@shared/schema";
 
+// Form schema
+const subscriptionFormSchema = z.object({
+  routeId: z.string().min(1, "Route is required"),
+  weekdays: z.array(z.string()).min(1, "At least one weekday must be selected"),
+  timeSlotId: z.string().min(1, "Time slot is required"),
+  pickupPointId: z.string().min(1, "Pickup point is required"),
+  dropOffPointId: z.string().min(1, "Drop-off point is required"),
+});
+
+type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>;
+
+const weekdayOptions = [
+  { value: 'monday', label: 'Monday', short: 'Mon' },
+  { value: 'tuesday', label: 'Tuesday', short: 'Tue' },
+  { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
+  { value: 'thursday', label: 'Thursday', short: 'Thu' },
+  { value: 'friday', label: 'Friday', short: 'Fri' },
+];
+
 export default function CarpoolPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useWouterLocation();
   const { toast } = useToast();
-  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null);
-  const [bookingComplete, setBookingComplete] = useState(false);
-  const [shareToken, setShareToken] = useState<string | null>(null);
-  const [bookingResponse, setBookingResponse] = useState<{referenceId: string; shareToken: string; shareUrl: string} | null>(null);
+  const { wallet, balance, isLoading: walletLoading } = useWallet();
+  const purchaseSubscription = usePurchaseSubscription();
+  const topUpWallet = useTopUpWallet();
   
-  // Extract share token from URL on mount
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('share');
-    if (token) {
-      setShareToken(token);
-    }
-  }, []);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [showTopUpDialog, setShowTopUpDialog] = useState(false);
+  const [topUpAmount, setTopUpAmount] = useState("");
+  const [selectedRoute, setSelectedRoute] = useState<string>("");
+  const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
+  const [purchaseComplete, setPurchaseComplete] = useState(false);
   
   // Redirect to login if not authenticated
   if (!authLoading && !user) {
     setLocation("/login");
     return null;
   }
-
-  // Fetch shared booking details if share token exists
-  const { data: sharedBooking } = useQuery({
-    queryKey: ['/api/carpool/bookings/shared', shareToken],
-    enabled: !!shareToken,
-  });
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -73,197 +91,187 @@ export default function CarpoolPage() {
     enabled: !!selectedRoute,
   });
 
-  // Fetch booking counts for selected route
-  const { data: bookingCounts = {} } = useQuery<Record<string, number>>({
-    queryKey: [`/api/carpool/routes/${selectedRoute}/booking-counts`],
-    enabled: !!selectedRoute,
-  });
+  // Calculate cost when route and weekdays are selected
+  const { monthlyTotal, isLoading: calculatingCost } = useCalculateCost(
+    selectedRoute,
+    selectedWeekdays
+  );
 
   // Get selected route details
   const selectedRouteDetails = routes.find(r => r.id === selectedRoute);
 
-  // Get selected time slot details
-  const selectedTimeSlotDetails = timeSlots.find(ts => ts.id === selectedTimeSlot);
-
-  // Form schema with validation
-  const bookingFormSchema = insertCarpoolBookingSchema.extend({
-    customerName: z.string().min(2, "Name must be at least 2 characters"),
-    phone: z.string().min(10, "Phone number must be at least 10 digits"),
-    email: z.string().email("Valid email is required").min(1, "Email is required"),
-    travelDate: z.string().min(1, "Travel date is required"),
-  });
-
-  const form = useForm<z.infer<typeof bookingFormSchema>>({
-    resolver: zodResolver(bookingFormSchema),
+  // Form setup
+  const form = useForm<SubscriptionFormData>({
+    resolver: zodResolver(subscriptionFormSchema),
     defaultValues: {
       routeId: "",
+      weekdays: [],
       timeSlotId: "",
-      boardingPointId: "",
+      pickupPointId: "",
       dropOffPointId: "",
-      customerName: "",
-      phone: "",
-      email: "",
-      travelDate: "",
     },
   });
 
-  // Create booking mutation
-  const createBookingMutation = useMutation({
-    mutationFn: async (data: z.infer<typeof bookingFormSchema>) => {
-      const response = await apiRequest('POST', '/api/carpool/bookings', data);
-      return await response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/carpool/routes'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/my/carpool-bookings'] });
-      
-      // Store booking response data
-      setBookingResponse({
-        referenceId: data.referenceId,
-        shareToken: data.shareToken,
-        shareUrl: `${window.location.origin}/carpool?share=${data.shareToken}`
-      });
-      
-      toast({ 
-        title: "Success", 
-        description: "Your carpool booking has been confirmed! You'll receive an email with details." 
-      });
-      setBookingComplete(true);
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({ 
-        title: "Error", 
-        description: error.message || "Failed to create booking. Please try again.", 
-        variant: "destructive" 
-      });
-    },
-  });
-
-  const handleSubmit = (data: z.infer<typeof bookingFormSchema>) => {
-    createBookingMutation.mutate(data);
-  };
-
-  const handleRouteChange = (routeId: string) => {
+  // Handle route selection
+  const handleRouteSelection = (routeId: string) => {
     setSelectedRoute(routeId);
-    setSelectedTimeSlot(null);
     form.setValue('routeId', routeId);
+    // Reset dependent fields
+    form.setValue('weekdays', []);
     form.setValue('timeSlotId', '');
-    form.setValue('boardingPointId', '');
+    form.setValue('pickupPointId', '');
     form.setValue('dropOffPointId', '');
+    setSelectedWeekdays([]);
   };
 
-  const handleTimeSlotChange = (timeSlotId: string) => {
-    setSelectedTimeSlot(timeSlotId);
-    form.setValue('timeSlotId', timeSlotId);
-  };
-
-  // Pre-populate form from shared booking
-  useEffect(() => {
-    if (sharedBooking && routes.length > 0) {
-      const booking = sharedBooking as any;
-      
-      // Set route
-      if (booking.routeId) {
-        setSelectedRoute(booking.routeId);
-        form.setValue('routeId', booking.routeId);
-      }
-      
-      // Set time slot
-      if (booking.timeSlotId) {
-        setSelectedTimeSlot(booking.timeSlotId);
-        form.setValue('timeSlotId', booking.timeSlotId);
-      }
-      
-      // Set travel date
-      if (booking.travelDate) {
-        form.setValue('travelDate', booking.travelDate);
-      }
-      
-      // Set pickup and drop-off points
-      if (booking.boardingPointId) {
-        form.setValue('boardingPointId', booking.boardingPointId);
-      }
-      if (booking.dropOffPointId) {
-        form.setValue('dropOffPointId', booking.dropOffPointId);
-      }
-      
-      toast({
-        title: "Booking pre-filled",
-        description: "Form has been pre-filled from shared link. Update your details and confirm.",
-      });
+  // Handle weekday selection
+  const handleWeekdayToggle = (weekday: string) => {
+    const currentWeekdays = form.getValues('weekdays');
+    let newWeekdays: string[];
+    
+    if (currentWeekdays.includes(weekday)) {
+      newWeekdays = currentWeekdays.filter(w => w !== weekday);
+    } else {
+      newWeekdays = [...currentWeekdays, weekday];
     }
-  }, [sharedBooking, routes, form, toast]);
+    
+    form.setValue('weekdays', newWeekdays);
+    setSelectedWeekdays(newWeekdays);
+  };
 
-  if (bookingComplete) {
+  // Handle step navigation
+  const goToNextStep = () => {
+    const currentValues = form.getValues();
+    
+    // Validate current step before proceeding
+    if (currentStep === 1 && !currentValues.routeId) {
+      toast({
+        title: "Please select a route",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 2 && currentValues.weekdays.length === 0) {
+      toast({
+        title: "Please select at least one weekday",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 3 && !currentValues.timeSlotId) {
+      toast({
+        title: "Please select a time slot",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep === 4 && (!currentValues.pickupPointId || !currentValues.dropOffPointId)) {
+      toast({
+        title: "Please select both pickup and drop-off points",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  // Handle subscription purchase
+  const handlePurchase = async () => {
+    const formData = form.getValues();
+    
+    // Check wallet balance
+    if (balance < monthlyTotal) {
+      setShowTopUpDialog(true);
+      return;
+    }
+    
+    try {
+      await purchaseSubscription.mutateAsync(formData);
+      setPurchaseComplete(true);
+    } catch (error) {
+      // Error is handled by the mutation hook
+    }
+  };
+
+  // Handle wallet top-up
+  const handleTopUp = async () => {
+    const amount = parseFloat(topUpAmount);
+    if (isNaN(amount) || amount <= 0) {
+      toast({
+        title: "Invalid amount",
+        description: "Please enter a valid amount",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      await topUpWallet.mutateAsync(amount);
+      setShowTopUpDialog(false);
+      setTopUpAmount("");
+      toast({
+        title: "Wallet topped up successfully",
+        description: "You can now proceed with your subscription purchase",
+      });
+    } catch (error) {
+      // Error is handled by the mutation hook
+    }
+  };
+
+  // Step progress indicator
+  const steps = [
+    { number: 1, title: "Route" },
+    { number: 2, title: "Weekdays" },
+    { number: 3, title: "Time Slot" },
+    { number: 4, title: "Pickup & Drop" },
+    { number: 5, title: "Review & Pay" },
+  ];
+
+  if (purchaseComplete) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
         <div className="max-w-2xl mx-auto">
-          <Card className="text-center" data-testid="booking-success-card">
+          <Card className="text-center" data-testid="subscription-success-card">
             <CardHeader>
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+                <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
-              <CardTitle className="text-2xl">Booking Confirmed!</CardTitle>
+              <CardTitle className="text-2xl">Subscription Activated!</CardTitle>
               <CardDescription className="text-base mt-2">
-                Your carpool seat has been reserved. We'll send you an email confirmation shortly.
+                Your carpool subscription has been successfully activated. You'll receive an email confirmation shortly.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {bookingResponse && (
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
-                    <div>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Booking Reference</p>
-                      <p className="text-xl font-bold text-gray-900 dark:text-white" data-testid="text-reference-id">
-                        {bookingResponse.referenceId}
-                      </p>
-                    </div>
-                    
-                    <div className="border-t pt-3">
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">Share this trip</p>
-                      <p className="text-xs text-gray-500 mb-2">Invite friends or colleagues to join you on this route!</p>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          readOnly
-                          value={bookingResponse.shareUrl}
-                          className="flex-1 px-3 py-2 text-sm border rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
-                          data-testid="input-share-url"
-                        />
-                        <Button
-                          onClick={() => {
-                            navigator.clipboard.writeText(bookingResponse.shareUrl);
-                            toast({
-                              title: "Link copied!",
-                              description: "Share this link with others to join your ride",
-                            });
-                          }}
-                          variant="outline"
-                          data-testid="button-copy-link"
-                        >
-                          Copy
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                <p className="text-sm text-muted-foreground">
-                  Please note: Your trip will be confirmed once we have at least 3 passengers. 
-                  You'll receive an email 2 hours before departure if the minimum isn't met.
-                </p>
-                <Button 
-                  onClick={() => {
-                    setBookingComplete(false);
-                    setBookingResponse(null);
-                  }} 
-                  className="w-full"
-                  data-testid="button-book-another"
+            <CardContent className="space-y-4">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Monthly Fee</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">৳{monthlyTotal.toFixed(2)}</p>
+              </div>
+              
+              <div className="flex gap-4 justify-center pt-4">
+                <Button
+                  onClick={() => setLocation("/my-subscriptions")}
+                  data-testid="button-view-subscriptions"
                 >
-                  Book Another Ride
+                  View My Subscriptions
+                </Button>
+                <Button
+                  onClick={() => setLocation("/")}
+                  variant="outline"
+                  data-testid="button-go-home"
+                >
+                  Go to Home
                 </Button>
               </div>
             </CardContent>
@@ -275,160 +283,234 @@ export default function CarpoolPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4" data-testid="heading-carpool">
-            Office Carpool Service
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Share your commute with colleagues. Save money, reduce traffic, and help the environment.
-          </p>
+      <div className="max-w-4xl mx-auto">
+        {/* Progress Steps */}
+        <div className="mb-8">
+          <div className="flex justify-between items-center">
+            {steps.map((step, index) => (
+              <div key={step.number} className="flex-1 flex items-center">
+                <div className="flex flex-col items-center flex-1">
+                  <div
+                    className={cn(
+                      "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm",
+                      currentStep >= step.number
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
+                    )}
+                  >
+                    {currentStep > step.number ? (
+                      <CheckCircle2 className="w-5 h-5" />
+                    ) : (
+                      step.number
+                    )}
+                  </div>
+                  <span className="text-xs mt-2 text-gray-600 dark:text-gray-400">{step.title}</span>
+                </div>
+                {index < steps.length - 1 && (
+                  <div
+                    className={cn(
+                      "h-1 flex-1 mx-2",
+                      currentStep > step.number
+                        ? "bg-primary"
+                        : "bg-gray-200 dark:bg-gray-700"
+                    )}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {/* Route Selection */}
-          <div className="md:col-span-2">
-            <Card data-testid="card-route-selection">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-5 w-5" />
-                  Select Your Route
-                </CardTitle>
-                <CardDescription>Choose a route that matches your commute</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {loadingRoutes ? (
-                  <div className="text-center py-8" data-testid="loading-routes">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-white mx-auto"></div>
-                  </div>
-                ) : routes.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground" data-testid="no-routes">
-                    No routes available at the moment. Please check back later.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {routes.map((route) => (
-                      <div
-                        key={route.id}
-                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                          selectedRoute === route.id
-                            ? 'border-primary bg-primary/5'
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
-                        onClick={() => handleRouteChange(route.id)}
-                        data-testid={`card-route-${route.id}`}
-                      >
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-lg" data-testid={`text-route-name-${route.id}`}>
-                              {route.name}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {route.fromLocation} → {route.toLocation}
-                            </p>
-                            {route.description && (
-                              <p className="text-sm text-muted-foreground mt-2">{route.description}</p>
-                            )}
-                            <div className="flex items-center gap-4 mt-3 text-sm">
-                              <span className="flex items-center gap-1">
-                                <MapPin className="h-4 w-4" />
-                                {route.estimatedDistance} km
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="h-4 w-4" />
-                                BDT {route.pricePerSeat} per seat
-                              </span>
+        <Card>
+          <CardHeader>
+            <CardTitle>Subscribe to Carpool Service</CardTitle>
+            <CardDescription>
+              Set up your monthly carpool subscription in just a few steps
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <Form {...form}>
+              {/* Step 1: Select Route */}
+              {currentStep === 1 && (
+                <div className="space-y-6" data-testid="step-select-route">
+                  <h3 className="text-lg font-semibold">Select Your Route</h3>
+                  
+                  {loadingRoutes ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-24 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <RadioGroup
+                      value={form.watch('routeId')}
+                      onValueChange={handleRouteSelection}
+                    >
+                      {routes.map((route) => (
+                        <div key={route.id} className="mb-3">
+                          <Label
+                            htmlFor={route.id}
+                            className="flex items-start space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
+                            data-testid={`route-option-${route.id}`}
+                          >
+                            <RadioGroupItem value={route.id} id={route.id} />
+                            <div className="flex-1">
+                              <div className="font-medium">{route.name}</div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                {route.startPoint} → {route.endPoint}
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                Available: {route.availableWeekdays?.join(', ') || 'Mon-Fri'}
+                              </div>
+                              <div className="text-sm font-medium text-primary mt-2">
+                                ৳{route.perSeatPrice}/day
+                              </div>
                             </div>
-                          </div>
+                          </Label>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </RadioGroup>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Select Weekdays */}
+              {currentStep === 2 && (
+                <div className="space-y-6" data-testid="step-select-weekdays">
+                  <h3 className="text-lg font-semibold">Choose Your Weekdays</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Select the days you want to use the carpool service
+                  </p>
+                  
+                  <div className="space-y-3">
+                    {weekdayOptions.map((weekday) => {
+                      const isAvailable = selectedRouteDetails?.availableWeekdays?.includes(weekday.value) ?? true;
+                      
+                      return (
+                        <div key={weekday.value} className="flex items-center space-x-3">
+                          <Checkbox
+                            id={weekday.value}
+                            checked={form.watch('weekdays').includes(weekday.value)}
+                            onCheckedChange={() => handleWeekdayToggle(weekday.value)}
+                            disabled={!isAvailable}
+                            data-testid={`checkbox-weekday-${weekday.value}`}
+                          />
+                          <Label
+                            htmlFor={weekday.value}
+                            className={cn(
+                              "cursor-pointer",
+                              !isAvailable && "text-gray-400 line-through"
+                            )}
+                          >
+                            {weekday.label}
+                          </Label>
+                        </div>
+                      );
+                    })}
                   </div>
-                )}
-              </CardContent>
-            </Card>
 
-            {/* Booking Form */}
-            {selectedRoute && (
-              <Card className="mt-8" data-testid="card-booking-form">
-                <CardHeader>
-                  <CardTitle>Book Your Seat</CardTitle>
-                  <CardDescription>Complete the form to reserve your seat</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Form {...form}>
-                    <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+                  {selectedWeekdays.length > 0 && !calculatingCost && (
+                    <Alert>
+                      <Wallet className="h-4 w-4" />
+                      <AlertDescription>
+                        Estimated monthly cost: <strong>৳{monthlyTotal.toFixed(2)}</strong>
+                        <br />
+                        <span className="text-xs text-gray-500">
+                          ({selectedWeekdays.length} days × 4.33 weeks × ৳{selectedRouteDetails?.perSeatPrice})
+                        </span>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+              )}
+
+              {/* Step 3: Select Time Slot */}
+              {currentStep === 3 && (
+                <div className="space-y-6" data-testid="step-select-timeslot">
+                  <h3 className="text-lg font-semibold">Select Office Entry Time</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Choose your preferred time slot for reaching the office
+                  </p>
+                  
+                  {loadingTimeSlots ? (
+                    <div className="space-y-3">
+                      {[1, 2, 3].map(i => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <RadioGroup
+                      value={form.watch('timeSlotId')}
+                      onValueChange={(value) => form.setValue('timeSlotId', value)}
+                    >
+                      {timeSlots.map((slot) => (
+                        <div key={slot.id} className="mb-3">
+                          <Label
+                            htmlFor={`slot-${slot.id}`}
+                            className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
+                            data-testid={`timeslot-option-${slot.id}`}
+                          >
+                            <RadioGroupItem value={slot.id} id={`slot-${slot.id}`} />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-gray-500" />
+                                <span className="font-medium">{slot.officeEntryTime}</span>
+                              </div>
+                              <div className="text-sm text-gray-500 mt-1">
+                                Departure: {slot.departureTime}
+                              </div>
+                            </div>
+                          </Label>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  )}
+                </div>
+              )}
+
+              {/* Step 4: Select Pickup and Drop Points */}
+              {currentStep === 4 && (
+                <div className="space-y-6" data-testid="step-select-points">
+                  <h3 className="text-lg font-semibold">Select Pickup and Drop-off Points</h3>
+                  
+                  {loadingPickupPoints ? (
+                    <div className="space-y-3">
+                      <Skeleton className="h-12 w-full" />
+                      <Skeleton className="h-12 w-full" />
+                    </div>
+                  ) : (
+                    <>
                       <FormField
                         control={form.control}
-                        name="timeSlotId"
+                        name="pickupPointId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Office Entry Time *</FormLabel>
-                            <Select 
-                              onValueChange={(value) => {
-                                field.onChange(value);
-                                handleTimeSlotChange(value);
-                              }} 
-                              value={field.value}
-                            >
+                            <FormLabel>Pickup Point</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-timeslot">
-                                  <SelectValue placeholder="Select office entry time" />
+                                <SelectTrigger data-testid="select-pickup-point">
+                                  <SelectValue placeholder="Select pickup point" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {loadingTimeSlots ? (
-                                  <SelectItem value="loading" disabled>Loading...</SelectItem>
-                                ) : timeSlots.length === 0 ? (
-                                  <SelectItem value="none" disabled>No office entry times available</SelectItem>
-                                ) : (
-                                  timeSlots.map((slot) => {
-                                    const bookingCount = bookingCounts[slot.id] || 0;
-                                    return (
-                                      <SelectItem key={slot.id} value={slot.id} data-testid={`option-timeslot-${slot.id}`}>
-                                        <div className="flex items-center justify-between w-full">
-                                          <span>Departure: {slot.departureTime}</span>
-                                          {bookingCount > 0 && (
-                                            <span className="ml-2 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                                              {bookingCount} {bookingCount === 1 ? 'booking' : 'bookings'}
-                                            </span>
-                                          )}
-                                        </div>
-                                      </SelectItem>
-                                    );
-                                  })
-                                )}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="boardingPointId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Pickup Point *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || undefined}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-pickup">
-                                  <SelectValue placeholder="Select pickup location" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {loadingPickupPoints ? (
-                                  <SelectItem value="loading" disabled>Loading...</SelectItem>
-                                ) : pickupPoints.length === 0 ? (
-                                  <SelectItem value="none" disabled>No pickup points available</SelectItem>
-                                ) : (
-                                  pickupPoints.map((point) => (
-                                    <SelectItem key={point.id} value={point.id} data-testid={`option-pickup-${point.id}`}>
+                                {pickupPoints.map((point) => (
+                                  <SelectItem
+                                    key={point.id}
+                                    value={point.id}
+                                    data-testid={`pickup-point-${point.id}`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="w-3 h-3" />
                                       {point.name}
-                                    </SelectItem>
-                                  ))
-                                )}
+                                      {point.landmark && (
+                                        <span className="text-xs text-gray-500">
+                                          ({point.landmark})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -441,254 +523,224 @@ export default function CarpoolPage() {
                         name="dropOffPointId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Drop-off Point *</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value || undefined}>
+                            <FormLabel>Drop-off Point</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-dropoff">
-                                  <SelectValue placeholder="Select drop-off location" />
+                                <SelectTrigger data-testid="select-dropoff-point">
+                                  <SelectValue placeholder="Select drop-off point" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {loadingPickupPoints ? (
-                                  <SelectItem value="loading" disabled>Loading...</SelectItem>
-                                ) : pickupPoints.length === 0 ? (
-                                  <SelectItem value="none" disabled>No drop-off points available</SelectItem>
-                                ) : (
-                                  pickupPoints.map((point) => (
-                                    <SelectItem key={point.id} value={point.id} data-testid={`option-dropoff-${point.id}`}>
+                                {pickupPoints.map((point) => (
+                                  <SelectItem
+                                    key={point.id}
+                                    value={point.id}
+                                    data-testid={`dropoff-point-${point.id}`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="w-3 h-3" />
                                       {point.name}
-                                    </SelectItem>
-                                  ))
-                                )}
+                                      {point.landmark && (
+                                        <span className="text-xs text-gray-500">
+                                          ({point.landmark})
+                                        </span>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-
-                      <FormField
-                        control={form.control}
-                        name="travelDate"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-col">
-                            <FormLabel>Travel Date *</FormLabel>
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <FormControl>
-                                  <Button
-                                    variant={"outline"}
-                                    className={cn(
-                                      "w-full pl-3 text-left font-normal",
-                                      !field.value && "text-muted-foreground"
-                                    )}
-                                    data-testid="button-travel-date"
-                                  >
-                                    {field.value ? (
-                                      format(new Date(field.value), "PPP")
-                                    ) : (
-                                      <span>Pick a date</span>
-                                    )}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                  </Button>
-                                </FormControl>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-auto p-0" align="start">
-                                <CalendarComponent
-                                  mode="single"
-                                  selected={field.value ? new Date(field.value) : undefined}
-                                  onSelect={(date) => {
-                                    field.onChange(date ? format(date, 'yyyy-MM-dd') : '');
-                                  }}
-                                  disabled={(date) =>
-                                    date < new Date(new Date().setHours(0, 0, 0, 0))
-                                  }
-                                  initialFocus
-                                />
-                              </PopoverContent>
-                            </Popover>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <FormField
-                          control={form.control}
-                          name="customerName"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Your Name *</FormLabel>
-                              <FormControl>
-                                <input
-                                  {...field}
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                  placeholder="Enter your full name"
-                                  data-testid="input-customer-name"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={form.control}
-                          name="phone"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Phone Number *</FormLabel>
-                              <FormControl>
-                                <input
-                                  {...field}
-                                  type="tel"
-                                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                  placeholder="e.g., 01712345678"
-                                  data-testid="input-phone"
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email *</FormLabel>
-                            <FormControl>
-                              <input
-                                {...field}
-                                value={field.value || ''}
-                                type="email"
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                                placeholder="your.email@example.com"
-                                data-testid="input-email"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <Button 
-                        type="submit" 
-                        className="w-full" 
-                        disabled={createBookingMutation.isPending}
-                        data-testid="button-submit-booking"
-                      >
-                        {createBookingMutation.isPending ? "Booking..." : "Confirm Booking"}
-                      </Button>
-                    </form>
-                  </Form>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-
-          {/* Info Sidebar */}
-          <div className="space-y-6">
-            <Card data-testid="card-how-it-works">
-              <CardHeader>
-                <CardTitle className="text-lg">How It Works</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 text-sm">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                    1
-                  </div>
-                  <div>
-                    <p className="font-medium">Choose a route</p>
-                    <p className="text-muted-foreground">Select a route that matches your commute</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                    2
-                  </div>
-                  <div>
-                    <p className="font-medium">Book your seat</p>
-                    <p className="text-muted-foreground">Select time, pickup/drop-off points</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                    3
-                  </div>
-                  <div>
-                    <p className="font-medium">Get confirmation</p>
-                    <p className="text-muted-foreground">Receive email with trip details</p>
-                  </div>
-                </div>
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">
-                    4
-                  </div>
-                  <div>
-                    <p className="font-medium">Share the ride</p>
-                    <p className="text-muted-foreground">Enjoy a comfortable commute</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {selectedRoute && selectedRouteDetails && (
-              <Card data-testid="card-booking-summary">
-                <CardHeader>
-                  <CardTitle className="text-lg">Booking Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Route</p>
-                    <p className="font-medium">{selectedRouteDetails.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">From → To</p>
-                    <p className="font-medium">
-                      {selectedRouteDetails.fromLocation} → {selectedRouteDetails.toLocation}
-                    </p>
-                  </div>
-                  {selectedTimeSlotDetails && (
-                    <div>
-                      <p className="text-muted-foreground">Departure</p>
-                      <p className="font-medium">
-                        Time: {selectedTimeSlotDetails.departureTime}
-                      </p>
-                    </div>
+                    </>
                   )}
-                  <div className="pt-3 border-t">
-                    <p className="text-muted-foreground">Price per seat</p>
-                    <p className="text-lg font-bold text-primary">BDT {selectedRouteDetails.pricePerSeat}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
 
-            <Card data-testid="card-important-info">
-              <CardHeader>
-                <CardTitle className="text-lg">Important Information</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm text-muted-foreground">
-                <p className="flex items-start gap-2">
-                  <Users className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>Minimum 3 passengers required per trip</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>You'll be notified 2 hours before if trip is cancelled</span>
-                </p>
-                <p className="flex items-start gap-2">
-                  <Calendar className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <span>Book at least 4 hours before departure</span>
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
+              {/* Step 5: Review and Confirm */}
+              {currentStep === 5 && (
+                <div className="space-y-6" data-testid="step-review">
+                  <h3 className="text-lg font-semibold">Review Your Subscription</h3>
+                  
+                  <div className="space-y-4">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Route:</span>
+                        <span className="font-medium">{selectedRouteDetails?.name}</span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Weekdays:</span>
+                        <span className="font-medium">
+                          {form.watch('weekdays').map(w => 
+                            weekdayOptions.find(opt => opt.value === w)?.short
+                          ).join(', ')}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Time Slot:</span>
+                        <span className="font-medium">
+                          {timeSlots.find(ts => ts.id === form.watch('timeSlotId'))?.officeEntryTime}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Pickup:</span>
+                        <span className="font-medium">
+                          {pickupPoints.find(p => p.id === form.watch('pickupPointId'))?.name}
+                        </span>
+                      </div>
+                      
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Drop-off:</span>
+                        <span className="font-medium">
+                          {pickupPoints.find(p => p.id === form.watch('dropOffPointId'))?.name}
+                        </span>
+                      </div>
+                      
+                      <div className="border-t pt-3 mt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="font-semibold">Monthly Fee:</span>
+                          <span className="text-2xl font-bold text-primary">
+                            ৳{monthlyTotal.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Wallet Balance Check */}
+                    <div className="border rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="w-5 h-5 text-gray-500" />
+                          <span className="text-gray-600 dark:text-gray-400">Wallet Balance:</span>
+                        </div>
+                        <span className={cn(
+                          "font-semibold",
+                          balance >= monthlyTotal ? "text-green-600" : "text-red-600"
+                        )}>
+                          ৳{balance.toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      {balance < monthlyTotal && (
+                        <Alert className="mt-3">
+                          <AlertCircle className="h-4 w-4" />
+                          <AlertDescription>
+                            Insufficient balance. You need ৳{(monthlyTotal - balance).toFixed(2)} more.
+                            <Button
+                              variant="link"
+                              className="p-0 h-auto ml-1"
+                              onClick={() => setShowTopUpDialog(true)}
+                              data-testid="button-topup-inline"
+                            >
+                              Top up now
+                            </Button>
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </Form>
+          </CardContent>
+
+          <CardFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={goToPreviousStep}
+              disabled={currentStep === 1}
+              data-testid="button-previous-step"
+            >
+              <ChevronLeft className="w-4 h-4 mr-2" />
+              Previous
+            </Button>
+            
+            {currentStep < 5 ? (
+              <Button
+                onClick={goToNextStep}
+                data-testid="button-next-step"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-2" />
+              </Button>
+            ) : (
+              <Button
+                onClick={handlePurchase}
+                disabled={purchaseSubscription.isPending || balance < monthlyTotal}
+                data-testid="button-confirm-purchase"
+              >
+                {purchaseSubscription.isPending ? "Processing..." : "Confirm & Subscribe"}
+              </Button>
+            )}
+          </CardFooter>
+        </Card>
       </div>
+
+      {/* Top-up Dialog */}
+      <Dialog open={showTopUpDialog} onOpenChange={setShowTopUpDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Top Up Wallet</DialogTitle>
+            <DialogDescription>
+              Add funds to your wallet to complete the subscription purchase
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="topup-amount">Amount (৳)</Label>
+              <Input
+                id="topup-amount"
+                type="number"
+                placeholder="Enter amount"
+                value={topUpAmount}
+                onChange={(e) => setTopUpAmount(e.target.value)}
+                min="1"
+                step="0.01"
+                data-testid="input-topup-amount"
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-2">
+              {[500, 1000, 2000].map((amount) => (
+                <Button
+                  key={amount}
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setTopUpAmount(amount.toString())}
+                  data-testid={`button-quick-amount-${amount}`}
+                >
+                  ৳{amount}
+                </Button>
+              ))}
+            </div>
+            
+            <Alert>
+              <AlertDescription>
+                <strong>Note:</strong> This is a mock payment system. Funds will be added instantly to your wallet.
+              </AlertDescription>
+            </Alert>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTopUpDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleTopUp}
+              disabled={topUpWallet.isPending}
+              data-testid="button-confirm-topup"
+            >
+              {topUpWallet.isPending ? "Processing..." : "Add Funds"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
