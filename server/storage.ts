@@ -320,6 +320,41 @@ export interface IStorage {
   getComplaintsByUser(userId: string): Promise<Complaint[]>;
   getComplaintsByStatus(status: string): Promise<Complaint[]>;
   updateComplaint(id: string, data: Partial<Omit<Complaint, 'id' | 'createdAt'>>): Promise<Complaint>;
+  
+  // Admin subscription operations
+  getAllSubscriptions(): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+    weekdays: string[];
+  })[]>;
+  getSubscriptionStats(): Promise<{
+    totalActive: number;
+    totalPendingCancellation: number;
+    totalCancelled: number;
+    totalExpired: number;
+    totalRevenue: number;
+    monthlyRevenue: number;
+  }>;
+  
+  // Admin wallet operations
+  getAllWallets(): Promise<(UserWallet & {
+    userName: string;
+    userPhone: string;
+    lastTransactionDate: Date | null;
+    totalCredits: number;
+    totalDebits: number;
+  })[]>;
+  adminAdjustWalletBalance(
+    walletId: string,
+    amount: number,
+    type: 'credit' | 'debit',
+    reason: string,
+    adminUserId: string
+  ): Promise<WalletTransaction>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1905,6 +1940,187 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Complaint not found');
     return updated;
+  }
+  
+  // Admin subscription operations
+  async getAllSubscriptions(): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+    weekdays: string[];
+  })[]> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        user: users,
+        route: carpoolRoutes,
+        timeSlot: carpoolTimeSlots
+      })
+      .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.carpoolRouteId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .orderBy(desc(subscriptions.createdAt));
+      
+    return result.map(row => ({
+      ...row.subscription,
+      userName: row.user?.name || 'Unknown',
+      userPhone: row.user?.phone || 'Unknown',
+      routeName: row.route?.name || 'Unknown Route',
+      fromLocation: row.route?.fromLocation || '',
+      toLocation: row.route?.toLocation || '',
+      timeSlot: row.timeSlot ? `${row.timeSlot.departureTime} - ${row.timeSlot.arrivalTime}` : '',
+      weekdays: row.subscription.weekdays || []
+    }));
+  }
+  
+  async getSubscriptionStats(): Promise<{
+    totalActive: number;
+    totalPendingCancellation: number;
+    totalCancelled: number;
+    totalExpired: number;
+    totalRevenue: number;
+    monthlyRevenue: number;
+  }> {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    // Get counts by status
+    const statusCounts = await db
+      .select({
+        status: subscriptions.status,
+        count: sql<number>`count(*)::int`
+      })
+      .from(subscriptions)
+      .groupBy(subscriptions.status);
+      
+    // Get revenue stats
+    const revenueStats = await db
+      .select({
+        totalRevenue: sql<number>`coalesce(sum(${subscriptions.monthlyFee}), 0)::float`,
+        monthlyRevenue: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.monthlyFee} else 0 end), 0)::float`
+      })
+      .from(subscriptions);
+      
+    const counts = statusCounts.reduce((acc, row) => {
+      acc[row.status] = Number(row.count);
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      totalActive: counts['active'] || 0,
+      totalPendingCancellation: counts['pending_cancellation'] || 0,
+      totalCancelled: counts['cancelled'] || 0,
+      totalExpired: counts['expired'] || 0,
+      totalRevenue: Number(revenueStats[0]?.totalRevenue || 0),
+      monthlyRevenue: Number(revenueStats[0]?.monthlyRevenue || 0)
+    };
+  }
+  
+  // Admin wallet operations
+  async getAllWallets(): Promise<(UserWallet & {
+    userName: string;
+    userPhone: string;
+    lastTransactionDate: Date | null;
+    totalCredits: number;
+    totalDebits: number;
+  })[]> {
+    // Get all wallets with user info
+    const walletsWithUsers = await db
+      .select({
+        wallet: userWallets,
+        user: users
+      })
+      .from(userWallets)
+      .leftJoin(users, eq(userWallets.userId, users.id))
+      .orderBy(desc(userWallets.updatedAt));
+      
+    // Get transaction stats for each wallet
+    const walletIds = walletsWithUsers.map(w => w.wallet.id);
+    
+    const transactionStats = await db
+      .select({
+        walletId: walletTransactions.walletId,
+        lastTransactionDate: sql<Date>`max(${walletTransactions.createdAt})`,
+        totalCredits: sql<number>`coalesce(sum(case when ${walletTransactions.type} = 'credit' then ${walletTransactions.amount} else 0 end), 0)::float`,
+        totalDebits: sql<number>`coalesce(sum(case when ${walletTransactions.type} = 'debit' then ${walletTransactions.amount} else 0 end), 0)::float`
+      })
+      .from(walletTransactions)
+      .where(sql`${walletTransactions.walletId} = ANY(${walletIds})`)
+      .groupBy(walletTransactions.walletId);
+      
+    // Combine the data
+    const statsMap = new Map(transactionStats.map(s => [s.walletId, s]));
+    
+    return walletsWithUsers.map(row => {
+      const stats = statsMap.get(row.wallet.id);
+      return {
+        ...row.wallet,
+        userName: row.user?.name || 'Unknown',
+        userPhone: row.user?.phone || 'Unknown',
+        lastTransactionDate: stats?.lastTransactionDate || null,
+        totalCredits: Number(stats?.totalCredits || 0),
+        totalDebits: Number(stats?.totalDebits || 0)
+      };
+    });
+  }
+  
+  async adminAdjustWalletBalance(
+    walletId: string,
+    amount: number,
+    type: 'credit' | 'debit',
+    reason: string,
+    adminUserId: string
+  ): Promise<WalletTransaction> {
+    return await db.transaction(async (tx) => {
+      // Get the wallet to verify it exists and get current balance
+      const [wallet] = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.id, walletId));
+        
+      if (!wallet) throw new Error('Wallet not found');
+      
+      // Calculate new balance
+      const newBalance = type === 'credit' 
+        ? wallet.balance + amount 
+        : wallet.balance - amount;
+      
+      // Check for negative balance
+      if (newBalance < 0) {
+        throw new Error('Cannot adjust wallet: would result in negative balance');
+      }
+      
+      // Update wallet balance
+      await tx
+        .update(userWallets)
+        .set({ 
+          balance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(userWallets.id, walletId));
+      
+      // Create transaction record with admin adjustment metadata
+      const [transaction] = await tx
+        .insert(walletTransactions)
+        .values({
+          walletId,
+          userId: wallet.userId,
+          type,
+          amount,
+          description: `Admin adjustment: ${reason}`,
+          category: 'admin_adjustment',
+          referenceId: adminUserId, // Store admin user ID as reference
+          balanceAfter: newBalance,
+          status: 'completed'
+        })
+        .returning();
+        
+      return transaction;
+    });
   }
 }
 

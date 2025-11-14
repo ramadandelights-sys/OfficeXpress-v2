@@ -3540,6 +3540,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch invoices" });
     }
   });
+  
+  // Admin subscription management endpoints
+  app.get("/api/admin/subscriptions", 
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const subscriptions = await storage.getAllSubscriptions();
+        res.json({ subscriptions });
+      } catch (error) {
+        console.error("Error fetching subscriptions:", error);
+        res.status(500).json({ message: "Failed to fetch subscriptions" });
+      }
+    }
+  );
+  
+  app.get("/api/admin/subscription-stats", 
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const stats = await storage.getSubscriptionStats();
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching subscription stats:", error);
+        res.status(500).json({ message: "Failed to fetch subscription statistics" });
+      }
+    }
+  );
+  
+  // Admin wallet management endpoints
+  app.get("/api/admin/wallets", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const wallets = await storage.getAllWallets();
+        res.json({ wallets });
+      } catch (error) {
+        console.error("Error fetching wallets:", error);
+        res.status(500).json({ message: "Failed to fetch wallets" });
+      }
+    }
+  );
+  
+  app.get("/api/admin/wallets/:walletId/transactions", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const { walletId } = req.params;
+        const transactions = await storage.getWalletTransactions(walletId);
+        res.json({ transactions });
+      } catch (error) {
+        console.error("Error fetching wallet transactions:", error);
+        res.status(500).json({ message: "Failed to fetch wallet transactions" });
+      }
+    }
+  );
+  
+  app.post("/api/admin/wallets/:walletId/adjust", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { walletId } = req.params;
+        const { amount, type, reason } = req.body;
+        
+        // Validate input
+        if (!amount || amount <= 0) {
+          return res.status(400).json({ message: "Amount must be positive" });
+        }
+        if (!['credit', 'debit'].includes(type)) {
+          return res.status(400).json({ message: "Type must be 'credit' or 'debit'" });
+        }
+        if (!reason || reason.trim().length === 0) {
+          return res.status(400).json({ message: "Reason is required for admin adjustments" });
+        }
+        
+        const adminUserId = req.session.userId;
+        
+        const transaction = await storage.adminAdjustWalletBalance(
+          walletId,
+          amount,
+          type as 'credit' | 'debit',
+          reason,
+          adminUserId
+        );
+        
+        res.json({ 
+          message: `Wallet ${type}ed successfully`,
+          transaction 
+        });
+      } catch (error: any) {
+        console.error("Error adjusting wallet balance:", error);
+        if (error.message?.includes('negative balance')) {
+          res.status(400).json({ message: error.message });
+        } else if (error.message?.includes('not found')) {
+          res.status(404).json({ message: error.message });
+        } else {
+          res.status(500).json({ message: "Failed to adjust wallet balance" });
+        }
+      }
+    }
+  );
 
 
   const httpServer = createServer(app);
