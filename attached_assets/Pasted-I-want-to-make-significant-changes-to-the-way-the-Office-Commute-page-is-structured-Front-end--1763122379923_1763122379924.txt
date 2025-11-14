@@ -1,0 +1,104 @@
+I want to make significant changes to the way the Office Commute page is structured. 
+
+Front end:
+
+Route Creation & Blackout Dates Election Mechanism:
+We create a route
+Set Pickup Points
+Set office entry Time slots
+Set which days of the week the route is open for booking
+Routes will be “Live” by default
+The blackout dates selection page will have the ability to elect blackout dates, which will automatically reflect across the other booking functionalities of this product.
+When a route is created, AI will automatically check the tentative public holiday dates for Bangladesh that are upcoming in the next 12 months, and show a check-box list of all those dates and the name of the holiday. Admin can select which holidays to consider, and show them as blackout dates. 
+The blackout dates section should have a button that can initiate a manual run of this function and let the admin re-select additional dates when required.
+Admin should also have the option to manually open the calendar and select blackout dates, without running any system led process.
+Blackout dates can be removed or rescheduled at a later date, as long as the date is not in the past, i.e. the date we want to edit cannot be before today.
+
+Pricing:
+Pricing will be calculated on a trip basis, per seat.
+Subscriptions will be sold on a monthly basis.
+Subscription Value = ((number of work days - blackout days) * per seat price - Any discount - Any approved refund amount)
+No mid-month subscription cancellations
+Refunds will be processed at the end of the month, and sent to the user’s wallet. Refund will be based on number of failed trips
+If blackout dates are announced mid-month, those trips will automatically be marked as ‘cancelled’ and the trip’s fare at actual will be refunded back to the user’s wallet
+All refunds / store credits will be in the user’s wallet. If the user wants, they can click on a withdraw button and get the credits in cash via their elected payment method. Store credits can’t be cashed out.
+We will not do dynamic pickup point -> dropoff point (distance) based pricing. All the users, regardless of their pickup points and dropoff points will pay the same subscription fees, unless they have a coupon/discount code/in-store credits, or residual credits from refunds, which can change the payment amount.
+
+
+
+Suggestion for Backend Database Structure
+I'm building a carpool subscription service. The core idea is that users subscribe to a recurring monthly route and time slot. We then need to manage the daily operations (assigning vehicles) and the financial side (wallets and payments).
+Here is the suggested database schema, broken down into logical groups:
+1. Service Definition Tables (The Templates)
+These tables define the service we are selling.
+Routes:
+route_id (Primary Key)
+name (e.g., "Downtown to North Suburb")
+start_address
+end_address
+RouteSchedules:
+schedule_id (Primary Key)
+route_id (Links to Routes)
+time_slot (e.g., "08:00:00")
+day_of_week (e.g., Monday-Friday)
+is_active (boolean)
+BlackoutDates:
+blackout_date_id (Primary Key)
+blackout_date (A specific date when service is off)
+schedule_id (Optional, links to RouteSchedules if it's not a global holiday)
+2. User & Contract Tables (The "Agreements")
+These tables link users to the services they've purchased.
+Users:
+user_id (Primary Key)
+name, email, phone, etc.
+Subscriptions:
+subscription_id (Primary Key)
+user_id (Links to Users)
+schedule_id (Links to RouteSchedules)
+start_date (Start of the monthly contract)
+end_date (End of the monthly contract)
+status (e.g., 'active', 'cancelled')
+3. Daily Operations Tables (The "Instances")
+These tables handle the day-to-day physical trips.
+VehicleTrips: (This is the shared trip for one vehicle)
+vehicle_trip_id (Primary Key)
+schedule_id (Links to RouteSchedules, to know which run this is)
+trip_date (The specific date of this run)
+vehicle_id (Nullable, links to a "Vehicles" table)
+driver_id (Nullable, links to a "Drivers" table)
+status (e.g., 'pending_assignment', 'in_progress', 'completed', 'cancelled')
+TripBookings: (This is the user-specific record for a single trip)
+trip_booking_id (Primary Key) - This is the ID used for individual complaints.
+vehicle_trip_id (Links to VehicleTrips, to group users together)
+subscription_id (Links to Subscriptions, to know who this is for)
+user_id (Links to Users, for easy lookup)
+status (e.g., 'expected', 'picked_up', 'no_show', 'cancelled')
+4. Financial & Wallet Tables
+These tables manage all money, payments, and refunds.
+UserWallets:
+wallet_id (Primary Key)
+user_id (Links to Users)
+balance (A decimal/numeric field for the current amount)
+WalletTransactions: (The ledger for all money in/out)
+transaction_id (Primary Key)
+wallet_id (Links to UserWallets)
+amount (A decimal/numeric field. Positive for credits, negative for debits)
+type (e.g., 'credit', 'debit')
+reason (e.g., 'top_up', 'subscription_purchase', 'refund_failed_trip')
+timestamp
+SubscriptionInvoices: (The "bill" for each subscription purchase)
+invoice_id (Primary Key)
+subscription_id (Links to Subscriptions)
+user_id (Links to Users)
+amount_due
+status (e.g., 'pending', 'paid', 'failed')
+due_date
+wallet_transaction_id (Nullable, links to the specific WalletTransaction that paid this)
+5. (Optional) Audit/Support Table
+Complaints:
+complaint_id (Primary Key)
+trip_booking_id (Links to the specific TripBooking the user was on)
+user_id (Links to Users)
+details (Text of the complaint)
+status (e.g., 'open', 'resolved')
+
