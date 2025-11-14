@@ -3700,6 +3700,108 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Admin endpoints for automated trip generation and subscription renewal
+  
+  // Manual trigger for trip generation
+  app.post("/api/admin/trips/generate-today",
+    isEmployeeOrAdmin,
+    hasPermission('carpoolRouteManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { dryRun = false, date } = req.body;
+        
+        // Import the service dynamically to avoid circular dependencies
+        const { getTripGeneratorService } = await import('./trip-generator');
+        const tripGenerator = getTripGeneratorService(storage);
+        
+        let result;
+        if (date) {
+          // Generate for specific date
+          const targetDate = new Date(date);
+          result = await tripGenerator.generateTripsForDate(targetDate, dryRun);
+        } else {
+          // Generate for today
+          result = await tripGenerator.generateTripsForToday(dryRun);
+        }
+        
+        res.json({
+          message: dryRun ? 
+            `[DRY RUN] Trip generation simulation completed` : 
+            `Trip generation completed`,
+          result
+        });
+      } catch (error: any) {
+        console.error("Error generating trips:", error);
+        res.status(500).json({ 
+          message: "Failed to generate trips",
+          error: error.message 
+        });
+      }
+    }
+  );
+  
+  // Manual trigger for subscription renewal processing
+  app.post("/api/admin/subscriptions/process-renewals",
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { dryRun = false, date } = req.body;
+        
+        // Import the service dynamically to avoid circular dependencies
+        const { getSubscriptionRenewalService } = await import('./subscription-renewal');
+        const renewalService = getSubscriptionRenewalService(storage);
+        
+        let result;
+        if (date) {
+          // Process for specific date
+          const targetDate = new Date(date);
+          result = await renewalService.processRenewalsForDate(targetDate, dryRun);
+        } else {
+          // Process for today
+          result = await renewalService.processRenewals(dryRun);
+        }
+        
+        res.json({
+          message: dryRun ? 
+            `[DRY RUN] Subscription renewal simulation completed` : 
+            `Subscription renewal processing completed`,
+          result
+        });
+      } catch (error: any) {
+        console.error("Error processing subscription renewals:", error);
+        res.status(500).json({ 
+          message: "Failed to process subscription renewals",
+          error: error.message 
+        });
+      }
+    }
+  );
+  
+  // Get service status endpoint
+  app.get("/api/admin/automation/status",
+    isEmployeeOrAdmin,
+    async (req: any, res: any) => {
+      try {
+        res.json({
+          tripGeneration: {
+            enabled: process.env.TRIP_GENERATION_ENABLED !== 'false',
+            schedule: process.env.TRIP_GENERATION_SCHEDULE || '0 0 * * *',
+            timezone: 'Asia/Dhaka'
+          },
+          subscriptionRenewal: {
+            enabled: process.env.SUBSCRIPTION_RENEWAL_ENABLED !== 'false',
+            schedule: process.env.SUBSCRIPTION_RENEWAL_SCHEDULE || '0 1 * * *',
+            timezone: 'Asia/Dhaka'
+          }
+        });
+      } catch (error: any) {
+        console.error("Error getting automation status:", error);
+        res.status(500).json({ message: "Failed to get automation status" });
+      }
+    }
+  );
+
 
   const httpServer = createServer(app);
   return httpServer;

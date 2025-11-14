@@ -5,6 +5,8 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { startCarpoolNotificationService } from "./carpool-notifications";
+import { startTripGeneratorService } from "./trip-generator";
+import { startSubscriptionRenewalService } from "./subscription-renewal";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -185,5 +187,15 @@ app.use((req, res, next) => {
     
     // Start carpool notification service for insufficient bookings
     startCarpoolNotificationService(storage);
+    
+    // Start automated trip generation service
+    log('[Startup] Starting automated trip generation service...');
+    startTripGeneratorService(storage);
+    
+    // Start automated subscription renewal service
+    log('[Startup] Starting subscription renewal service...');
+    startSubscriptionRenewalService(storage);
+    
+    log('[Startup] All automated services started successfully');
   });
 })();

@@ -2122,6 +2122,209 @@ export class DatabaseStorage implements IStorage {
       return transaction;
     });
   }
+  
+  // Helper methods for automated trip generation and subscription renewal
+  
+  // Get active subscriptions for a specific weekday (0 = Sunday, 1 = Monday, etc.)
+  async getActiveSubscriptionsByWeekday(weekday: number): Promise<Subscription[]> {
+    const today = new Date();
+    // Exclude weekends (Saturday = 6, Sunday = 0)
+    if (weekday === 0 || weekday === 6) {
+      return [];
+    }
+    
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          eq(subscriptions.status, 'active'),
+          sql`${subscriptions.startDate} <= ${today}`,
+          sql`${subscriptions.endDate} >= ${today}`
+        )
+      );
+  }
+  
+  // Get or create a vehicle trip for a specific route, time slot, and date
+  async getOrCreateVehicleTrip(routeId: string, timeSlotId: string, tripDate: string): Promise<VehicleTrip> {
+    // First, try to get existing vehicle trip
+    const [existingTrip] = await db
+      .select()
+      .from(vehicleTrips)
+      .where(
+        and(
+          eq(vehicleTrips.routeId, routeId),
+          eq(vehicleTrips.timeSlotId, timeSlotId),
+          eq(vehicleTrips.tripDate, tripDate)
+        )
+      );
+    
+    if (existingTrip) {
+      return existingTrip;
+    }
+    
+    // Get route details for capacity
+    const [route] = await db
+      .select()
+      .from(carpoolRoutes)
+      .where(eq(carpoolRoutes.id, routeId));
+    
+    if (!route) {
+      throw new Error(`Route not found: ${routeId}`);
+    }
+    
+    // Create new vehicle trip
+    const [newTrip] = await db
+      .insert(vehicleTrips)
+      .values({
+        routeId,
+        timeSlotId,
+        tripDate,
+        vehicleCapacity: route.defaultVehicleCapacity || 4,
+        status: 'scheduled' // Changed from 'pending_assignment' to 'scheduled' as per requirements
+      })
+      .returning();
+    
+    return newTrip;
+  }
+  
+  // Efficiently create multiple trip bookings
+  async bulkCreateTripBookings(bookings: InsertTripBooking[]): Promise<TripBooking[]> {
+    if (bookings.length === 0) {
+      return [];
+    }
+    
+    return await db.transaction(async (tx) => {
+      // Validate all bookings first
+      for (const booking of bookings) {
+        if (booking.vehicleTripId) {
+          // Get the vehicle trip to check capacity
+          const [vehicleTrip] = await tx
+            .select()
+            .from(vehicleTrips)
+            .where(eq(vehicleTrips.id, booking.vehicleTripId));
+          
+          if (!vehicleTrip) {
+            throw new Error(`Vehicle trip not found: ${booking.vehicleTripId}`);
+          }
+          
+          // Get existing bookings count
+          const [bookingCount] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(tripBookings)
+            .where(eq(tripBookings.vehicleTripId, booking.vehicleTripId));
+          
+          const currentPassengers = bookingCount?.count || 0;
+          const newPassengers = bookings.filter(b => b.vehicleTripId === booking.vehicleTripId).length;
+          
+          if (vehicleTrip.vehicleCapacity && (currentPassengers + newPassengers) > vehicleTrip.vehicleCapacity) {
+            throw new Error(
+              `Vehicle capacity exceeded for trip ${booking.vehicleTripId}. ` +
+              `Capacity: ${vehicleTrip.vehicleCapacity}, Current: ${currentPassengers}, New: ${newPassengers}`
+            );
+          }
+        }
+      }
+      
+      // Insert all bookings
+      const createdBookings = await tx
+        .insert(tripBookings)
+        .values(bookings)
+        .returning();
+      
+      // Update booked seats count for each vehicle trip
+      const vehicleTripIds = [...new Set(bookings.map(b => b.vehicleTripId).filter(Boolean))];
+      for (const tripId of vehicleTripIds) {
+        if (tripId) {
+          const [bookingCount] = await tx
+            .select({ count: sql<number>`count(*)::int` })
+            .from(tripBookings)
+            .where(eq(tripBookings.vehicleTripId, tripId));
+          
+          await tx
+            .update(vehicleTrips)
+            .set({ 
+              bookedSeats: bookingCount?.count || 0,
+              updatedAt: new Date()
+            })
+            .where(eq(vehicleTrips.id, tripId));
+        }
+      }
+      
+      return createdBookings;
+    });
+  }
+  
+  // Get subscriptions expiring on a specific date
+  async getExpiringSubscriptions(date: Date): Promise<Subscription[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          sql`${subscriptions.endDate} >= ${startOfDay}`,
+          sql`${subscriptions.endDate} <= ${endOfDay}`,
+          or(
+            eq(subscriptions.status, 'active'),
+            eq(subscriptions.status, 'pending_cancellation')
+          )
+        )
+      );
+  }
+  
+  // Extend subscription end date by specified months
+  async extendSubscription(id: string, months: number = 1): Promise<Subscription> {
+    const [subscription] = await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.id, id));
+    
+    if (!subscription) {
+      throw new Error(`Subscription not found: ${id}`);
+    }
+    
+    // Calculate new end date
+    const currentEndDate = new Date(subscription.endDate);
+    const newEndDate = new Date(currentEndDate);
+    newEndDate.setMonth(newEndDate.getMonth() + months);
+    
+    // Update subscription
+    const [updated] = await db
+      .update(subscriptions)
+      .set({
+        endDate: newEndDate,
+        status: 'active', // Ensure status is active after renewal
+        updatedAt: new Date()
+      })
+      .where(eq(subscriptions.id, id))
+      .returning();
+    
+    return updated;
+  }
+  
+  // Check if a date is a blackout date
+  async isBlackoutDate(date: Date): Promise<boolean> {
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+    
+    const [blackoutDate] = await db
+      .select()
+      .from(carpoolBlackoutDates)
+      .where(
+        and(
+          sql`${carpoolBlackoutDates.startDate} <= ${dateOnly}`,
+          sql`${carpoolBlackoutDates.endDate} >= ${dateOnly}`
+        )
+      )
+      .limit(1);
+    
+    return !!blackoutDate;
+  }
 }
 
 export const storage = new DatabaseStorage();
