@@ -26,7 +26,9 @@ import {
   FileCheck,
   UserPlus,
   Info,
-  CalendarOff
+  CalendarOff,
+  CreditCard,
+  Wallet
 } from "lucide-react";
 
 export type PermissionLevel = {
@@ -49,6 +51,8 @@ export type UserPermissions = {
   driverAssignment?: boolean;
   carpoolBlackoutDates?: PermissionLevel;
   employeeManagement?: PermissionLevel;
+  subscriptionManagement?: PermissionLevel;
+  walletManagement?: PermissionLevel;
 };
 
 interface PermissionMatrixProps {
@@ -157,6 +161,20 @@ const permissionSections: PermissionSection[] = [
     icon: <Users className="h-4 w-4" />,
     description: "Manage employee accounts and permissions (Superadmin only)",
     hasCsv: false,
+  },
+  {
+    key: "subscriptionManagement",
+    label: "Subscription Management",
+    icon: <CreditCard className="h-4 w-4" />,
+    description: "View and manage user subscriptions and invoices",
+    hasCsv: true,
+  },
+  {
+    key: "walletManagement",
+    label: "Wallet Management",
+    icon: <Wallet className="h-4 w-4" />,
+    description: "Manage user wallets and perform adjustments",
+    hasCsv: true,
   },
 ];
 

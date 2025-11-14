@@ -3547,8 +3547,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasPermission('subscriptionManagement', 'view'),
     async (req: any, res: any) => {
       try {
-        const subscriptions = await storage.getAllSubscriptions();
-        res.json({ subscriptions });
+        const { status } = req.query;
+        let subscriptions;
+        
+        if (status && status !== 'all') {
+          subscriptions = await storage.getSubscriptionsByStatus(status as string);
+        } else {
+          subscriptions = await storage.getAllSubscriptionsWithDetails();
+        }
+        
+        res.json(subscriptions);
       } catch (error) {
         console.error("Error fetching subscriptions:", error);
         res.status(500).json({ message: "Failed to fetch subscriptions" });
@@ -3556,7 +3564,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
-  app.get("/api/admin/subscription-stats", 
+  app.get("/api/admin/subscriptions/:id", 
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const subscription = await storage.getSubscriptionWithDetails(req.params.id);
+        if (!subscription) {
+          return res.status(404).json({ message: "Subscription not found" });
+        }
+        res.json(subscription);
+      } catch (error) {
+        console.error("Error fetching subscription details:", error);
+        res.status(500).json({ message: "Failed to fetch subscription details" });
+      }
+    }
+  );
+  
+  app.get("/api/admin/subscriptions/:id/invoices", 
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const invoices = await storage.getInvoicesBySubscription(req.params.id);
+        res.json(invoices);
+      } catch (error) {
+        console.error("Error fetching subscription invoices:", error);
+        res.status(500).json({ message: "Failed to fetch subscription invoices" });
+      }
+    }
+  );
+  
+  app.get("/api/admin/subscriptions/stats", 
     isEmployeeOrAdmin,
     hasPermission('subscriptionManagement', 'view'),
     async (req: any, res: any) => {
@@ -3576,11 +3615,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasPermission('walletManagement', 'view'),
     async (req: any, res: any) => {
       try {
-        const wallets = await storage.getAllWallets();
-        res.json({ wallets });
+        const wallets = await storage.getAllWalletsWithUserDetails();
+        res.json(wallets);
       } catch (error) {
         console.error("Error fetching wallets:", error);
         res.status(500).json({ message: "Failed to fetch wallets" });
+      }
+    }
+  );
+  
+  app.get("/api/admin/wallets/stats", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const stats = await storage.getWalletStats();
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching wallet stats:", error);
+        res.status(500).json({ message: "Failed to fetch wallet statistics" });
       }
     }
   );
@@ -3591,8 +3644,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: any, res: any) => {
       try {
         const { walletId } = req.params;
-        const transactions = await storage.getWalletTransactions(walletId);
-        res.json({ transactions });
+        const transactions = await storage.getWalletTransactionsWithDetails(walletId);
+        res.json(transactions);
       } catch (error) {
         console.error("Error fetching wallet transactions:", error);
         res.status(500).json({ message: "Failed to fetch wallet transactions" });
@@ -3606,7 +3659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     async (req: any, res: any) => {
       try {
         const { walletId } = req.params;
-        const { amount, type, reason } = req.body;
+        const { amount, type, reason, description, adminUserId } = req.body;
         
         // Validate input
         if (!amount || amount <= 0) {
@@ -3619,14 +3672,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Reason is required for admin adjustments" });
         }
         
-        const adminUserId = req.session.userId;
+        const performedByUserId = adminUserId || req.session.userId;
         
         const transaction = await storage.adminAdjustWalletBalance(
           walletId,
           amount,
           type as 'credit' | 'debit',
           reason,
-          adminUserId
+          performedByUserId,
+          description
         );
         
         res.json({ 
