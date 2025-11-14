@@ -93,7 +93,8 @@ import {
   type TripBooking,
   type InsertTripBooking,
   type Complaint,
-  type InsertComplaint
+  type InsertComplaint,
+  type UpdateComplaint
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
@@ -319,7 +320,22 @@ export interface IStorage {
   getComplaint(id: string): Promise<Complaint | undefined>;
   getComplaintsByUser(userId: string): Promise<Complaint[]>;
   getComplaintsByStatus(status: string): Promise<Complaint[]>;
+  getAllComplaints(filters?: { 
+    status?: string; 
+    severity?: string; 
+    dateFrom?: Date; 
+    dateTo?: Date 
+  }): Promise<Complaint[]>;
   updateComplaint(id: string, data: Partial<Omit<Complaint, 'id' | 'createdAt'>>): Promise<Complaint>;
+  updateComplaintStatus(id: string, status: string, resolution: string | null, resolvedByUserId: string | null): Promise<Complaint>;
+  getComplaintStats(): Promise<{
+    total: number;
+    byCategory: Record<string, number>;
+    bySeverity: Record<string, number>;
+    byStatus: Record<string, number>;
+    resolutionRate: number;
+  }>;
+  getUserTripBookings(userId: string, daysBack?: number): Promise<TripBooking[]>;
   
   // Admin subscription operations
   getAllSubscriptions(): Promise<(Subscription & { 
@@ -1940,6 +1956,110 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Complaint not found');
     return updated;
+  }
+  
+  async getAllComplaints(filters?: { 
+    status?: string; 
+    severity?: string; 
+    dateFrom?: Date; 
+    dateTo?: Date 
+  }): Promise<Complaint[]> {
+    let query = db.select().from(complaints);
+    const conditions = [];
+    
+    if (filters) {
+      if (filters.status) {
+        conditions.push(eq(complaints.status, filters.status));
+      }
+      if (filters.severity) {
+        conditions.push(eq(complaints.severity, filters.severity));
+      }
+      if (filters.dateFrom) {
+        conditions.push(sql`${complaints.createdAt} >= ${filters.dateFrom}`);
+      }
+      if (filters.dateTo) {
+        conditions.push(sql`${complaints.createdAt} <= ${filters.dateTo}`);
+      }
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    return await query.orderBy(desc(complaints.createdAt));
+  }
+  
+  async updateComplaintStatus(id: string, status: string, resolution: string | null, resolvedByUserId: string | null): Promise<Complaint> {
+    const updateData: any = {
+      status,
+      resolution,
+      resolvedByUserId,
+      updatedAt: new Date()
+    };
+    
+    // Set resolvedAt if status is resolved or closed
+    if (status === 'resolved' || status === 'closed') {
+      updateData.resolvedAt = new Date();
+    }
+    
+    const [updated] = await db
+      .update(complaints)
+      .set(updateData)
+      .where(eq(complaints.id, id))
+      .returning();
+    if (!updated) throw new Error('Complaint not found');
+    return updated;
+  }
+  
+  async getComplaintStats(): Promise<{
+    total: number;
+    byCategory: Record<string, number>;
+    bySeverity: Record<string, number>;
+    byStatus: Record<string, number>;
+    resolutionRate: number;
+  }> {
+    const allComplaints = await db.select().from(complaints);
+    
+    const byCategory: Record<string, number> = {};
+    const bySeverity: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+    
+    allComplaints.forEach(complaint => {
+      // Count by category
+      byCategory[complaint.category] = (byCategory[complaint.category] || 0) + 1;
+      
+      // Count by severity
+      bySeverity[complaint.severity] = (bySeverity[complaint.severity] || 0) + 1;
+      
+      // Count by status
+      byStatus[complaint.status] = (byStatus[complaint.status] || 0) + 1;
+    });
+    
+    const total = allComplaints.length;
+    const resolved = allComplaints.filter(c => c.status === 'resolved' || c.status === 'closed').length;
+    const resolutionRate = total > 0 ? (resolved / total) * 100 : 0;
+    
+    return {
+      total,
+      byCategory,
+      bySeverity,
+      byStatus,
+      resolutionRate
+    };
+  }
+  
+  async getUserTripBookings(userId: string, daysBack: number = 30): Promise<TripBooking[]> {
+    const dateThreshold = new Date();
+    dateThreshold.setDate(dateThreshold.getDate() - daysBack);
+    
+    return await db
+      .select()
+      .from(tripBookings)
+      .where(and(
+        eq(tripBookings.userId, userId),
+        sql`${tripBookings.createdAt} >= ${dateThreshold}`
+      ))
+      .orderBy(desc(tripBookings.createdAt));
   }
   
   // Admin subscription operations

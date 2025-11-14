@@ -3541,6 +3541,297 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Complaint Management Endpoints
+  
+  // Get user's recent trip bookings (last 30 days)
+  app.get("/api/my/trip-bookings", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const daysBack = req.query.days ? parseInt(req.query.days as string) : 30;
+      
+      // Get trip bookings with related info
+      const bookings = await storage.getUserTripBookings(userId, daysBack);
+      
+      // Fetch related data for each booking
+      const bookingsWithDetails = await Promise.all(
+        bookings.map(async (booking) => {
+          const vehicleTrip = await storage.getVehicleTrip(booking.vehicleTripId);
+          if (!vehicleTrip) return null;
+          
+          const route = await storage.getCarpoolRoute(vehicleTrip.routeId);
+          const timeSlot = await storage.getCarpoolTimeSlot(vehicleTrip.timeSlotId);
+          const boardingPoint = await storage.getCarpoolPickupPoint(booking.boardingPointId);
+          const dropOffPoint = await storage.getCarpoolPickupPoint(booking.dropOffPointId);
+          const driver = vehicleTrip.driverId ? await storage.getDriver(vehicleTrip.driverId) : null;
+          
+          return {
+            ...booking,
+            tripDate: vehicleTrip.tripDate,
+            routeName: route?.name || 'Unknown Route',
+            fromLocation: route?.fromLocation || '',
+            toLocation: route?.toLocation || '',
+            timeSlot: timeSlot?.slotTime || '',
+            boardingPoint: boardingPoint?.name || '',
+            dropOffPoint: dropOffPoint?.name || '',
+            driverName: driver?.name || 'Not Assigned',
+            driverPhone: driver?.phone || '',
+          };
+        })
+      );
+      
+      res.json(bookingsWithDetails.filter(b => b !== null));
+    } catch (error) {
+      console.error("Error fetching user trip bookings:", error);
+      res.status(500).json({ message: "Failed to fetch trip bookings" });
+    }
+  });
+  
+  // File a new complaint
+  app.post("/api/complaints", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const { tripBookingId, category, severity, title, description } = req.body;
+      
+      // Validate input
+      if (!category || !severity || !title || !description) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      if (description.length < 20) {
+        return res.status(400).json({ message: "Description must be at least 20 characters long" });
+      }
+      
+      // Validate trip booking belongs to user if provided
+      if (tripBookingId) {
+        const booking = await storage.getTripBooking(tripBookingId);
+        if (!booking || booking.userId !== userId) {
+          return res.status(403).json({ message: "Invalid trip booking" });
+        }
+      }
+      
+      // Generate reference ID
+      const referenceId = generateReferenceId();
+      
+      const complaint = await storage.createComplaint({
+        referenceId,
+        userId,
+        tripBookingId: tripBookingId || null,
+        category,
+        severity,
+        title,
+        description,
+      });
+      
+      res.json(complaint);
+    } catch (error) {
+      console.error("Error creating complaint:", error);
+      res.status(500).json({ message: "Failed to create complaint" });
+    }
+  });
+  
+  // Get user's complaints
+  app.get("/api/my/complaints", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.session.userId;
+      const complaints = await storage.getComplaintsByUser(userId);
+      
+      // Fetch trip details for each complaint
+      const complaintsWithDetails = await Promise.all(
+        complaints.map(async (complaint) => {
+          if (!complaint.tripBookingId) {
+            return { ...complaint, tripDetails: null };
+          }
+          
+          const booking = await storage.getTripBooking(complaint.tripBookingId);
+          if (!booking) {
+            return { ...complaint, tripDetails: null };
+          }
+          
+          const vehicleTrip = await storage.getVehicleTrip(booking.vehicleTripId);
+          if (!vehicleTrip) {
+            return { ...complaint, tripDetails: null };
+          }
+          
+          const route = await storage.getCarpoolRoute(vehicleTrip.routeId);
+          const timeSlot = await storage.getCarpoolTimeSlot(vehicleTrip.timeSlotId);
+          
+          return {
+            ...complaint,
+            tripDetails: {
+              tripDate: vehicleTrip.tripDate,
+              routeName: route?.name || 'Unknown Route',
+              fromLocation: route?.fromLocation || '',
+              toLocation: route?.toLocation || '',
+              timeSlot: timeSlot?.slotTime || '',
+            }
+          };
+        })
+      );
+      
+      res.json(complaintsWithDetails);
+    } catch (error) {
+      console.error("Error fetching user complaints:", error);
+      res.status(500).json({ message: "Failed to fetch complaints" });
+    }
+  });
+  
+  // Admin: Get all complaints with filters
+  app.get("/api/admin/complaints", isEmployeeOrAdmin, hasPermission('complaintManagement', 'view'), async (req, res) => {
+    try {
+      const { status, severity, dateFrom, dateTo } = req.query;
+      
+      const filters = {
+        status: status as string | undefined,
+        severity: severity as string | undefined,
+        dateFrom: dateFrom ? new Date(dateFrom as string) : undefined,
+        dateTo: dateTo ? new Date(dateTo as string) : undefined,
+      };
+      
+      const complaints = await storage.getAllComplaints(filters);
+      
+      // Fetch additional details for each complaint
+      const complaintsWithDetails = await Promise.all(
+        complaints.map(async (complaint) => {
+          const user = await storage.getUser(complaint.userId);
+          let tripDetails = null;
+          
+          if (complaint.tripBookingId) {
+            const booking = await storage.getTripBooking(complaint.tripBookingId);
+            if (booking) {
+              const vehicleTrip = await storage.getVehicleTrip(booking.vehicleTripId);
+              if (vehicleTrip) {
+                const route = await storage.getCarpoolRoute(vehicleTrip.routeId);
+                const timeSlot = await storage.getCarpoolTimeSlot(vehicleTrip.timeSlotId);
+                const driver = vehicleTrip.driverId ? await storage.getDriver(vehicleTrip.driverId) : null;
+                
+                tripDetails = {
+                  tripDate: vehicleTrip.tripDate,
+                  routeName: route?.name || 'Unknown Route',
+                  fromLocation: route?.fromLocation || '',
+                  toLocation: route?.toLocation || '',
+                  timeSlot: timeSlot?.slotTime || '',
+                  driverName: driver?.name || 'Not Assigned',
+                };
+              }
+            }
+          }
+          
+          const resolvedBy = complaint.resolvedByUserId ? await storage.getUser(complaint.resolvedByUserId) : null;
+          
+          return {
+            ...complaint,
+            userName: user?.name || 'Unknown User',
+            userPhone: user?.phone || 'Unknown',
+            userEmail: user?.email || '',
+            tripDetails,
+            resolvedByName: resolvedBy?.name || null,
+          };
+        })
+      );
+      
+      res.json(complaintsWithDetails);
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+      res.status(500).json({ message: "Failed to fetch complaints" });
+    }
+  });
+  
+  // Admin: Get single complaint details
+  app.get("/api/admin/complaints/:id", isEmployeeOrAdmin, hasPermission('complaintManagement', 'view'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const complaint = await storage.getComplaint(id);
+      
+      if (!complaint) {
+        return res.status(404).json({ message: "Complaint not found" });
+      }
+      
+      const user = await storage.getUser(complaint.userId);
+      let tripDetails = null;
+      
+      if (complaint.tripBookingId) {
+        const booking = await storage.getTripBooking(complaint.tripBookingId);
+        if (booking) {
+          const vehicleTrip = await storage.getVehicleTrip(booking.vehicleTripId);
+          if (vehicleTrip) {
+            const route = await storage.getCarpoolRoute(vehicleTrip.routeId);
+            const timeSlot = await storage.getCarpoolTimeSlot(vehicleTrip.timeSlotId);
+            const boardingPoint = await storage.getCarpoolPickupPoint(booking.boardingPointId);
+            const dropOffPoint = await storage.getCarpoolPickupPoint(booking.dropOffPointId);
+            const driver = vehicleTrip.driverId ? await storage.getDriver(vehicleTrip.driverId) : null;
+            
+            tripDetails = {
+              tripDate: vehicleTrip.tripDate,
+              routeName: route?.name || 'Unknown Route',
+              fromLocation: route?.fromLocation || '',
+              toLocation: route?.toLocation || '',
+              timeSlot: timeSlot?.slotTime || '',
+              boardingPoint: boardingPoint?.name || '',
+              dropOffPoint: dropOffPoint?.name || '',
+              driverName: driver?.name || 'Not Assigned',
+              driverPhone: driver?.phone || '',
+            };
+          }
+        }
+      }
+      
+      const resolvedBy = complaint.resolvedByUserId ? await storage.getUser(complaint.resolvedByUserId) : null;
+      
+      res.json({
+        ...complaint,
+        userName: user?.name || 'Unknown User',
+        userPhone: user?.phone || 'Unknown',
+        userEmail: user?.email || '',
+        tripDetails,
+        resolvedByName: resolvedBy?.name || null,
+      });
+    } catch (error) {
+      console.error("Error fetching complaint:", error);
+      res.status(500).json({ message: "Failed to fetch complaint details" });
+    }
+  });
+  
+  // Admin: Update complaint status/resolution
+  app.put("/api/admin/complaints/:id", isEmployeeOrAdmin, hasPermission('complaintManagement', 'edit'), async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { status, resolution } = req.body;
+      const resolvedByUserId = req.session.userId;
+      
+      if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+      }
+      
+      // If resolving/closing, resolution note is required
+      if ((status === 'resolved' || status === 'closed') && !resolution) {
+        return res.status(400).json({ message: "Resolution notes are required when resolving or closing a complaint" });
+      }
+      
+      const updated = await storage.updateComplaintStatus(
+        id,
+        status,
+        resolution || null,
+        (status === 'resolved' || status === 'closed') ? resolvedByUserId : null
+      );
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating complaint:", error);
+      res.status(500).json({ message: "Failed to update complaint" });
+    }
+  });
+  
+  // Admin: Get complaint statistics
+  app.get("/api/admin/complaints/stats", isEmployeeOrAdmin, hasPermission('complaintManagement', 'view'), async (req, res) => {
+    try {
+      const stats = await storage.getComplaintStats();
+      res.json(stats);
+    } catch (error) {
+      console.error("Error fetching complaint stats:", error);
+      res.status(500).json({ message: "Failed to fetch complaint statistics" });
+    }
+  });
+  
   // Admin subscription management endpoints
   app.get("/api/admin/subscriptions", 
     isEmployeeOrAdmin,

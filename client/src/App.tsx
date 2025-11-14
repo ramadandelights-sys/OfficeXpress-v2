@@ -29,6 +29,7 @@ import CustomerDashboard from "@/pages/dashboard";
 import Survey from "@/pages/survey";
 import WalletPage from "@/pages/wallet";
 import MySubscriptionsPage from "@/pages/my-subscriptions";
+import ComplaintsPage from "@/pages/complaints";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -61,6 +62,7 @@ function Router() {
       <Route path="/dashboard" component={CustomerDashboard} />
       <Route path="/wallet" component={WalletPage} />
       <Route path="/my-subscriptions" component={MySubscriptionsPage} />
+      <Route path="/complaints" component={ComplaintsPage} />
       <Route path="/survey" component={Survey} />
       <Route path="/terms-and-conditions" component={LegalPageView} />
       <Route path="/privacy-policy" component={LegalPageView} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown, Wallet, Calendar } from "lucide-react";
+import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown, Wallet, Calendar, MessageSquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
@@ -31,6 +31,15 @@ export default function Header() {
   });
 
   const logoSrc = logoData?.src || "/logo.jpg";
+
+  // Fetch user's pending complaints count
+  const { data: pendingComplaints } = useQuery<any[]>({
+    queryKey: ['/api/my/complaints?status=pending'],
+    enabled: !!user,
+    staleTime: 60 * 1000, // 1 minute
+  });
+  
+  const pendingComplaintsCount = Array.isArray(pendingComplaints) ? pendingComplaints.length : 0;
 
   const navigation = [
     { name: t('nav.home'), href: "/" },
@@ -189,6 +198,25 @@ export default function Header() {
                     >
                       <Calendar className="w-4 h-4" />
                       Subscriptions
+                    </Link>
+                    
+                    {/* File Complaint Link for all logged-in users */}
+                    <Link
+                      href="/complaints"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 relative ${
+                        isActive("/complaints")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-complaints"
+                    >
+                      <MessageSquarePlus className="w-4 h-4" />
+                      File Complaint
+                      {pendingComplaintsCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                          {pendingComplaintsCount}
+                        </span>
+                      )}
                     </Link>
                     
                     {user.role === 'customer' && (
@@ -365,6 +393,26 @@ export default function Header() {
                       >
                         <Calendar className="w-4 h-4" />
                         My Subscriptions
+                      </Link>
+                      
+                      {/* File Complaint Link for all logged-in users */}
+                      <Link
+                        href="/complaints"
+                        className={`font-medium transition-colors px-3 py-2 rounded-lg flex items-center gap-2 relative ${
+                          isActive("/complaints")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        data-testid="mobile-nav-complaints"
+                      >
+                        <MessageSquarePlus className="w-4 h-4" />
+                        File Complaint
+                        {pendingComplaintsCount > 0 && (
+                          <span className="absolute top-1 right-10 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                            {pendingComplaintsCount}
+                          </span>
+                        )}
                       </Link>
                       
                       {user.role === 'customer' && (

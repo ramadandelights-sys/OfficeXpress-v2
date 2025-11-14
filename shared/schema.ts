@@ -38,6 +38,7 @@ export type UserPermissions = {
   driverManagement?: PermissionLevel; // Renamed from "drivers"
   driverAssignment?: boolean; // Special: stays as boolean (it's an action, not CRUD)
   employeeManagement?: PermissionLevel;
+  complaintManagement?: PermissionLevel;
 };
 
 export const users = pgTable("users", {
@@ -556,18 +557,23 @@ export const tripBookings = pgTable("trip_bookings", {
 // Complaints Table - User complaints for specific trips
 export const complaints = pgTable("complaints", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  tripBookingId: varchar("trip_booking_id").notNull().references(() => tripBookings.id),
+  referenceId: varchar("reference_id", { length: 6 }).notNull().unique(),
+  tripBookingId: varchar("trip_booking_id").references(() => tripBookings.id), // Can be null for general complaints
   userId: varchar("user_id").notNull().references(() => users.id),
+  category: text("category").notNull(), // 'Driver Issue', 'Vehicle Condition', 'Route Deviation', 'Delay', 'Safety Concern', 'Other'
+  severity: text("severity").notNull(), // 'Low', 'Medium', 'High', 'Critical'
   title: text("title").notNull(),
   description: text("description").notNull(),
-  status: text("status").notNull().default("open"), // 'open', 'in_progress', 'resolved', 'closed'
+  status: text("status").notNull().default("pending"), // 'pending', 'investigating', 'resolved', 'closed'
   resolution: text("resolution"),
+  resolvedByUserId: varchar("resolved_by_user_id").references(() => users.id),
   resolvedAt: timestamp("resolved_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_complaint_user").on(table.userId, table.status),
   index("idx_complaint_booking").on(table.tripBookingId),
+  index("idx_complaint_severity").on(table.severity, table.status),
 ]);
 
 // Insert schemas
@@ -854,11 +860,25 @@ export const insertTripBookingSchema = createInsertSchema(tripBookings).omit({
 
 export const insertComplaintSchema = createInsertSchema(complaints).omit({
   id: true,
+  referenceId: true,
   status: true,
+  resolution: true,
+  resolvedByUserId: true,
   resolvedAt: true,
   createdAt: true,
   updatedAt: true,
 });
+
+export const updateComplaintSchema = createInsertSchema(complaints).omit({
+  id: true,
+  referenceId: true,
+  userId: true,
+  tripBookingId: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
+}).partial();
 
 // Types
 export type User = typeof users.$inferSelect;
@@ -929,3 +949,4 @@ export type TripBooking = typeof tripBookings.$inferSelect;
 export type InsertTripBooking = z.infer<typeof insertTripBookingSchema>;
 export type Complaint = typeof complaints.$inferSelect;
 export type InsertComplaint = z.infer<typeof insertComplaintSchema>;
+export type UpdateComplaint = z.infer<typeof updateComplaintSchema>;

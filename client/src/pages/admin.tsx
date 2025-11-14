@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck, Eye, Check, CreditCard, Wallet } from "lucide-react";
+import { Edit, Trash2, Plus, Save, X, Building, Car, Users, MessageSquare, LogOut, Download, Filter, Search, Calendar, ChevronDown, ChevronUp, Settings, Target, Globe, Scale, Star, Palette, Shield, UserCog, Truck, Eye, Check, CreditCard, Wallet, AlertTriangle } from "lucide-react";
 import { useLocation } from "wouter";
 import BlogPostCreator from "@/components/blog-post-creator";
 import LegalPageCreator from "@/components/legal-page-creator";
@@ -12,6 +12,7 @@ import CarpoolRouteManagement from "@/components/carpool-route-management";
 import CarpoolBookingManagement from "@/components/carpool-booking-management";
 import AdminSubscriptionManagement from "@/components/admin-subscription-management";
 import AdminWalletManagement from "@/components/admin-wallet-management";
+import AdminComplaintManagement from "@/components/admin-complaint-management";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -1146,6 +1147,13 @@ function AdminDashboard({ user }: { user: any }) {
         {(hasPermission('walletManagement', 'view')) && (
           <div className="mb-8">
             <AdminWalletManagement />
+          </div>
+        )}
+
+        {/* Complaint Management */}
+        {(hasPermission('complaintManagement', 'view')) && (
+          <div className="mb-8">
+            <AdminComplaintManagement hasPermission={hasPermission} />
           </div>
         )}
 
