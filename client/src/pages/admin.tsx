@@ -12,6 +12,7 @@ import CarpoolRouteManagement from "@/components/carpool-route-management";
 import CarpoolBookingManagement from "@/components/carpool-booking-management";
 import AdminSubscriptionManagement from "@/components/admin-subscription-management";
 import AdminWalletManagement from "@/components/admin-wallet-management";
+import AdminRefundManagement from "@/components/admin-refund-management";
 import AdminComplaintManagement from "@/components/admin-complaint-management";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1147,6 +1148,13 @@ function AdminDashboard({ user }: { user: any }) {
         {(hasPermission('walletManagement', 'view')) && (
           <div className="mb-8">
             <AdminWalletManagement />
+          </div>
+        )}
+
+        {/* Refund Management */}
+        {(hasPermission('walletManagement', 'view') || hasPermission('walletManagement', 'edit')) && (
+          <div className="mb-8">
+            <AdminRefundManagement />
           </div>
         )}
 

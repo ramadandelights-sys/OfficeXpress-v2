@@ -7,6 +7,7 @@ import { storage } from "./storage";
 import { startCarpoolNotificationService } from "./carpool-notifications";
 import { startTripGeneratorService } from "./trip-generator";
 import { startSubscriptionRenewalService } from "./subscription-renewal";
+import { startRefundProcessorService } from "./refund-processor";
 
 const app = express();
 app.set('trust proxy', 1);
@@ -195,6 +196,10 @@ app.use((req, res, next) => {
     // Start automated subscription renewal service
     log('[Startup] Starting subscription renewal service...');
     startSubscriptionRenewalService(storage);
+    
+    // Start automated refund processor service
+    log('[Startup] Starting refund processor service...');
+    startRefundProcessorService(storage);
     
     log('[Startup] All automated services started successfully');
   });

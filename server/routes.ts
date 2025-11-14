@@ -3990,6 +3990,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+  
+  // Admin Refund Management Endpoints
+  
+  // Get pending refunds
+  app.get("/api/admin/refunds/pending",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const pendingRefunds = await storage.getPendingRefunds();
+        res.json(pendingRefunds);
+      } catch (error) {
+        console.error("Error fetching pending refunds:", error);
+        res.status(500).json({ message: "Failed to fetch pending refunds" });
+      }
+    }
+  );
+  
+  // Get refund history
+  app.get("/api/admin/refunds/history",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const { userId, startDate, endDate, limit } = req.query;
+        
+        const filters: any = {};
+        if (userId) filters.userId = userId as string;
+        if (startDate) filters.startDate = new Date(startDate as string);
+        if (endDate) filters.endDate = new Date(endDate as string);
+        if (limit) filters.limit = parseInt(limit as string);
+        
+        const history = await storage.getRefundHistory(filters);
+        res.json(history);
+      } catch (error) {
+        console.error("Error fetching refund history:", error);
+        res.status(500).json({ message: "Failed to fetch refund history" });
+      }
+    }
+  );
+  
+  // Get refund statistics
+  app.get("/api/admin/refunds/stats",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const stats = await storage.getRefundStats();
+        res.json(stats);
+      } catch (error) {
+        console.error("Error fetching refund stats:", error);
+        res.status(500).json({ message: "Failed to fetch refund statistics" });
+      }
+    }
+  );
+  
+  // Manually trigger refund processing
+  app.post("/api/admin/refunds/process",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        // Import the refund processor dynamically
+        const { getRefundProcessor } = await import('./refund-processor');
+        const refundProcessor = getRefundProcessor();
+        
+        if (!refundProcessor) {
+          return res.status(503).json({ message: "Refund processor service not running" });
+        }
+        
+        const result = await refundProcessor.processPendingRefunds();
+        
+        res.json({
+          message: "Refund processing completed",
+          processed: result.processed,
+          failed: result.failed,
+          totalAmount: result.totalAmount
+        });
+      } catch (error) {
+        console.error("Error processing refunds:", error);
+        res.status(500).json({ message: "Failed to process refunds" });
+      }
+    }
+  );
+  
+  // Cancel a trip and trigger refunds
+  app.post("/api/admin/trips/:id/cancel",
+    isEmployeeOrAdmin,
+    hasPermission('carpoolRouteManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const { reason = "Trip cancelled by admin" } = req.body;
+        
+        // Import the refund processor dynamically
+        const { getRefundProcessor } = await import('./refund-processor');
+        const refundProcessor = getRefundProcessor();
+        
+        if (!refundProcessor) {
+          return res.status(503).json({ message: "Refund processor service not running" });
+        }
+        
+        const result = await refundProcessor.cancelTripAndRefund(id, reason);
+        
+        res.json({
+          message: `Trip cancelled and refunds processed`,
+          affectedBookings: result.affectedBookings,
+          totalRefunded: result.totalRefunded
+        });
+      } catch (error) {
+        console.error("Error cancelling trip:", error);
+        res.status(500).json({ message: "Failed to cancel trip and process refunds" });
+      }
+    }
+  );
 
   // Admin endpoints for automated trip generation and subscription renewal
   

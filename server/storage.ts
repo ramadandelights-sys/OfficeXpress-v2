@@ -2445,6 +2445,467 @@ export class DatabaseStorage implements IStorage {
     
     return !!blackoutDate;
   }
+  
+  // Refund-related methods for automatic refund processing
+  
+  // Get trips that need refunds (cancelled, no-show, or on blackout dates)
+  async getRefundableTrips(): Promise<(TripBooking & { 
+    vehicleTrip: VehicleTrip,
+    subscription: Subscription,
+    route: CarpoolRoute 
+  })[]> {
+    const now = new Date();
+    const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    
+    // Get active blackout dates
+    const activeBlackouts = await db
+      .select()
+      .from(carpoolBlackoutDates)
+      .where(
+        and(
+          eq(carpoolBlackoutDates.isActive, true),
+          sql`${carpoolBlackoutDates.startDate} <= ${now}`,
+          sql`${carpoolBlackoutDates.endDate} >= ${now}`
+        )
+      );
+    
+    // Get trip bookings that need refunds
+    const refundableBookings = await db
+      .select({
+        booking: tripBookings,
+        trip: vehicleTrips,
+        subscription: subscriptions,
+        route: carpoolRoutes
+      })
+      .from(tripBookings)
+      .innerJoin(vehicleTrips, eq(tripBookings.vehicleTripId, vehicleTrips.id))
+      .innerJoin(subscriptions, eq(tripBookings.subscriptionId, subscriptions.id))
+      .innerJoin(carpoolRoutes, eq(vehicleTrips.routeId, carpoolRoutes.id))
+      .where(
+        and(
+          eq(tripBookings.refundProcessed, false),
+          or(
+            // Cancelled trips
+            eq(vehicleTrips.status, 'cancelled'),
+            // No-show trips (past departure time with scheduled status)
+            and(
+              eq(tripBookings.status, 'no_show'),
+              sql`${vehicleTrips.createdAt} < ${oneDayAgo}`
+            ),
+            // Trips on blackout dates
+            activeBlackouts.length > 0 ? sql`
+              EXISTS (
+                SELECT 1 FROM ${carpoolBlackoutDates}
+                WHERE ${carpoolBlackoutDates.isActive} = true
+                AND DATE(${vehicleTrips.tripDate}) 
+                BETWEEN DATE(${carpoolBlackoutDates.startDate}) 
+                AND DATE(${carpoolBlackoutDates.endDate})
+              )
+            ` : sql`false`
+          )
+        )
+      );
+    
+    return refundableBookings.map(row => ({
+      ...row.booking,
+      vehicleTrip: row.trip,
+      subscription: row.subscription,
+      route: row.route
+    }));
+  }
+  
+  // Process a single refund
+  async processRefund(
+    userId: string,
+    amount: number,
+    reason: string,
+    referenceId: string,
+    referenceType: 'trip_booking' | 'subscription' | 'blackout'
+  ): Promise<WalletTransaction> {
+    return await db.transaction(async (tx) => {
+      // Get or create wallet for user
+      let [wallet] = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.userId, userId));
+      
+      if (!wallet) {
+        // Create wallet if it doesn't exist
+        [wallet] = await tx
+          .insert(userWallets)
+          .values({
+            userId,
+            balance: 0
+          })
+          .returning();
+      }
+      
+      // Calculate new balance
+      const newBalance = Number(wallet.balance) + amount;
+      
+      // Update wallet balance
+      await tx
+        .update(userWallets)
+        .set({
+          balance: newBalance,
+          updatedAt: new Date()
+        })
+        .where(eq(userWallets.id, wallet.id));
+      
+      // Create transaction record
+      const [transaction] = await tx
+        .insert(walletTransactions)
+        .values({
+          walletId: wallet.id,
+          amount,
+          type: 'credit',
+          reason: 'refund',
+          description: reason,
+          metadata: {
+            referenceId,
+            referenceType,
+            processedAt: new Date().toISOString()
+          }
+        })
+        .returning();
+      
+      return transaction;
+    });
+  }
+  
+  // Mark a trip booking as refunded
+  async markTripBookingRefunded(bookingId: string, refundAmount: number): Promise<TripBooking> {
+    const [updated] = await db
+      .update(tripBookings)
+      .set({
+        refundProcessed: true,
+        refundAmount: refundAmount.toString(),
+        updatedAt: new Date()
+      })
+      .where(eq(tripBookings.id, bookingId))
+      .returning();
+    
+    if (!updated) throw new Error('Trip booking not found');
+    return updated;
+  }
+  
+  // Calculate pro-rated refund for subscription
+  async calculateProRatedRefund(subscription: Subscription, endDate?: Date): Promise<number> {
+    const now = new Date();
+    const effectiveEndDate = endDate || now;
+    
+    // Don't refund if subscription already ended
+    if (new Date(subscription.endDate) <= effectiveEndDate) {
+      return 0;
+    }
+    
+    // Calculate remaining days
+    const remainingDays = Math.ceil(
+      (new Date(subscription.endDate).getTime() - effectiveEndDate.getTime()) / 
+      (1000 * 60 * 60 * 24)
+    );
+    
+    // Calculate total subscription days
+    const totalDays = Math.ceil(
+      (new Date(subscription.endDate).getTime() - new Date(subscription.startDate).getTime()) / 
+      (1000 * 60 * 60 * 24)
+    );
+    
+    // Calculate refund
+    const monthlyFee = Number(subscription.totalMonthlyPrice);
+    const dailyRate = monthlyFee / 30;
+    const refundAmount = dailyRate * remainingDays;
+    
+    return Math.max(0, refundAmount);
+  }
+  
+  // Bulk process multiple refunds in a transaction
+  async bulkProcessRefunds(refunds: {
+    userId: string;
+    amount: number;
+    reason: string;
+    referenceId: string;
+    referenceType: 'trip_booking' | 'subscription' | 'blackout';
+    bookingId?: string;
+  }[]): Promise<{ transactions: WalletTransaction[], errors: string[] }> {
+    const errors: string[] = [];
+    const transactions: WalletTransaction[] = [];
+    
+    await db.transaction(async (tx) => {
+      for (const refund of refunds) {
+        try {
+          // Get or create wallet
+          let [wallet] = await tx
+            .select()
+            .from(userWallets)
+            .where(eq(userWallets.userId, refund.userId));
+          
+          if (!wallet) {
+            [wallet] = await tx
+              .insert(userWallets)
+              .values({
+                userId: refund.userId,
+                balance: 0
+              })
+              .returning();
+          }
+          
+          // Update wallet balance
+          const newBalance = Number(wallet.balance) + refund.amount;
+          await tx
+            .update(userWallets)
+            .set({
+              balance: newBalance,
+              updatedAt: new Date()
+            })
+            .where(eq(userWallets.id, wallet.id));
+          
+          // Create transaction
+          const [transaction] = await tx
+            .insert(walletTransactions)
+            .values({
+              walletId: wallet.id,
+              amount: refund.amount,
+              type: 'credit',
+              reason: 'refund',
+              description: refund.reason,
+              metadata: {
+                referenceId: refund.referenceId,
+                referenceType: refund.referenceType,
+                processedAt: new Date().toISOString()
+              }
+            })
+            .returning();
+          
+          transactions.push(transaction);
+          
+          // Mark booking as refunded if applicable
+          if (refund.bookingId) {
+            await tx
+              .update(tripBookings)
+              .set({
+                refundProcessed: true,
+                refundAmount: refund.amount.toString(),
+                updatedAt: new Date()
+              })
+              .where(eq(tripBookings.id, refund.bookingId));
+          }
+        } catch (error) {
+          errors.push(`Failed to process refund for user ${refund.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+    });
+    
+    return { transactions, errors };
+  }
+  
+  // Get pending refunds for admin view
+  async getPendingRefunds(): Promise<{
+    tripRefunds: Array<{
+      bookingId: string;
+      userId: string;
+      userName: string;
+      tripDate: string;
+      route: string;
+      reason: string;
+      amount: number;
+    }>;
+    subscriptionRefunds: Array<{
+      subscriptionId: string;
+      userId: string;
+      userName: string;
+      route: string;
+      remainingDays: number;
+      amount: number;
+    }>;
+  }> {
+    // Get refundable trips
+    const refundableTrips = await this.getRefundableTrips();
+    
+    // Get users for trip refunds
+    const userIds = [...new Set(refundableTrips.map(t => t.userId))];
+    let userMap = new Map<string, typeof users.$inferSelect>();
+    
+    if (userIds.length > 0) {
+      const usersData = await db
+        .select()
+        .from(users)
+        .where(sql`${users.id} = ANY(${userIds})`);
+      userMap = new Map(usersData.map(u => [u.id, u]));
+    }
+    
+    const tripRefunds = refundableTrips.map(trip => {
+      const user = userMap.get(trip.userId);
+      const amount = Number(trip.route.pricePerSeat);
+      let reason = 'Trip cancelled';
+      
+      if (trip.vehicleTrip.status === 'cancelled') {
+        reason = 'Trip cancelled by operator';
+      } else if (trip.status === 'no_show') {
+        reason = 'Driver no-show';
+      }
+      
+      return {
+        bookingId: trip.id,
+        userId: trip.userId,
+        userName: user?.name || 'Unknown',
+        tripDate: trip.vehicleTrip.tripDate,
+        route: trip.route.name,
+        reason,
+        amount
+      };
+    });
+    
+    // Get cancelled subscriptions needing refunds
+    const cancelledSubs = await db
+      .select({
+        subscription: subscriptions,
+        user: users,
+        route: carpoolRoutes
+      })
+      .from(subscriptions)
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .where(
+        and(
+          eq(subscriptions.status, 'cancelled'),
+          sql`${subscriptions.cancellationDate} IS NOT NULL`,
+          sql`${subscriptions.endDate} > NOW()`
+        )
+      );
+    
+    const subscriptionRefunds = [];
+    for (const sub of cancelledSubs) {
+      const refundAmount = await this.calculateProRatedRefund(sub.subscription);
+      if (refundAmount > 0) {
+        const remainingDays = Math.ceil(
+          (new Date(sub.subscription.endDate).getTime() - new Date().getTime()) / 
+          (1000 * 60 * 60 * 24)
+        );
+        
+        subscriptionRefunds.push({
+          subscriptionId: sub.subscription.id,
+          userId: sub.subscription.userId,
+          userName: sub.user.name,
+          route: sub.route.name,
+          remainingDays,
+          amount: refundAmount
+        });
+      }
+    }
+    
+    return { tripRefunds, subscriptionRefunds };
+  }
+  
+  // Get refund history
+  async getRefundHistory(filters?: {
+    userId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<(WalletTransaction & {
+    userName: string;
+    userPhone: string;
+  })[]> {
+    let query = db
+      .select({
+        transaction: walletTransactions,
+        wallet: userWallets,
+        user: users
+      })
+      .from(walletTransactions)
+      .innerJoin(userWallets, eq(walletTransactions.walletId, userWallets.id))
+      .innerJoin(users, eq(userWallets.userId, users.id))
+      .where(eq(walletTransactions.reason, 'refund'))
+      .$dynamic();
+    
+    const conditions = [];
+    
+    if (filters?.userId) {
+      conditions.push(eq(userWallets.userId, filters.userId));
+    }
+    
+    if (filters?.startDate) {
+      conditions.push(sql`${walletTransactions.createdAt} >= ${filters.startDate}`);
+    }
+    
+    if (filters?.endDate) {
+      conditions.push(sql`${walletTransactions.createdAt} <= ${filters.endDate}`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    const results = await query
+      .orderBy(desc(walletTransactions.createdAt))
+      .limit(filters?.limit || 100);
+    
+    return results.map(row => ({
+      ...row.transaction,
+      userName: row.user.name,
+      userPhone: row.user.phone
+    }));
+  }
+  
+  // Get refund statistics
+  async getRefundStats(): Promise<{
+    totalRefunded: number;
+    refundsByReason: Record<string, { count: number; amount: number }>;
+    monthlyTrends: Array<{ month: string; count: number; amount: number }>;
+  }> {
+    // Get all refunds
+    const refunds = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.reason, 'refund'));
+    
+    // Calculate total
+    const totalRefunded = refunds.reduce((sum, r) => sum + Number(r.amount), 0);
+    
+    // Group by reason (from description)
+    const refundsByReason: Record<string, { count: number; amount: number }> = {};
+    
+    refunds.forEach(refund => {
+      const reason = refund.description || 'Other';
+      if (!refundsByReason[reason]) {
+        refundsByReason[reason] = { count: 0, amount: 0 };
+      }
+      refundsByReason[reason].count++;
+      refundsByReason[reason].amount += Number(refund.amount);
+    });
+    
+    // Calculate monthly trends (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    
+    const monthlyData: Record<string, { count: number; amount: number }> = {};
+    
+    refunds
+      .filter(r => r.createdAt >= sixMonthsAgo)
+      .forEach(refund => {
+        const monthKey = new Date(refund.createdAt).toISOString().slice(0, 7);
+        if (!monthlyData[monthKey]) {
+          monthlyData[monthKey] = { count: 0, amount: 0 };
+        }
+        monthlyData[monthKey].count++;
+        monthlyData[monthKey].amount += Number(refund.amount);
+      });
+    
+    const monthlyTrends = Object.entries(monthlyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, data]) => ({
+        month,
+        count: data.count,
+        amount: data.amount
+      }));
+    
+    return {
+      totalRefunded,
+      refundsByReason,
+      monthlyTrends
+    };
+  }
 }
 
 export const storage = new DatabaseStorage();
