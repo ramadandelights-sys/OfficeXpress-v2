@@ -2440,6 +2440,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Holiday API endpoints for blackout date suggestions
+  // Admin: Get upcoming holidays for next 12 months
+  app.get("/api/admin/holidays/upcoming", hasPermission('carpoolBlackoutDates', 'view'), async (req, res) => {
+    try {
+      const { holidayService } = await import('./holiday-service');
+      const months = parseInt(req.query.months as string) || 12;
+      const holidays = holidayService.getUpcomingHolidays(months);
+      res.json(holidays);
+    } catch (error) {
+      console.error("Get upcoming holidays error:", error);
+      res.status(500).json({ message: "Failed to fetch upcoming holidays" });
+    }
+  });
+
+  // Admin: Get holiday suggestions with blackout status
+  app.get("/api/admin/holidays/suggestions", hasPermission('carpoolBlackoutDates', 'view'), async (req, res) => {
+    try {
+      const { holidayService } = await import('./holiday-service');
+      const existingBlackouts = await storage.getCarpoolBlackoutDates();
+      const formattedBlackouts = existingBlackouts.map(b => ({
+        startDate: b.startDate,
+        endDate: b.endDate,
+        name: b.name
+      }));
+      const suggestions = await holidayService.getHolidaySuggestions(formattedBlackouts);
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Get holiday suggestions error:", error);
+      res.status(500).json({ message: "Failed to fetch holiday suggestions" });
+    }
+  });
+
+  // Admin: Get holidays for specific year
+  app.get("/api/admin/holidays/:year", hasPermission('carpoolBlackoutDates', 'view'), async (req, res) => {
+    try {
+      const { holidayService } = await import('./holiday-service');
+      const year = parseInt(req.params.year);
+      if (isNaN(year) || year < 2024 || year > 2030) {
+        return res.status(400).json({ message: "Invalid year. Supported years: 2024-2030" });
+      }
+      const holidays = holidayService.getHolidaysForYear(year);
+      res.json(holidays);
+    } catch (error) {
+      console.error("Get holidays for year error:", error);
+      res.status(500).json({ message: "Failed to fetch holidays" });
+    }
+  });
+
+  // Admin: Bulk add holidays as blackout dates
+  app.post("/api/admin/holidays/sync", hasPermission('carpoolBlackoutDates', 'edit'), async (req, res) => {
+    try {
+      const { holidays } = req.body;
+      if (!Array.isArray(holidays) || holidays.length === 0) {
+        return res.status(400).json({ message: "Please provide an array of holidays to sync" });
+      }
+
+      const { holidayService } = await import('./holiday-service');
+      const createdBlackouts = [];
+
+      for (const holiday of holidays) {
+        const blackoutData = holidayService.prepareBlackoutDatesForHoliday(holiday);
+        for (const data of blackoutData) {
+          const blackout = await storage.createCarpoolBlackoutDate({
+            name: data.name,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            isActive: true,
+          });
+          createdBlackouts.push(blackout);
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: `Successfully added ${createdBlackouts.length} blackout date(s)`,
+        blackouts: createdBlackouts 
+      });
+    } catch (error) {
+      console.error("Sync holidays error:", error);
+      res.status(500).json({ message: "Failed to sync holidays as blackout dates" });
+    }
+  });
+
   // Vendor registration routes
   app.post("/api/vendor-registrations", validateVendorRegistration, async (req: any, res: any) => {
     try {

@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -49,6 +49,7 @@ export default function CarpoolRouteManagement() {
   const [deleteTimeSlotId, setDeleteTimeSlotId] = useState<string | null>(null);
   const [showBlackoutDateDialog, setShowBlackoutDateDialog] = useState(false);
   const [deleteBlackoutDateId, setDeleteBlackoutDateId] = useState<string | null>(null);
+  const [showHolidayImportDialog, setShowHolidayImportDialog] = useState(false);
 
   // Fetch all routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -264,6 +265,22 @@ export default function CarpoolRouteManagement() {
     },
   });
 
+  // Sync holidays mutation
+  const syncHolidaysMutation = useMutation({
+    mutationFn: async (holidays: any[]) => {
+      return await apiRequest('POST', '/api/admin/holidays/sync', { holidays });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/blackout-dates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/holidays/suggestions'] });
+      toast({ title: "Success", description: "Holidays imported as blackout dates successfully" });
+      setShowHolidayImportDialog(false);
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+    },
+  });
+
   return (
     <div className="space-y-6">
       {/* Blackout Dates */}
@@ -274,10 +291,16 @@ export default function CarpoolRouteManagement() {
               <CalendarOff className="h-5 w-5" />
               Service Blackout Dates
             </CardTitle>
-            <Button onClick={() => setShowBlackoutDateDialog(true)} data-testid="button-create-blackout-date">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Blackout Date
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setShowHolidayImportDialog(true)} data-testid="button-import-holidays">
+                <Download className="h-4 w-4 mr-2" />
+                Import Holidays
+              </Button>
+              <Button onClick={() => setShowBlackoutDateDialog(true)} data-testid="button-create-blackout-date">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Blackout Date
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -684,6 +707,14 @@ export default function CarpoolRouteManagement() {
         onClose={() => setShowBlackoutDateDialog(false)}
         onSubmit={(data) => createBlackoutDateMutation.mutate(data)}
         isPending={createBlackoutDateMutation.isPending}
+      />
+
+      {/* Holiday Import Dialog */}
+      <HolidayImportDialog
+        open={showHolidayImportDialog}
+        onClose={() => setShowHolidayImportDialog(false)}
+        onSubmit={(holidays) => syncHolidaysMutation.mutate(holidays)}
+        isPending={syncHolidaysMutation.isPending}
       />
 
       <AlertDialog open={deleteBlackoutDateId !== null} onOpenChange={() => setDeleteBlackoutDateId(null)}>
@@ -1260,6 +1291,240 @@ function BlackoutDateDialog({
             </div>
           </form>
         </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface Holiday {
+  name: string;
+  nameBn: string;
+  date: string;
+  type: 'national' | 'religious' | 'cultural';
+  durationDays: number;
+  isVariable: boolean;
+}
+
+interface HolidaySuggestion {
+  holiday: Holiday;
+  expandedDates: string[];
+  overlappingBlackouts: string[];
+  fullyAdded: boolean;
+  partiallyAdded: boolean;
+}
+
+function HolidayImportDialog({
+  open,
+  onClose,
+  onSubmit,
+  isPending
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSubmit: (holidays: Holiday[]) => void;
+  isPending: boolean;
+}) {
+  const [selectedHolidays, setSelectedHolidays] = useState<Holiday[]>([]);
+
+  const { data: suggestions = [], isLoading } = useQuery<HolidaySuggestion[]>({
+    queryKey: ['/api/admin/holidays/suggestions'],
+    enabled: open,
+  });
+
+  useEffect(() => {
+    if (open) {
+      setSelectedHolidays([]);
+    }
+  }, [open]);
+
+  const handleToggleHoliday = (holiday: Holiday, fullyAdded: boolean) => {
+    if (fullyAdded) return;
+    
+    setSelectedHolidays(prev => {
+      const isSelected = prev.some(h => h.date === holiday.date && h.name === holiday.name);
+      if (isSelected) {
+        return prev.filter(h => !(h.date === holiday.date && h.name === holiday.name));
+      } else {
+        return [...prev, holiday];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    const availableHolidays = suggestions
+      .filter(s => !s.fullyAdded)
+      .map(s => s.holiday);
+    setSelectedHolidays(availableHolidays);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedHolidays([]);
+  };
+
+  const handleSubmit = () => {
+    if (selectedHolidays.length > 0) {
+      onSubmit(selectedHolidays);
+    }
+  };
+
+  const getTypeColor = (type: 'national' | 'religious' | 'cultural') => {
+    switch (type) {
+      case 'national':
+        return 'bg-red-100 text-red-800 border-red-200';
+      case 'religious':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'cultural':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+    }
+  };
+
+  const availableCount = suggestions.filter(s => !s.fullyAdded).length;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2" data-testid="dialog-title-import-holidays">
+            <Calendar className="h-5 w-5" />
+            Import Bangladesh Holidays
+          </DialogTitle>
+          <DialogDescription>
+            Select holidays to add as blackout dates. Multi-day holidays (like Eid) will block all days automatically.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex gap-2 mb-4">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAll}
+            disabled={availableCount === 0}
+            data-testid="button-select-all-holidays"
+          >
+            Select All ({availableCount})
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDeselectAll}
+            disabled={selectedHolidays.length === 0}
+            data-testid="button-deselect-all-holidays"
+          >
+            Deselect All
+          </Button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto space-y-2 pr-2" data-testid="holiday-list-container">
+          {isLoading ? (
+            <div className="text-center py-8">Loading holidays...</div>
+          ) : suggestions.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No upcoming holidays found.
+            </div>
+          ) : (
+            suggestions.map((suggestion, index) => {
+              const { holiday, fullyAdded, partiallyAdded } = suggestion;
+              const isSelected = selectedHolidays.some(
+                h => h.date === holiday.date && h.name === holiday.name
+              );
+
+              return (
+                <div
+                  key={`${holiday.date}-${holiday.name}-${index}`}
+                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                    fullyAdded
+                      ? 'bg-gray-50 border-gray-200 opacity-60'
+                      : isSelected
+                      ? 'bg-primary/5 border-primary'
+                      : 'hover:bg-gray-50 border-gray-200'
+                  }`}
+                  data-testid={`holiday-item-${holiday.date}`}
+                >
+                  <Checkbox
+                    checked={isSelected || fullyAdded}
+                    disabled={fullyAdded}
+                    onCheckedChange={() => handleToggleHoliday(holiday, fullyAdded)}
+                    data-testid={`checkbox-holiday-${holiday.date}`}
+                  />
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium truncate">{holiday.name}</span>
+                      <span className={`px-2 py-0.5 text-xs rounded-full border ${getTypeColor(holiday.type)}`}>
+                        {holiday.type}
+                      </span>
+                      {holiday.durationDays > 1 && (
+                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 border border-gray-200">
+                          {holiday.durationDays} days
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      {holiday.nameBn}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {new Date(holiday.date).toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                      })}
+                      {holiday.durationDays > 1 && (
+                        <span>
+                          {' - '}
+                          {new Date(new Date(holiday.date).setDate(
+                            new Date(holiday.date).getDate() + holiday.durationDays - 1
+                          )).toLocaleDateString('en-US', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {fullyAdded && (
+                    <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+                      Already Added
+                    </span>
+                  )}
+                  {partiallyAdded && !fullyAdded && (
+                    <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-1 rounded">
+                      Partial
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <div className="flex justify-between items-center pt-4 border-t">
+          <div className="text-sm text-gray-500">
+            {selectedHolidays.length} holiday(s) selected
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              data-testid="button-cancel-import-holidays"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending || selectedHolidays.length === 0}
+              data-testid="button-submit-import-holidays"
+            >
+              {isPending ? 'Importing...' : `Import ${selectedHolidays.length} Holiday(s)`}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
