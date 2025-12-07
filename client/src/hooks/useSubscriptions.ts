@@ -67,19 +67,28 @@ export function useWallet() {
     queryKey: ['/api/wallet'],
   });
 
+  // Parse balance to number (API returns string from database)
+  const balance = wallet?.balance ? parseFloat(String(wallet.balance)) : 0;
+
   return {
     wallet,
     isLoading,
     error,
-    balance: wallet?.balance ?? 0,
+    balance: isNaN(balance) ? 0 : balance,
   };
 }
 
 // Hook to get wallet transactions
 export function useWalletTransactions() {
-  const { data: transactions = [], isLoading, error } = useQuery<WalletTransaction[]>({
+  const { data: rawTransactions = [], isLoading, error } = useQuery<WalletTransaction[]>({
     queryKey: ['/api/wallet/transactions'],
   });
+
+  // Parse amounts to numbers (API returns strings from database)
+  const transactions = rawTransactions.map(t => ({
+    ...t,
+    amount: typeof t.amount === 'string' ? parseFloat(t.amount) : (t.amount || 0),
+  }));
 
   return {
     transactions,

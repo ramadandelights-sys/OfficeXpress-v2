@@ -1592,21 +1592,20 @@ export class DatabaseStorage implements IStorage {
       
       // Create wallet transaction record atomically
       const transactionType = amount >= 0 ? 'credit' : 'debit';
+      const reason = amount >= 0 ? 'top_up' : 'subscription_purchase';
       const description = amount >= 0 
-        ? `Wallet credited with ${Math.abs(amount)}`
-        : `Wallet debited with ${Math.abs(amount)}`;
+        ? `Wallet credited with ৳${Math.abs(amount)}`
+        : `Wallet debited ৳${Math.abs(amount)}`;
       
       await tx
         .insert(walletTransactions)
         .values({
           walletId: walletId,
-          userId: currentWallet.userId,
           amount: Math.abs(amount).toString(),
           type: transactionType,
+          reason: reason,
           description: description,
-          balanceAfter: newBalance.toString(),
-          status: 'completed',
-          createdAt: new Date()
+          metadata: { balanceAfter: newBalance.toString() }
         });
       
       return updatedWallet;
