@@ -2536,6 +2536,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Delete carpool booking (superadmin only)
+  app.delete("/api/admin/carpool/bookings/:id", isSuperAdmin, async (req, res) => {
+    try {
+      await storage.deleteCarpoolBooking(req.params.id);
+      res.json({ message: "Booking deleted successfully" });
+    } catch (error) {
+      console.error("Delete booking error:", error);
+      res.status(500).json({ message: "Failed to delete booking" });
+    }
+  });
+
   // Admin: Update carpool booking
   app.put("/api/admin/carpool/bookings/:id", hasPermission('carpoolBookings', 'edit'), async (req, res) => {
     try {

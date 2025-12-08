@@ -1,20 +1,26 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Users, Calendar, MapPin, Clock, User, Phone, Mail, AlertCircle } from "lucide-react";
+import { Users, Calendar, MapPin, Clock, User, Phone, Mail, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
+import { useAuth } from "@/hooks/useAuth";
 import type { CarpoolBooking, Driver, CarpoolRoute, CarpoolTimeSlot } from "@shared/schema";
 
 export default function CarpoolBookingManagement({ showDriverAssignment }: { showDriverAssignment: boolean }) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
+
+  const isSuperadmin = user?.role === 'superadmin';
 
   // Fetch all bookings
   const { data: bookings = [], isLoading: loadingBookings, refetch } = useQuery<CarpoolBooking[]>({
@@ -57,6 +63,21 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
+    },
+  });
+
+  // Delete booking mutation (superadmin only)
+  const deleteBookingMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      return await apiRequest('DELETE', `/api/admin/carpool/bookings/${bookingId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/bookings'] });
+      toast({ title: "Success", description: "Booking deleted successfully" });
+      setDeleteBookingId(null);
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to delete booking", variant: "destructive" });
     },
   });
 
@@ -246,24 +267,37 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
                           </TableCell>
                         )}
                         <TableCell>
-                          <Select
-                            value={booking.status || 'pending'}
-                            onValueChange={(status) => {
-                              updateStatusMutation.mutate({ bookingId: booking.id, status });
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[150px]" data-testid={`select-status-${booking.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Pending</SelectItem>
-                              <SelectItem value="confirmed">Confirmed</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                              <SelectItem value="insufficient_bookings">Insufficient</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="flex items-center gap-2">
+                            <Select
+                              value={booking.status || 'pending'}
+                              onValueChange={(status) => {
+                                updateStatusMutation.mutate({ bookingId: booking.id, status });
+                              }}
+                              disabled={updateStatusMutation.isPending}
+                            >
+                              <SelectTrigger className="w-[120px]" data-testid={`select-status-${booking.id}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="confirmed">Confirmed</SelectItem>
+                                <SelectItem value="completed">Completed</SelectItem>
+                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                <SelectItem value="insufficient_bookings">Insufficient</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {isSuperadmin && (
+                              <Button
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => setDeleteBookingId(booking.id)}
+                                disabled={deleteBookingMutation.isPending}
+                                data-testid={`button-delete-booking-${booking.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -274,6 +308,28 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteBookingId} onOpenChange={(open) => !open && setDeleteBookingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Booking</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this booking? This action cannot be undone and will remove all related data including notifications.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteBookingId && deleteBookingMutation.mutate(deleteBookingId)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete-booking"
+            >
+              {deleteBookingMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

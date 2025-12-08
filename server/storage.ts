@@ -264,6 +264,7 @@ export interface IStorage {
   updateCarpoolBooking(booking: UpdateCarpoolBooking): Promise<CarpoolBooking>;
   assignDriverToCarpool(bookingId: string, driverId: string): Promise<CarpoolBooking>;
   updateCarpoolBookingStatus(id: string, status: string): Promise<CarpoolBooking>;
+  deleteCarpoolBooking(id: string): Promise<void>;
   getCarpoolBookingsByPickupPoint(pickupPointId: string): Promise<CarpoolBooking[]>;
   getCarpoolBookingsByTimeSlot(timeSlotId: string): Promise<CarpoolBooking[]>;
   getSubscriptionsByPickupPoint(pickupPointId: string): Promise<Subscription[]>;
@@ -1572,6 +1573,23 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Booking not found');
     return updated;
+  }
+
+  async deleteCarpoolBooking(id: string): Promise<void> {
+    // Delete related notifications first
+    await db
+      .delete(notifications)
+      .where(eq(notifications.bookingId, id));
+    
+    // Delete the booking
+    const result = await db
+      .delete(carpoolBookings)
+      .where(eq(carpoolBookings.id, id))
+      .returning();
+    
+    if (result.length === 0) {
+      throw new Error('Booking not found');
+    }
   }
 
   async getCarpoolBookingsByPickupPoint(pickupPointId: string): Promise<CarpoolBooking[]> {
