@@ -46,6 +46,7 @@ Preferred communication style: Simple, everyday language.
 - Multi-language selector with flags and persistent preference.
 - Modern permission UI with table-based matrix and toggle switches.
 - User-facing pages for Wallet, Carpool subscription, My Subscriptions, and Complaints.
+- **Google Maps Integration**: Interactive location picker with autocomplete for route creation and pickup/drop-off point management. Route visualization with directions displayed in both admin panel and customer-facing views.
 
 ### System Design Choices
 - **Multi-User Authentication**: Customer, Employee, Superadmin roles with automatic customer account creation from bookings.
