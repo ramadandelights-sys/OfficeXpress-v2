@@ -116,7 +116,16 @@ export function GoogleMapsRouteDisplay({
   }, [apiKey]);
 
   useEffect(() => {
+    console.log('[GoogleMapsRouteDisplay] useEffect running, apiReady:', apiReady, 'hasContainer:', !!mapContainerRef.current);
     if (!apiReady || !mapContainerRef.current) return;
+
+    console.log('[GoogleMapsRouteDisplay] Building points from:', {
+      startPoint,
+      endPoint,
+      pickupPointsCount: pickupPoints.length,
+      dropoffPointsCount: dropoffPoints.length,
+      showOnlyVisible
+    });
 
     const filteredPickups = showOnlyVisible 
       ? pickupPoints.filter(p => p.isVisible !== false && p.latitude && p.longitude)
@@ -147,6 +156,8 @@ export function GoogleMapsRouteDisplay({
     if (endPoint?.latitude && endPoint?.longitude) {
       allPoints.push({ ...endPoint, type: 'end' });
     }
+
+    console.log('[GoogleMapsRouteDisplay] Total points to display:', allPoints.length, allPoints.map(p => ({ name: p.name, type: p.type, lat: p.latitude, lng: p.longitude })));
 
     if (allPoints.length === 0) {
       const defaultCenter = { lat: 23.8103, lng: 90.4125 };
@@ -235,60 +246,73 @@ export function GoogleMapsRouteDisplay({
       markersRef.current.push(marker);
     });
 
+    // Always draw a polyline connecting the points
     if (allPoints.length >= 2) {
-      const directionsService = new window.google.maps.DirectionsService();
+      console.log('[GoogleMapsRouteDisplay] Drawing route with', allPoints.length, 'points');
       
-      if (directionsRendererRef.current) {
-        directionsRendererRef.current.setMap(null);
-      }
+      const path = allPoints
+        .filter(p => p.latitude && p.longitude)
+        .map(p => ({ lat: p.latitude!, lng: p.longitude! }));
       
-      const directionsRenderer = new window.google.maps.DirectionsRenderer({
+      // Draw immediate polyline (always works)
+      const polyline = new window.google.maps.Polyline({
+        path,
         map,
-        suppressMarkers: true,
-        polylineOptions: {
-          strokeColor: '#4f46e5',
-          strokeWeight: 4,
-          strokeOpacity: 0.7,
-        },
+        strokeColor: '#4f46e5',
+        strokeWeight: 4,
+        strokeOpacity: 0.8,
       });
-      directionsRendererRef.current = directionsRenderer;
 
-      const origin = { lat: allPoints[0].latitude!, lng: allPoints[0].longitude! };
-      const destination = { lat: allPoints[allPoints.length - 1].latitude!, lng: allPoints[allPoints.length - 1].longitude! };
-      
-      const waypoints = allPoints.slice(1, -1).map(point => ({
-        location: { lat: point.latitude!, lng: point.longitude! },
-        stopover: true,
-      }));
-
-      directionsService.route(
-        {
-          origin,
-          destination,
-          waypoints,
-          travelMode: window.google.maps.TravelMode.DRIVING,
-          optimizeWaypoints: false,
-        },
-        (result, status) => {
-          if (status === window.google.maps.DirectionsStatus.OK && result) {
-            directionsRenderer.setDirections(result);
-          } else {
-            console.warn('[GoogleMapsRouteDisplay] Directions API failed:', status, '- falling back to polyline');
-            // Fallback: draw a simple polyline connecting all points
-            const path = allPoints
-              .filter(p => p.latitude && p.longitude)
-              .map(p => ({ lat: p.latitude!, lng: p.longitude! }));
-            
-            new window.google.maps.Polyline({
-              path,
-              map,
-              strokeColor: '#4f46e5',
-              strokeWeight: 3,
-              strokeOpacity: 0.7,
-            });
-          }
+      // Optionally try to get directions for road-following route
+      try {
+        const directionsService = new window.google.maps.DirectionsService();
+        
+        if (directionsRendererRef.current) {
+          directionsRendererRef.current.setMap(null);
         }
-      );
+        
+        const directionsRenderer = new window.google.maps.DirectionsRenderer({
+          map,
+          suppressMarkers: true,
+          polylineOptions: {
+            strokeColor: '#6366f1',
+            strokeWeight: 5,
+            strokeOpacity: 0.9,
+          },
+        });
+        directionsRendererRef.current = directionsRenderer;
+
+        const origin = { lat: allPoints[0].latitude!, lng: allPoints[0].longitude! };
+        const destination = { lat: allPoints[allPoints.length - 1].latitude!, lng: allPoints[allPoints.length - 1].longitude! };
+        
+        const waypoints = allPoints.slice(1, -1).map(point => ({
+          location: { lat: point.latitude!, lng: point.longitude! },
+          stopover: true,
+        }));
+
+        directionsService.route(
+          {
+            origin,
+            destination,
+            waypoints,
+            travelMode: window.google.maps.TravelMode.DRIVING,
+            optimizeWaypoints: false,
+          },
+          (result, status) => {
+            if (status === window.google.maps.DirectionsStatus.OK && result) {
+              // Hide the simple polyline and show directions route
+              polyline.setMap(null);
+              directionsRenderer.setDirections(result);
+            } else {
+              console.warn('[GoogleMapsRouteDisplay] Directions API unavailable:', status);
+              // Keep the simple polyline visible
+            }
+          }
+        );
+      } catch (err) {
+        console.warn('[GoogleMapsRouteDisplay] Directions request failed:', err);
+        // Simple polyline remains visible
+      }
     }
 
     return () => {
