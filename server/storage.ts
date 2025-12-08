@@ -1856,13 +1856,11 @@ export class DatabaseStorage implements IStorage {
       // Get existing bookings for this vehicle trip
       const existingBookings = await this.getTripBookingsByVehicleTrip(booking.vehicleTripId);
       
-      // Calculate current passenger count
-      const currentPassengers = existingBookings.reduce((sum, b) => {
-        return sum + (b.numberOfPassengers || 1);
-      }, 0);
+      // Calculate current passenger count (1 passenger per booking since numberOfPassengers is not tracked)
+      const currentPassengers = existingBookings.length;
       
       // Check if adding this booking would exceed capacity
-      const newPassengers = booking.numberOfPassengers || 1;
+      const newPassengers = 1;
       const totalPassengers = currentPassengers + newPassengers;
       
       if (vehicleTrip.vehicleCapacity && totalPassengers > vehicleTrip.vehicleCapacity) {
@@ -1938,9 +1936,14 @@ export class DatabaseStorage implements IStorage {
   
   // Complaint operations
   async createComplaint(complaint: InsertComplaint): Promise<Complaint> {
+    // Generate a unique reference ID for the complaint
+    const referenceId = Math.random().toString(36).substring(2, 8).toUpperCase();
     const [created] = await db
       .insert(complaints)
-      .values(complaint)
+      .values({
+        ...complaint,
+        referenceId
+      })
       .returning();
     return created;
   }
@@ -2105,7 +2108,7 @@ export class DatabaseStorage implements IStorage {
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
-      .leftJoin(carpoolRoutes, eq(subscriptions.carpoolRouteId, carpoolRoutes.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
       .orderBy(desc(subscriptions.createdAt));
       
@@ -2116,8 +2119,8 @@ export class DatabaseStorage implements IStorage {
       routeName: row.route?.name || 'Unknown Route',
       fromLocation: row.route?.fromLocation || '',
       toLocation: row.route?.toLocation || '',
-      timeSlot: row.timeSlot ? `${row.timeSlot.departureTime} - ${row.timeSlot.arrivalTime}` : '',
-      weekdays: row.subscription.weekdays || []
+      timeSlot: row.timeSlot?.departureTime || '',
+      weekdays: []
     }));
   }
   
@@ -2261,8 +2264,8 @@ export class DatabaseStorage implements IStorage {
     // Get revenue stats
     const revenueStats = await db
       .select({
-        totalRevenue: sql<number>`coalesce(sum(${subscriptions.monthlyFee}), 0)::float`,
-        monthlyRevenue: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.monthlyFee} else 0 end), 0)::float`
+        totalRevenue: sql<number>`coalesce(sum(${subscriptions.totalMonthlyPrice}), 0)::float`,
+        monthlyRevenue: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.totalMonthlyPrice} else 0 end), 0)::float`
       })
       .from(subscriptions);
       
@@ -2346,9 +2349,10 @@ export class DatabaseStorage implements IStorage {
       if (!wallet) throw new Error('Wallet not found');
       
       // Calculate new balance
+      const currentBalance = parseFloat(wallet.balance) || 0;
       const newBalance = type === 'credit' 
-        ? wallet.balance + amount 
-        : wallet.balance - amount;
+        ? currentBalance + amount 
+        : currentBalance - amount;
       
       // Check for negative balance
       if (newBalance < 0) {
@@ -2359,7 +2363,7 @@ export class DatabaseStorage implements IStorage {
       await tx
         .update(userWallets)
         .set({ 
-          balance: newBalance,
+          balance: newBalance.toString(),
           updatedAt: new Date()
         })
         .where(eq(userWallets.id, walletId));
@@ -2371,11 +2375,11 @@ export class DatabaseStorage implements IStorage {
           walletId,
           userId: wallet.userId,
           type,
-          amount,
+          amount: amount.toString(),
           description: `Admin adjustment: ${reason}`,
           category: 'admin_adjustment',
           referenceId: adminUserId, // Store admin user ID as reference
-          balanceAfter: newBalance,
+          balanceAfter: newBalance.toString(),
           status: 'completed'
         })
         .returning();
