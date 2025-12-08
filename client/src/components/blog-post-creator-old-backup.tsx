@@ -448,7 +448,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   // Function to strip HTML tags and extract clean text
   const extractTextFromHTML = (html: string): string => {
     const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
+    tempDiv.innerHTML = DOMPurify.sanitize(html);
     return tempDiv.textContent || tempDiv.innerText || '';
   };
 
