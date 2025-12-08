@@ -3989,7 +3989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasPermission('walletManagement', 'view'),
     async (req: any, res: any) => {
       try {
-        const wallets = await storage.getAllWalletsWithUserDetails();
+        const wallets = await storage.getAllWallets();
         res.json(wallets);
       } catch (error) {
         console.error("Error fetching wallets:", error);
@@ -4003,8 +4003,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasPermission('walletManagement', 'view'),
     async (req: any, res: any) => {
       try {
-        const stats = await storage.getWalletStats();
-        res.json(stats);
+        const wallets = await storage.getAllWallets();
+        const totalWallets = wallets.length;
+        const totalBalance = wallets.reduce((sum, w) => sum + Number(w.balance || 0), 0);
+        const totalCredits = wallets.reduce((sum, w) => sum + Number(w.totalCredits || 0), 0);
+        const totalDebits = wallets.reduce((sum, w) => sum + Number(w.totalDebits || 0), 0);
+        res.json({
+          totalWallets,
+          totalBalance,
+          totalCredits,
+          totalDebits,
+          averageBalance: totalWallets > 0 ? totalBalance / totalWallets : 0
+        });
       } catch (error) {
         console.error("Error fetching wallet stats:", error);
         res.status(500).json({ message: "Failed to fetch wallet statistics" });
