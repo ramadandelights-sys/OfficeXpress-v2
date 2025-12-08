@@ -74,10 +74,10 @@ const formLimiter = rateLimit({
 });
 
 // Rate limiting for admin operations
-// Environment-aware: strict in production (10), lenient in development (100)
+// Environment-aware: moderate in production (100), lenient in development (500)
 const adminLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: process.env.NODE_ENV === 'production' ? 10 : 100, // Auto-adjusts based on environment
+  max: process.env.NODE_ENV === 'production' ? 100 : 500, // Auto-adjusts based on environment
   message: {
     error: "Too many admin requests from this IP, please try again later."
   },
