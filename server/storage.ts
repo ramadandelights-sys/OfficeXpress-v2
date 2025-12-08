@@ -1323,10 +1323,11 @@ export class DatabaseStorage implements IStorage {
 
   async updateCarpoolRoute(route: UpdateCarpoolRoute): Promise<CarpoolRoute> {
     if (!route.id) throw new Error('Route ID is required');
+    const { id, ...updateData } = route;
     const [updated] = await db
       .update(carpoolRoutes)
-      .set({ ...route, updatedAt: new Date() })
-      .where(eq(carpoolRoutes.id, route.id))
+      .set({ ...updateData, updatedAt: new Date() })
+      .where(eq(carpoolRoutes.id, id))
       .returning();
     if (!updated) throw new Error('Route not found');
     return updated;
