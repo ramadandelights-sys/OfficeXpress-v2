@@ -2159,6 +2159,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Reorder pickup points (bulk update sequence order)
+  // NOTE: This route MUST be before the :id route to avoid matching "reorder" as an ID
+  app.put("/api/admin/carpool/pickup-points/reorder", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const { routeId, pointType, orderedIds } = req.body;
+      
+      // Validate required fields
+      if (!routeId || !pointType || !Array.isArray(orderedIds)) {
+        return res.status(400).json({ message: "routeId, pointType, and orderedIds array are required" });
+      }
+      
+      console.log(`[Reorder] Route: ${routeId}, Type: ${pointType}, IDs:`, orderedIds);
+      
+      // Get all existing points for this route and type
+      const existingPoints = await storage.getCarpoolPickupPoints(routeId, pointType);
+      const existingIds = new Set(existingPoints.map(p => p.id));
+      
+      // Filter to only valid IDs and assign sequential order (1, 2, 3, ...)
+      const validOrderedIds = orderedIds.filter((id: string) => existingIds.has(id));
+      
+      if (validOrderedIds.length === 0) {
+        return res.status(400).json({ message: "No valid points to reorder" });
+      }
+      
+      // Update each point with its new sequential order
+      const updates = await Promise.all(
+        validOrderedIds.map((id: string, index: number) => 
+          storage.updateCarpoolPickupPoint(id, { sequenceOrder: index + 1 })
+        )
+      );
+      
+      console.log(`[Reorder] Successfully updated ${updates.length} points with sequential orders`);
+      res.json({ success: true, updated: updates.length });
+    } catch (error) {
+      console.error("Reorder pickup points error:", error);
+      res.status(500).json({ message: "Failed to reorder pickup points" });
+    }
+  });
+
   // Admin: Update pickup point
   app.put("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
@@ -2204,28 +2243,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Update pickup point error:", error);
       res.status(500).json({ message: "Failed to update pickup point" });
-    }
-  });
-
-  // Admin: Reorder pickup points (bulk update sequence order)
-  app.put("/api/admin/carpool/pickup-points/reorder", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
-    try {
-      const { points } = req.body;
-      if (!Array.isArray(points)) {
-        return res.status(400).json({ message: "Points array is required" });
-      }
-      
-      // Update each point's sequence order
-      const updates = await Promise.all(
-        points.map((point: { id: string; sequenceOrder: number }) => 
-          storage.updateCarpoolPickupPoint(point.id, { sequenceOrder: point.sequenceOrder })
-        )
-      );
-      
-      res.json({ success: true, updated: updates.length });
-    } catch (error) {
-      console.error("Reorder pickup points error:", error);
-      res.status(500).json({ message: "Failed to reorder pickup points" });
     }
   });
 

@@ -207,8 +207,8 @@ export default function CarpoolRouteManagement() {
 
   // Reorder pickup points mutation
   const reorderPointsMutation = useMutation({
-    mutationFn: async (points: { id: string; sequenceOrder: number }[]) => {
-      return await apiRequest('PUT', '/api/admin/carpool/pickup-points/reorder', { points });
+    mutationFn: async (data: { routeId: string; pointType: string; orderedIds: string[] }) => {
+      return await apiRequest('PUT', '/api/admin/carpool/pickup-points/reorder', data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
@@ -235,30 +235,42 @@ export default function CarpoolRouteManagement() {
   // Handle drag end for pickup points
   const handlePickupDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && selectedRoute) {
       const oldIndex = pickupPoints.findIndex((p) => p.id === active.id);
       const newIndex = pickupPoints.findIndex((p) => p.id === over.id);
+      
+      // Validate indices
+      if (oldIndex === -1 || newIndex === -1) {
+        console.error("Invalid drag indices:", { oldIndex, newIndex, activeId: active.id, overId: over.id });
+        toast({ title: "Error", description: "Could not reorder - please refresh and try again", variant: "destructive" });
+        return;
+      }
+      
       const reordered = arrayMove(pickupPoints, oldIndex, newIndex);
-      const updates = reordered.map((point, index) => ({
-        id: point.id,
-        sequenceOrder: index + 1,
-      }));
-      reorderPointsMutation.mutate(updates);
+      const orderedIds = reordered.map((point) => point.id);
+      console.log("Reordering pickup points:", orderedIds);
+      reorderPointsMutation.mutate({ routeId: selectedRoute, pointType: 'pickup', orderedIds });
     }
   };
 
   // Handle drag end for drop-off points
   const handleDropOffDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
+    if (over && active.id !== over.id && selectedRoute) {
       const oldIndex = dropOffPoints.findIndex((p) => p.id === active.id);
       const newIndex = dropOffPoints.findIndex((p) => p.id === over.id);
+      
+      // Validate indices
+      if (oldIndex === -1 || newIndex === -1) {
+        console.error("Invalid drag indices:", { oldIndex, newIndex, activeId: active.id, overId: over.id });
+        toast({ title: "Error", description: "Could not reorder - please refresh and try again", variant: "destructive" });
+        return;
+      }
+      
       const reordered = arrayMove(dropOffPoints, oldIndex, newIndex);
-      const updates = reordered.map((point, index) => ({
-        id: point.id,
-        sequenceOrder: index + 1,
-      }));
-      reorderPointsMutation.mutate(updates);
+      const orderedIds = reordered.map((point) => point.id);
+      console.log("Reordering drop-off points:", orderedIds);
+      reorderPointsMutation.mutate({ routeId: selectedRoute, pointType: 'dropoff', orderedIds });
     }
   };
 
