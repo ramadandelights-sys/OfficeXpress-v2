@@ -198,7 +198,14 @@ export default function CarpoolPage() {
     }
     
     try {
-      await purchaseSubscription.mutateAsync(formData);
+      // Add startDate (start of next month or today if it's the 1st)
+      const today = new Date();
+      const startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0];
+      
+      await purchaseSubscription.mutateAsync({
+        ...formData,
+        startDate,
+      });
       setPurchaseComplete(true);
     } catch (error) {
       // Error is handled by the mutation hook

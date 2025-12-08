@@ -57,6 +57,7 @@ const purchaseSubscriptionSchema = z.object({
   timeSlotId: z.string().min(1, "Time slot is required"),
   pickupPointId: z.string().min(1, "Pickup point is required"),
   dropOffPointId: z.string().min(1, "Drop-off point is required"),
+  startDate: z.string().min(1, "Start date is required"),
 });
 
 export type PurchaseSubscriptionData = z.infer<typeof purchaseSubscriptionSchema>;
