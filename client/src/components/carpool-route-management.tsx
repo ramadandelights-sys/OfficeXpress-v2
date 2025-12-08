@@ -756,17 +756,45 @@ function RouteDialog({
 }) {
   const form = useForm<z.infer<typeof insertCarpoolRouteSchema>>({
     resolver: zodResolver(insertCarpoolRouteSchema),
-    defaultValues: route || {
+    defaultValues: {
       name: '',
       fromLocation: '',
       toLocation: '',
       estimatedDistance: '0',
       pricePerSeat: '200',
       description: '',
-      weekdays: [0, 1, 2, 3, 4, 5, 6], // All days by default
+      weekdays: [0, 1, 2, 3, 4, 5, 6],
       isActive: true,
     },
   });
+
+  useEffect(() => {
+    if (open) {
+      if (route) {
+        form.reset({
+          name: route.name || '',
+          fromLocation: route.fromLocation || '',
+          toLocation: route.toLocation || '',
+          estimatedDistance: route.estimatedDistance || '0',
+          pricePerSeat: route.pricePerSeat || '200',
+          description: route.description || '',
+          weekdays: route.weekdays || [0, 1, 2, 3, 4, 5, 6],
+          isActive: route.isActive ?? true,
+        });
+      } else {
+        form.reset({
+          name: '',
+          fromLocation: '',
+          toLocation: '',
+          estimatedDistance: '0',
+          pricePerSeat: '200',
+          description: '',
+          weekdays: [0, 1, 2, 3, 4, 5, 6],
+          isActive: true,
+        });
+      }
+    }
+  }, [open, route, form]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
