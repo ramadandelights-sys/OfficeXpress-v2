@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { GoogleMapsLocationPicker, type LocationData } from "@/components/google-maps-location-picker";
+import { GoogleMapsRouteDisplay } from "@/components/google-maps-route-display";
 import type { CarpoolRoute, CarpoolPickupPoint, CarpoolTimeSlot, CarpoolBlackoutDate } from "@shared/schema";
 import { insertCarpoolRouteSchema, updateCarpoolRouteSchema, insertCarpoolPickupPointSchema, insertCarpoolTimeSlotSchema, insertCarpoolBlackoutDateSchema } from "@shared/schema";
 import { z } from "zod";
@@ -532,6 +533,7 @@ export default function CarpoolRouteManagement() {
 
       {/* Pickup Points, Drop-off Points, and Time Slots for Selected Route */}
       {selectedRoute && (
+        <>
         <div className="grid md:grid-cols-3 gap-6">
           {/* Pickup Points */}
           <Card>
@@ -681,6 +683,51 @@ export default function CarpoolRouteManagement() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Route Map Display */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2" data-testid="heading-route-map">
+              <MapPin className="h-5 w-5" />
+              Route Map
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              const currentRoute = routes.find(r => r.id === selectedRoute);
+              return (
+                <GoogleMapsRouteDisplay
+                  startPoint={currentRoute ? {
+                    name: currentRoute.fromLocation,
+                    latitude: currentRoute.fromLatitude ? Number(currentRoute.fromLatitude) : null,
+                    longitude: currentRoute.fromLongitude ? Number(currentRoute.fromLongitude) : null,
+                  } : undefined}
+                  endPoint={currentRoute ? {
+                    name: currentRoute.toLocation,
+                    latitude: currentRoute.toLatitude ? Number(currentRoute.toLatitude) : null,
+                    longitude: currentRoute.toLongitude ? Number(currentRoute.toLongitude) : null,
+                  } : undefined}
+                  pickupPoints={pickupPoints.map(p => ({
+                    name: p.name,
+                    latitude: p.latitude ? Number(p.latitude) : null,
+                    longitude: p.longitude ? Number(p.longitude) : null,
+                    isVisible: p.isVisible !== false,
+                  }))}
+                  dropoffPoints={dropOffPoints.map(p => ({
+                    name: p.name,
+                    latitude: p.latitude ? Number(p.latitude) : null,
+                    longitude: p.longitude ? Number(p.longitude) : null,
+                    isVisible: p.isVisible !== false,
+                  }))}
+                  height="400px"
+                  showOnlyVisible={false}
+                  testId="route-map"
+                />
+              );
+            })()}
+          </CardContent>
+        </Card>
+        </>
       )}
 
       {/* Route Creator/Editor Dialog */}
