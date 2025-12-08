@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download, GripVertical, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download, GripVertical, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -49,10 +50,13 @@ function formatTimeWithAmPm(time: string): string {
 
 export default function CarpoolRouteManagement() {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isSuperadmin = user?.role === 'superadmin';
   const [showRouteCreator, setShowRouteCreator] = useState(false);
   const [editingRoute, setEditingRoute] = useState<string | null>(null);
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [showPickupPointDialog, setShowPickupPointDialog] = useState(false);
+  const [isGeocoding, setIsGeocoding] = useState(false);
   const [showDropOffPointDialog, setShowDropOffPointDialog] = useState(false);
   const [showTimeSlotDialog, setShowTimeSlotDialog] = useState(false);
   const [deleteRouteId, setDeleteRouteId] = useState<string | null>(null);
@@ -688,11 +692,45 @@ export default function CarpoolRouteManagement() {
 
         {/* Route Map Display */}
         <Card className="mt-6">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2" data-testid="heading-route-map">
               <MapPin className="h-5 w-5" />
               Route Map
             </CardTitle>
+            {isSuperadmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isGeocoding}
+                onClick={async () => {
+                  setIsGeocoding(true);
+                  try {
+                    const response = await apiRequest('POST', '/api/admin/carpool/pickup-points/geocode-all');
+                    const data = await response.json();
+                    toast({
+                      title: "Geocoding Complete",
+                      description: `Updated ${data.updated} locations, ${data.failed} failed.`,
+                    });
+                    queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes'] });
+                    if (selectedRoute) {
+                      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points'] });
+                    }
+                  } catch (error) {
+                    toast({
+                      title: "Geocoding Failed",
+                      description: extractErrorMessage(error),
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setIsGeocoding(false);
+                  }
+                }}
+                data-testid="button-geocode-all"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isGeocoding ? 'animate-spin' : ''}`} />
+                {isGeocoding ? 'Geocoding...' : 'Geocode All Points'}
+              </Button>
+            )}
           </CardHeader>
           <CardContent>
             {(() => {

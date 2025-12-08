@@ -2275,6 +2275,123 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Batch geocode pickup points without coordinates
+  app.post("/api/admin/carpool/pickup-points/geocode-all", isSuperAdmin, async (req, res) => {
+    try {
+      const apiKey = process.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ message: "Google Maps API key not configured" });
+      }
+
+      // Get all pickup points without coordinates
+      const allRoutes = await storage.getCarpoolRoutes();
+      let totalUpdated = 0;
+      let totalFailed = 0;
+      const results: { name: string; status: string; coords?: { lat: number; lng: number } }[] = [];
+
+      for (const route of allRoutes) {
+        const pickupPoints = await storage.getCarpoolPickupPoints(route.id, 'pickup');
+        const dropoffPoints = await storage.getCarpoolPickupPoints(route.id, 'dropoff');
+        const allPoints = [...pickupPoints, ...dropoffPoints];
+
+        for (const point of allPoints) {
+          // Skip points that already have coordinates
+          if (point.latitude && point.longitude) {
+            continue;
+          }
+
+          try {
+            // Add Bangladesh context to improve geocoding accuracy
+            const searchQuery = `${point.name}, Dhaka, Bangladesh`;
+            const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}&region=bd`;
+            
+            const response = await fetch(geocodeUrl);
+            const data = await response.json();
+
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const location = data.results[0].geometry.location;
+              await storage.updateCarpoolPickupPoint(point.id, {
+                latitude: String(location.lat),
+                longitude: String(location.lng)
+              });
+              totalUpdated++;
+              results.push({ name: point.name, status: 'success', coords: location });
+            } else {
+              totalFailed++;
+              results.push({ name: point.name, status: `geocode_failed: ${data.status}` });
+            }
+
+            // Rate limit: wait 100ms between requests
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (err) {
+            totalFailed++;
+            results.push({ name: point.name, status: 'error' });
+          }
+        }
+
+        // Also geocode route start/end if missing
+        if (route.fromLocation && (!route.fromLatitude || !route.fromLongitude)) {
+          try {
+            const searchQuery = `${route.fromLocation}, Dhaka, Bangladesh`;
+            const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}&region=bd`;
+            
+            const response = await fetch(geocodeUrl);
+            const data = await response.json();
+
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const location = data.results[0].geometry.location;
+              await storage.updateCarpoolRoute({
+                id: route.id,
+                fromLatitude: String(location.lat),
+                fromLongitude: String(location.lng)
+              });
+              totalUpdated++;
+              results.push({ name: `Route start: ${route.fromLocation}`, status: 'success', coords: location });
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (err) {
+            totalFailed++;
+          }
+        }
+
+        if (route.toLocation && (!route.toLatitude || !route.toLongitude)) {
+          try {
+            const searchQuery = `${route.toLocation}, Dhaka, Bangladesh`;
+            const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}&region=bd`;
+            
+            const response = await fetch(geocodeUrl);
+            const data = await response.json();
+
+            if (data.status === 'OK' && data.results && data.results.length > 0) {
+              const location = data.results[0].geometry.location;
+              await storage.updateCarpoolRoute({
+                id: route.id,
+                toLatitude: String(location.lat),
+                toLongitude: String(location.lng)
+              });
+              totalUpdated++;
+              results.push({ name: `Route end: ${route.toLocation}`, status: 'success', coords: location });
+            }
+            await new Promise(resolve => setTimeout(resolve, 100));
+          } catch (err) {
+            totalFailed++;
+          }
+        }
+      }
+
+      console.log(`[Geocode] Batch geocoding completed: ${totalUpdated} updated, ${totalFailed} failed`);
+      res.json({ 
+        success: true, 
+        updated: totalUpdated, 
+        failed: totalFailed,
+        details: results 
+      });
+    } catch (error) {
+      console.error("Batch geocode error:", error);
+      res.status(500).json({ message: "Failed to batch geocode pickup points" });
+    }
+  });
+
   // Admin: Get all time slots for a route
   app.get("/api/admin/carpool/routes/:id/time-slots", hasPermission('carpoolRouteManagement', 'view'), async (req, res) => {
     try {

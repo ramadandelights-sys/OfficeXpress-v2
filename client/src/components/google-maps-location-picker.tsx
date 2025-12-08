@@ -104,6 +104,9 @@ export function GoogleMapsLocationPicker({
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
+  // Create a hidden div for PlacesService initialization
+  const placesServiceDivRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     if (!apiKey) {
       setApiError("Google Maps API key not configured");
@@ -115,11 +118,28 @@ export function GoogleMapsLocationPicker({
         autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
         geocoderRef.current = new window.google.maps.Geocoder();
         sessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken();
+        
+        // Create a hidden div for PlacesService (required by Google Maps API)
+        if (!placesServiceDivRef.current) {
+          placesServiceDivRef.current = document.createElement('div');
+          placesServiceDivRef.current.style.display = 'none';
+          document.body.appendChild(placesServiceDivRef.current);
+        }
+        placesServiceRef.current = new window.google.maps.places.PlacesService(placesServiceDivRef.current);
+        
         setApiReady(true);
       })
       .catch((err) => {
         setApiError(err.message);
       });
+
+    return () => {
+      // Clean up hidden div on unmount
+      if (placesServiceDivRef.current && placesServiceDivRef.current.parentNode) {
+        placesServiceDivRef.current.parentNode.removeChild(placesServiceDivRef.current);
+        placesServiceDivRef.current = null;
+      }
+    };
   }, [apiKey]);
 
   useEffect(() => {
