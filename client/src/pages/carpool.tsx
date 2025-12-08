@@ -46,11 +46,13 @@ const subscriptionFormSchema = z.object({
 type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>;
 
 const weekdayOptions = [
-  { value: 'monday', label: 'Monday', short: 'Mon' },
-  { value: 'tuesday', label: 'Tuesday', short: 'Tue' },
-  { value: 'wednesday', label: 'Wednesday', short: 'Wed' },
-  { value: 'thursday', label: 'Thursday', short: 'Thu' },
-  { value: 'friday', label: 'Friday', short: 'Fri' },
+  { value: 'sunday', label: 'Sunday', short: 'Sun', dayNumber: 0 },
+  { value: 'monday', label: 'Monday', short: 'Mon', dayNumber: 1 },
+  { value: 'tuesday', label: 'Tuesday', short: 'Tue', dayNumber: 2 },
+  { value: 'wednesday', label: 'Wednesday', short: 'Wed', dayNumber: 3 },
+  { value: 'thursday', label: 'Thursday', short: 'Thu', dayNumber: 4 },
+  { value: 'friday', label: 'Friday', short: 'Fri', dayNumber: 5 },
+  { value: 'saturday', label: 'Saturday', short: 'Sat', dayNumber: 6 },
 ];
 
 export default function CarpoolPage() {
@@ -372,7 +374,7 @@ export default function CarpoolPage() {
                                 {route.fromLocation} → {route.toLocation}
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
-                                Available: {route.weekdays?.map(d => weekdayOptions[d]?.short || d).join(', ') || 'Mon-Fri'}
+                                Available: {route.weekdays?.map(d => weekdayOptions.find(w => w.dayNumber === d)?.short || d).join(', ') || 'Mon-Fri'}
                               </div>
                               <div className="text-sm font-medium text-primary mt-2">
                                 ৳{route.pricePerSeat}/day
@@ -395,31 +397,30 @@ export default function CarpoolPage() {
                   </p>
                   
                   <div className="space-y-3">
-                    {weekdayOptions.map((weekday) => {
-                      const weekdayIndex = weekdayOptions.findIndex(w => w.value === weekday.value);
-                      const isAvailable = selectedRouteDetails?.weekdays?.includes(weekdayIndex) ?? true;
-                      
-                      return (
-                        <div key={weekday.value} className="flex items-center space-x-3">
-                          <Checkbox
-                            id={weekday.value}
-                            checked={form.watch('weekdays').includes(weekday.value)}
-                            onCheckedChange={() => handleWeekdayToggle(weekday.value)}
-                            disabled={!isAvailable}
-                            data-testid={`checkbox-weekday-${weekday.value}`}
-                          />
-                          <Label
-                            htmlFor={weekday.value}
-                            className={cn(
-                              "cursor-pointer",
-                              !isAvailable && "text-gray-400 line-through"
-                            )}
-                          >
-                            {weekday.label}
-                          </Label>
-                        </div>
-                      );
-                    })}
+                    {weekdayOptions
+                      .filter((weekday) => selectedRouteDetails?.weekdays?.includes(weekday.dayNumber) ?? false)
+                      .length === 0 ? (
+                        <p className="text-sm text-gray-500">No operating days configured for this route.</p>
+                      ) : (
+                        weekdayOptions
+                          .filter((weekday) => selectedRouteDetails?.weekdays?.includes(weekday.dayNumber) ?? false)
+                          .map((weekday) => (
+                            <div key={weekday.value} className="flex items-center space-x-3">
+                              <Checkbox
+                                id={weekday.value}
+                                checked={form.watch('weekdays').includes(weekday.value)}
+                                onCheckedChange={() => handleWeekdayToggle(weekday.value)}
+                                data-testid={`checkbox-weekday-${weekday.value}`}
+                              />
+                              <Label
+                                htmlFor={weekday.value}
+                                className="cursor-pointer"
+                              >
+                                {weekday.label}
+                              </Label>
+                            </div>
+                          ))
+                      )}
                   </div>
 
                   {selectedWeekdays.length > 0 && !calculatingCost && (
