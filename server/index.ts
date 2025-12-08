@@ -27,7 +27,8 @@ app.use(helmet({
         "https://www.gstatic.com",
         "https://www.google-analytics.com",
         "https://ssl.google-analytics.com",
-        "https://replit.com"
+        "https://replit.com",
+        "https://maps.googleapis.com"
       ],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -37,7 +38,10 @@ app.use(helmet({
         "https:", 
         "https://www.facebook.com",
         "https://www.google-analytics.com",
-        "https://ssl.google-analytics.com"
+        "https://ssl.google-analytics.com",
+        "https://maps.gstatic.com",
+        "https://maps.googleapis.com",
+        "https://developers.google.com"
       ],
       connectSrc: [
         "'self'", 
@@ -48,7 +52,8 @@ app.use(helmet({
         "https://www.gstatic.com",
         "https://www.google-analytics.com",
         "https://ssl.google-analytics.com",
-        "https://analytics.google.com"
+        "https://analytics.google.com",
+        "https://maps.googleapis.com"
       ],
       frameSrc: [
         "'self'", 
