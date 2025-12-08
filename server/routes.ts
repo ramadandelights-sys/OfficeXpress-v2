@@ -2210,6 +2210,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Delete pickup point
   app.delete("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
+      // Check for dependent bookings before deleting
+      const dependentBookings = await storage.getCarpoolBookingsByPickupPoint(req.params.id);
+      if (dependentBookings.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this point. It is referenced by ${dependentBookings.length} booking(s). Please reassign or delete those bookings first.` 
+        });
+      }
+      
+      // Check for dependent subscriptions
+      const dependentSubscriptions = await storage.getSubscriptionsByPickupPoint(req.params.id);
+      if (dependentSubscriptions.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this point. It is referenced by ${dependentSubscriptions.length} subscription(s). Please reassign or cancel those subscriptions first.` 
+        });
+      }
+      
       await storage.deleteCarpoolPickupPoint(req.params.id);
       res.json({ success: true });
     } catch (error) {
@@ -2258,6 +2274,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Delete time slot
   app.delete("/api/admin/carpool/time-slots/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
+      // Check for dependent bookings before deleting
+      const dependentBookings = await storage.getCarpoolBookingsByTimeSlot(req.params.id);
+      if (dependentBookings.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this time slot. It is referenced by ${dependentBookings.length} booking(s). Please reassign or delete those bookings first.` 
+        });
+      }
+      
+      // Check for dependent subscriptions
+      const dependentSubscriptions = await storage.getSubscriptionsByTimeSlot(req.params.id);
+      if (dependentSubscriptions.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this time slot. It is referenced by ${dependentSubscriptions.length} subscription(s). Please reassign or cancel those subscriptions first.` 
+        });
+      }
+      
+      // Check for dependent AI trips
+      const dependentTrips = await storage.getTripsByTimeSlot(req.params.id);
+      if (dependentTrips.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this time slot. It is referenced by ${dependentTrips.length} trip(s). Please delete those trips first.` 
+        });
+      }
+      
       await storage.deleteCarpoolTimeSlot(req.params.id);
       res.json({ success: true });
     } catch (error) {

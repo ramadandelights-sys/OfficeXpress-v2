@@ -264,6 +264,11 @@ export interface IStorage {
   updateCarpoolBooking(booking: UpdateCarpoolBooking): Promise<CarpoolBooking>;
   assignDriverToCarpool(bookingId: string, driverId: string): Promise<CarpoolBooking>;
   updateCarpoolBookingStatus(id: string, status: string): Promise<CarpoolBooking>;
+  getCarpoolBookingsByPickupPoint(pickupPointId: string): Promise<CarpoolBooking[]>;
+  getCarpoolBookingsByTimeSlot(timeSlotId: string): Promise<CarpoolBooking[]>;
+  getSubscriptionsByPickupPoint(pickupPointId: string): Promise<Subscription[]>;
+  getSubscriptionsByTimeSlot(timeSlotId: string): Promise<Subscription[]>;
+  getTripsByTimeSlot(timeSlotId: string): Promise<VehicleTrip[]>;
   
   // Carpool blackout date operations
   getCarpoolBlackoutDates(): Promise<CarpoolBlackoutDate[]>;
@@ -1567,6 +1572,47 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Booking not found');
     return updated;
+  }
+
+  async getCarpoolBookingsByPickupPoint(pickupPointId: string): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .where(or(
+        eq(carpoolBookings.boardingPointId, pickupPointId),
+        eq(carpoolBookings.dropOffPointId, pickupPointId)
+      ));
+  }
+
+  async getCarpoolBookingsByTimeSlot(timeSlotId: string): Promise<CarpoolBooking[]> {
+    return await db
+      .select()
+      .from(carpoolBookings)
+      .where(eq(carpoolBookings.timeSlotId, timeSlotId));
+  }
+
+  async getSubscriptionsByPickupPoint(pickupPointId: string): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(or(
+        eq(subscriptions.boardingPointId, pickupPointId),
+        eq(subscriptions.dropOffPointId, pickupPointId)
+      ));
+  }
+
+  async getSubscriptionsByTimeSlot(timeSlotId: string): Promise<Subscription[]> {
+    return await db
+      .select()
+      .from(subscriptions)
+      .where(eq(subscriptions.timeSlotId, timeSlotId));
+  }
+
+  async getTripsByTimeSlot(timeSlotId: string): Promise<VehicleTrip[]> {
+    return await db
+      .select()
+      .from(vehicleTrips)
+      .where(eq(vehicleTrips.timeSlotId, timeSlotId));
   }
 
   // Carpool blackout date operations
