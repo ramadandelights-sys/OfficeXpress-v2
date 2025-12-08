@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft } from "lucide-react";
+import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft, ChevronDown, Eye } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation as useWouterLocation } from "wouter";
@@ -62,6 +63,71 @@ function formatTimeWithAmPm(time: string): string {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
+function RouteDetailsPanel({ routeId }: { routeId: string }) {
+  const { data: pickupPoints = [], isLoading: loadingPickup } = useQuery<CarpoolPickupPoint[]>({
+    queryKey: [`/api/carpool/routes/${routeId}/pickup-points?pointType=pickup`],
+    enabled: !!routeId,
+  });
+
+  const { data: dropOffPoints = [], isLoading: loadingDropoff } = useQuery<CarpoolPickupPoint[]>({
+    queryKey: [`/api/carpool/routes/${routeId}/pickup-points?pointType=dropoff`],
+    enabled: !!routeId,
+  });
+
+  const isLoading = loadingPickup || loadingDropoff;
+
+  return (
+    <div className="px-4 pb-4 pt-0 border-t bg-gray-50 dark:bg-gray-800/50" onClick={(e) => e.stopPropagation()}>
+      {isLoading ? (
+        <div className="py-3 text-sm text-gray-500">Loading route details...</div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-green-600" />
+              Pickup Points ({pickupPoints.length})
+            </h4>
+            {pickupPoints.length === 0 ? (
+              <p className="text-xs text-gray-500">No pickup points configured</p>
+            ) : (
+              <ul className="space-y-1">
+                {pickupPoints
+                  .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+                  .map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-red-600" />
+              Drop-off Points ({dropOffPoints.length})
+            </h4>
+            {dropOffPoints.length === 0 ? (
+              <p className="text-xs text-gray-500">No drop-off points configured</p>
+            ) : (
+              <ul className="space-y-1">
+                {dropOffPoints
+                  .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
+                  .map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CarpoolPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useWouterLocation();
@@ -76,6 +142,7 @@ export default function CarpoolPage() {
   const [selectedRoute, setSelectedRoute] = useState<string>("");
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
+  const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -146,6 +213,21 @@ export default function CarpoolPage() {
     
     form.setValue('weekdays', newWeekdays);
     setSelectedWeekdays(newWeekdays);
+  };
+
+  // Toggle route details expansion
+  const toggleRouteExpansion = (routeId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpandedRoutes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(routeId)) {
+        newSet.delete(routeId);
+      } else {
+        newSet.add(routeId);
+      }
+      return newSet;
+    });
   };
 
   // Handle step navigation
@@ -375,25 +457,48 @@ export default function CarpoolPage() {
                     >
                       {routes.map((route) => (
                         <div key={route.id} className="mb-3">
-                          <Label
-                            htmlFor={route.id}
-                            className="flex items-start space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
-                            data-testid={`route-option-${route.id}`}
-                          >
-                            <RadioGroupItem value={route.id} id={route.id} />
-                            <div className="flex-1">
-                              <div className="font-medium">{route.name}</div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                {route.fromLocation} → {route.toLocation}
+                          <div className="rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800">
+                            <Label
+                              htmlFor={route.id}
+                              className="flex items-start space-x-3 cursor-pointer p-4"
+                              data-testid={`route-option-${route.id}`}
+                            >
+                              <RadioGroupItem value={route.id} id={route.id} />
+                              <div className="flex-1">
+                                <div className="font-medium">{route.name}</div>
+                                <div className="text-sm text-gray-500 mt-1">
+                                  {route.fromLocation} → {route.toLocation}
+                                </div>
+                                <div className="text-sm text-gray-500 mt-1">
+                                  Available: {route.weekdays?.map(d => weekdayOptions.find(w => w.dayNumber === d)?.short || d).join(', ') || 'Mon-Fri'}
+                                </div>
+                                <div className="flex items-center justify-between mt-2">
+                                  <div className="text-sm font-medium text-primary">
+                                    ৳{route.pricePerSeat}/day
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-xs h-7 px-2"
+                                    onClick={(e) => toggleRouteExpansion(route.id, e)}
+                                    data-testid={`button-view-details-${route.id}`}
+                                  >
+                                    <Eye className="h-3 w-3 mr-1" />
+                                    {expandedRoutes.has(route.id) ? 'Hide Details' : 'View Details'}
+                                    {expandedRoutes.has(route.id) ? (
+                                      <ChevronDown className="h-3 w-3 ml-1" />
+                                    ) : (
+                                      <ChevronRight className="h-3 w-3 ml-1" />
+                                    )}
+                                  </Button>
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                Available: {route.weekdays?.map(d => weekdayOptions.find(w => w.dayNumber === d)?.short || d).join(', ') || 'Mon-Fri'}
-                              </div>
-                              <div className="text-sm font-medium text-primary mt-2">
-                                ৳{route.pricePerSeat}/day
-                              </div>
-                            </div>
-                          </Label>
+                            </Label>
+                            
+                            {expandedRoutes.has(route.id) && (
+                              <RouteDetailsPanel routeId={route.id} />
+                            )}
+                          </div>
                         </div>
                       ))}
                     </RadioGroup>
