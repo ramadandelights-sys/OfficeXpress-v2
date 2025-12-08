@@ -770,7 +770,7 @@ export const updateCarpoolRouteSchema = createInsertSchema(carpoolRoutes).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-}).extend({
+}).partial().extend({
   id: z.string(),
 });
 
