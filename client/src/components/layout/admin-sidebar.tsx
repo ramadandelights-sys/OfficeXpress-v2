@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -106,12 +106,20 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const [location, navigate] = useLocation();
   const { user, hasPermission, isSuperAdmin } = useAuth();
   const [openGroups, setOpenGroups] = useState<string[]>(["Content", "Bookings & Forms", "Operations", "Finance", "Settings"]);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
 
   const toggleGroup = (title: string) => {
     setOpenGroups((prev) =>
       prev.includes(title) ? prev.filter((t) => t !== title) : [...prev, title]
     );
   };
+
+  // Scroll to active item when location changes
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, [location]);
 
   const handleLogout = async () => {
     try {
@@ -201,18 +209,22 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pl-4 mt-1 space-y-1">
-                  {filteredItems.map((item) => (
-                    <Button
-                      key={item.href}
-                      variant={location === item.href ? "secondary" : "ghost"}
-                      className="w-full justify-start"
-                      onClick={() => handleNavClick(item.href)}
-                      data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
-                    >
-                      {item.icon}
-                      <span className="ml-2">{item.title}</span>
-                    </Button>
-                  ))}
+                  {filteredItems.map((item) => {
+                    const isActive = location === item.href;
+                    return (
+                      <Button
+                        key={item.href}
+                        ref={isActive ? activeItemRef : undefined}
+                        variant={isActive ? "secondary" : "ghost"}
+                        className="w-full justify-start"
+                        onClick={() => handleNavClick(item.href)}
+                        data-testid={`nav-${item.title.toLowerCase().replace(/\s+/g, "-")}`}
+                      >
+                        {item.icon}
+                        <span className="ml-2">{item.title}</span>
+                      </Button>
+                    );
+                  })}
                 </CollapsibleContent>
               </Collapsible>
             );

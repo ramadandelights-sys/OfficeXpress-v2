@@ -388,7 +388,7 @@ export const carpoolRoutes = pgTable("carpool_routes", {
   estimatedDistance: text("estimated_distance").notNull(),
   description: text("description"),
   pricePerSeat: numeric("price_per_seat", { precision: 10, scale: 2 }).notNull(),
-  weekdays: json("weekdays").$type<number[]>().default([1, 2, 3, 4, 5]), // 0=Sunday, 1=Monday, etc.
+  weekdays: integer("weekdays").array().default([1, 2, 3, 4, 5]), // 0=Sunday, 1=Monday, etc.
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
