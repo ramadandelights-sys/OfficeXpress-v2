@@ -403,6 +403,7 @@ export const carpoolPickupPoints = pgTable("carpool_pickup_points", {
   latitude: numeric("latitude", { precision: 10, scale: 7 }),
   longitude: numeric("longitude", { precision: 10, scale: 7 }),
   sequenceOrder: integer("sequence_order").notNull(),
+  isVisible: boolean("is_visible").default(true), // Whether point is visible to customers
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

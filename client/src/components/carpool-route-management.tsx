@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download, GripVertical } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download, GripVertical, Eye, EyeOff } from "lucide-react";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -176,6 +176,21 @@ export default function CarpoolRouteManagement() {
     onError: (error) => {
       toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
       setDeletePickupPointId(null);
+    },
+  });
+
+  // Toggle visibility mutation
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async ({ id, isVisible }: { id: string; isVisible: boolean }) => {
+      return await apiRequest('PUT', `/api/admin/carpool/pickup-points/${id}`, { isVisible });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'] });
+      toast({ title: "Success", description: "Visibility updated" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
     },
   });
 
@@ -554,6 +569,7 @@ export default function CarpoolRouteManagement() {
                           key={point.id}
                           point={point}
                           onDelete={() => setDeletePickupPointId(point.id)}
+                          onToggleVisibility={() => toggleVisibilityMutation.mutate({ id: point.id, isVisible: point.isVisible === false })}
                           testIdPrefix="pickup-point"
                         />
                       ))}
@@ -604,6 +620,7 @@ export default function CarpoolRouteManagement() {
                           key={point.id}
                           point={point}
                           onDelete={() => setDeleteDropOffPointId(point.id)}
+                          onToggleVisibility={() => toggleVisibilityMutation.mutate({ id: point.id, isVisible: point.isVisible === false })}
                           testIdPrefix="dropoff-point"
                         />
                       ))}
@@ -1627,10 +1644,12 @@ function HolidayImportDialog({
 function SortablePointItem({
   point,
   onDelete,
+  onToggleVisibility,
   testIdPrefix,
 }: {
   point: CarpoolPickupPoint;
   onDelete: () => void;
+  onToggleVisibility: () => void;
   testIdPrefix: string;
 }) {
   const {
@@ -1648,13 +1667,15 @@ function SortablePointItem({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const isVisible = point.isVisible !== false;
+
   return (
     <div
       ref={setNodeRef}
       style={style}
       className={`flex items-center justify-between p-3 border rounded-lg bg-white ${
         isDragging ? 'shadow-lg' : ''
-      }`}
+      } ${!isVisible ? 'opacity-60 bg-gray-50' : ''}`}
       data-testid={`${testIdPrefix}-${point.id}`}
     >
       <div className="flex items-center gap-3">
@@ -1667,18 +1688,38 @@ function SortablePointItem({
           <GripVertical className="h-4 w-4 text-gray-400" />
         </button>
         <div>
-          <div className="font-medium">{point.name}</div>
+          <div className="font-medium flex items-center gap-2">
+            {point.name}
+            {!isVisible && (
+              <span className="text-xs text-gray-400">(Hidden)</span>
+            )}
+          </div>
           <div className="text-sm text-gray-500">Order: {point.sequenceOrder}</div>
         </div>
       </div>
-      <Button
-        variant="destructive"
-        size="sm"
-        onClick={onDelete}
-        data-testid={`button-delete-${testIdPrefix}-${point.id}`}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onToggleVisibility}
+          title={isVisible ? 'Hide from customers' : 'Show to customers'}
+          data-testid={`button-toggle-visibility-${point.id}`}
+        >
+          {isVisible ? (
+            <Eye className="h-4 w-4 text-green-600" />
+          ) : (
+            <EyeOff className="h-4 w-4 text-gray-400" />
+          )}
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={onDelete}
+          data-testid={`button-delete-${testIdPrefix}-${point.id}`}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

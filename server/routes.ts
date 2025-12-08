@@ -2007,7 +2007,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const pointType = req.query.pointType as string | undefined;
       const points = await storage.getCarpoolPickupPoints(req.params.id, pointType);
-      res.json(points);
+      // Filter to only show visible points to customers (public API)
+      const visiblePoints = points.filter(p => p.isVisible !== false);
+      res.json(visiblePoints);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch pickup points" });
     }
