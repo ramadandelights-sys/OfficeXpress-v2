@@ -67,12 +67,6 @@ export default function CarpoolPage() {
   const [selectedRoute, setSelectedRoute] = useState<string>("");
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
-  
-  // Redirect to login if not authenticated
-  if (!authLoading && !user) {
-    setLocation("/login");
-    return null;
-  }
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -149,6 +143,16 @@ export default function CarpoolPage() {
         title: "Please select a route",
         variant: "destructive",
       });
+      return;
+    }
+    
+    // Require login to proceed past step 1
+    if (currentStep === 1 && !user) {
+      toast({
+        title: "Login Required",
+        description: "Please log in to subscribe to a route",
+      });
+      setLocation("/login?redirect=/carpool");
       return;
     }
     
@@ -365,13 +369,13 @@ export default function CarpoolPage() {
                             <div className="flex-1">
                               <div className="font-medium">{route.name}</div>
                               <div className="text-sm text-gray-500 mt-1">
-                                {route.startPoint} → {route.endPoint}
+                                {route.fromLocation} → {route.toLocation}
                               </div>
                               <div className="text-sm text-gray-500 mt-1">
-                                Available: {route.availableWeekdays?.join(', ') || 'Mon-Fri'}
+                                Available: {route.weekdays?.map(d => weekdayOptions[d]?.short || d).join(', ') || 'Mon-Fri'}
                               </div>
                               <div className="text-sm font-medium text-primary mt-2">
-                                ৳{route.perSeatPrice}/day
+                                ৳{route.pricePerSeat}/day
                               </div>
                             </div>
                           </Label>
@@ -392,7 +396,8 @@ export default function CarpoolPage() {
                   
                   <div className="space-y-3">
                     {weekdayOptions.map((weekday) => {
-                      const isAvailable = selectedRouteDetails?.availableWeekdays?.includes(weekday.value) ?? true;
+                      const weekdayIndex = weekdayOptions.findIndex(w => w.value === weekday.value);
+                      const isAvailable = selectedRouteDetails?.weekdays?.includes(weekdayIndex) ?? true;
                       
                       return (
                         <div key={weekday.value} className="flex items-center space-x-3">
@@ -424,7 +429,7 @@ export default function CarpoolPage() {
                         Estimated monthly cost: <strong>৳{monthlyTotal.toFixed(2)}</strong>
                         <br />
                         <span className="text-xs text-gray-500">
-                          ({selectedWeekdays.length} days × 4.33 weeks × ৳{selectedRouteDetails?.perSeatPrice})
+                          ({selectedWeekdays.length} days × 4.33 weeks × ৳{selectedRouteDetails?.pricePerSeat})
                         </span>
                       </AlertDescription>
                     </Alert>
@@ -462,10 +467,7 @@ export default function CarpoolPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">{slot.officeEntryTime}</span>
-                              </div>
-                              <div className="text-sm text-gray-500 mt-1">
-                                Departure: {slot.departureTime}
+                                <span className="font-medium">Departure: {slot.departureTime}</span>
                               </div>
                             </div>
                           </Label>
@@ -510,11 +512,6 @@ export default function CarpoolPage() {
                                     <div className="flex items-center gap-2">
                                       <MapPin className="w-3 h-3" />
                                       {point.name}
-                                      {point.landmark && (
-                                        <span className="text-xs text-gray-500">
-                                          ({point.landmark})
-                                        </span>
-                                      )}
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -547,11 +544,6 @@ export default function CarpoolPage() {
                                     <div className="flex items-center gap-2">
                                       <MapPin className="w-3 h-3" />
                                       {point.name}
-                                      {point.landmark && (
-                                        <span className="text-xs text-gray-500">
-                                          ({point.landmark})
-                                        </span>
-                                      )}
                                     </div>
                                   </SelectItem>
                                 ))}
@@ -590,7 +582,7 @@ export default function CarpoolPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Time Slot:</span>
                         <span className="font-medium">
-                          {timeSlots.find(ts => ts.id === form.watch('timeSlotId'))?.officeEntryTime}
+                          {timeSlots.find(ts => ts.id === form.watch('timeSlotId'))?.departureTime}
                         </span>
                       </div>
                       
