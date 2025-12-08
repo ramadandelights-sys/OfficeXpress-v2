@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLogin } from "@/hooks/useAuth";
 import { useLocation, Link } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Car, UserPlus, LogIn, Sparkles, MapPin, Clock, Shield, Phone, Mail, User, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { UserPlus, LogIn, MapPin, Clock, Shield, Bus, Phone, Mail, User, Lock, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
@@ -17,6 +17,13 @@ export default function LoginPage() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const login = useLogin();
+
+  // Fetch company logo
+  const { data: logoData } = useQuery<{ src: string; hasCustomLogo: boolean }>({
+    queryKey: ['/api/logo'],
+    staleTime: 5 * 60 * 1000,
+  });
+  const logoSrc = logoData?.src || "/logo.jpg";
 
   // Sign In state
   const [loginPhone, setLoginPhone] = useState("");
@@ -99,35 +106,36 @@ export default function LoginPage() {
   };
 
   const features = [
-    { icon: MapPin, text: "Daily commute routes", color: "text-green-500" },
-    { icon: Clock, text: "Flexible scheduling", color: "text-blue-500" },
-    { icon: Shield, text: "Safe & reliable", color: "text-purple-500" },
-    { icon: Car, text: "Premium vehicles", color: "text-orange-500" },
+    { icon: MapPin, text: "Daily commute routes" },
+    { icon: Clock, text: "Flexible scheduling" },
+    { icon: Shield, text: "Safe & reliable" },
+    { icon: Bus, text: "Premium vehicles" },
   ];
 
   return (
     <div className="min-h-screen flex">
       {/* Left side - Branding & Features (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-brand-primary via-green-600 to-teal-700 p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-[#A8E6CF] via-[#88D4AB] to-[#B2DFDB] p-12 flex-col justify-between relative overflow-hidden">
         {/* Decorative circles */}
-        <div className="absolute top-20 right-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 left-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
+        <div className="absolute top-20 right-20 w-64 h-64 bg-white/20 rounded-full blur-3xl" />
+        <div className="absolute bottom-20 left-10 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
         
         <div className="relative z-10">
           <Link href="/">
             <div className="flex items-center gap-3 mb-8 cursor-pointer hover:opacity-90 transition-opacity">
-              <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                <Car className="w-7 h-7 text-brand-primary" />
-              </div>
-              <span className="text-2xl font-bold text-white">OfficeXpress</span>
+              <img 
+                src={logoSrc} 
+                alt="OfficeXpress Logo" 
+                className="h-14 w-auto object-contain"
+              />
             </div>
           </Link>
           
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 className="text-4xl font-bold text-gray-800 mb-4">
             Your Daily Commute,<br />
-            <span className="text-yellow-300">Simplified</span>
+            <span className="text-[#2D5A45]">Simplified</span>
           </h1>
-          <p className="text-white/80 text-lg max-w-md">
+          <p className="text-gray-700 text-lg max-w-md">
             Join thousands of professionals who trust OfficeXpress for their daily office transportation needs.
           </p>
         </div>
@@ -139,23 +147,23 @@ export default function LoginPage() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.1 + 0.3 }}
-              className="flex items-center gap-3 text-white"
+              className="flex items-center gap-3 text-gray-800"
             >
-              <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+              <div className="w-10 h-10 bg-white/50 rounded-lg flex items-center justify-center backdrop-blur-sm">
                 <feature.icon className="w-5 h-5" />
               </div>
-              <span className="text-lg">{feature.text}</span>
+              <span className="text-lg font-medium">{feature.text}</span>
             </motion.div>
           ))}
         </div>
 
-        <div className="relative z-10 text-white/60 text-sm">
+        <div className="relative z-10 text-gray-600 text-sm">
           © 2024 OfficeXpress. Professional transportation services.
         </div>
       </div>
 
       {/* Right side - Auth Forms */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gradient-to-br from-[#F5FBF7] to-[#E8F5E9] dark:from-gray-900 dark:to-gray-800">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -163,19 +171,24 @@ export default function LoginPage() {
           className="w-full max-w-md"
         >
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center justify-center gap-2 mb-6">
-            <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center">
-              <Car className="w-6 h-6 text-white" />
-            </div>
-            <span className="text-xl font-bold text-gray-800 dark:text-white">OfficeXpress</span>
+          <div className="lg:hidden flex items-center justify-center mb-6">
+            <Link href="/">
+              <img 
+                src={logoSrc} 
+                alt="OfficeXpress Logo" 
+                className="h-12 w-auto object-contain cursor-pointer"
+              />
+            </Link>
           </div>
 
-          <Card className="shadow-xl border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm">
+          <Card className="shadow-xl border-0 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm">
             <CardHeader className="space-y-1 pb-4">
               <div className="flex items-center justify-center mb-2">
-                <div className="w-14 h-14 bg-gradient-to-br from-brand-primary to-green-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Sparkles className="w-7 h-7 text-white" />
-                </div>
+                <img 
+                  src={logoSrc} 
+                  alt="OfficeXpress" 
+                  className="h-16 w-auto object-contain"
+                />
               </div>
               <CardTitle className="text-2xl text-center">
                 {activeTab === "signin" ? "Welcome Back!" : "Join Us!"}
@@ -260,7 +273,7 @@ export default function LoginPage() {
 
                       <Button
                         type="submit"
-                        className="w-full h-12 text-base font-semibold bg-gradient-to-r from-brand-primary to-green-600 hover:from-brand-primary/90 hover:to-green-600/90"
+                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
                         disabled={login.isPending}
                         data-testid="button-login"
                       >
@@ -369,7 +382,7 @@ export default function LoginPage() {
 
                       <Button
                         type="submit"
-                        className="w-full h-12 text-base font-semibold bg-gradient-to-r from-brand-primary to-green-600 hover:from-brand-primary/90 hover:to-green-600/90"
+                        className="w-full h-12 text-base font-semibold bg-primary hover:bg-primary/90"
                         disabled={register.isPending}
                         data-testid="button-signup"
                       >
