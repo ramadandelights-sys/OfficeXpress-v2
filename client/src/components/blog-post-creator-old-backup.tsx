@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import DOMPurify from "isomorphic-dompurify";
 import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Paste, RotateCcw } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   // Sync content between rich text editor and form state
   useEffect(() => {
     if (contentRef.current && watchedContent && contentRef.current.innerHTML !== watchedContent) {
-      contentRef.current.innerHTML = watchedContent;
+      contentRef.current.innerHTML = DOMPurify.sanitize(watchedContent);
     }
   }, [watchedContent]);
 
