@@ -11,7 +11,9 @@
     "blog": "ブログ",
     "dashboard": "ダッシュボード",
     "adminPanel": "管理パネル",
-    "moreAbout": "OfficeXpressについて"
+    "moreAbout": "OfficeXpressについて",
+    "otherServices": "その他のサービス",
+    "account": "アカウント"
   },
   "auth": {
     "login": "ログイン",

@@ -11,7 +11,9 @@
     "blog": "Blog",
     "dashboard": "Dashboard",
     "adminPanel": "Admin Panel",
-    "moreAbout": "More About OfficeXpress"
+    "moreAbout": "More About OfficeXpress",
+    "otherServices": "Other Services",
+    "account": "Account"
   },
   "auth": {
     "login": "Login",

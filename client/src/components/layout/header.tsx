@@ -41,48 +41,66 @@ export default function Header() {
   
   const pendingComplaintsCount = Array.isArray(pendingComplaints) ? pendingComplaints.length : 0;
 
-  const navigation = [
+  // Large screens (lg+): Home, Office Commute, Rental, Blog, Contact
+  const lgNavigation = [
     { name: t('nav.home'), href: "/" },
-    { name: t('nav.corporate'), href: "/corporate" },
-    { name: t('nav.rental'), href: "/rental" },
     { name: t('nav.carpool'), href: "/carpool" },
-    { name: t('nav.vendors'), href: "/vendor" },
+    { name: t('nav.rental'), href: "/rental" },
+    { name: t('nav.blog'), href: "/blog" },
     { name: t('nav.contact'), href: "/contact" },
   ];
 
-  const moreAboutItems = [
-    { name: t('nav.about'), href: "/about" },
-    { name: t('nav.portfolio'), href: "/portfolio" },
+  // Large screens: Other Services dropdown items (Corporate, Vendors)
+  const lgOtherServices = [
+    { name: t('nav.corporate'), href: "/corporate" },
+    { name: t('nav.vendors'), href: "/vendor" },
+  ];
+
+  // Medium screens (md to lg): Home, Office Commute, Blog, Contact
+  const mdNavigation = [
+    { name: t('nav.home'), href: "/" },
+    { name: t('nav.carpool'), href: "/carpool" },
+    { name: t('nav.blog'), href: "/blog" },
+    { name: t('nav.contact'), href: "/contact" },
+  ];
+
+  // Medium screens: Other Services dropdown items (Corporate, Vendor, Rental)
+  const mdOtherServices = [
+    { name: t('nav.corporate'), href: "/corporate" },
+    { name: t('nav.vendors'), href: "/vendor" },
+    { name: t('nav.rental'), href: "/rental" },
+  ];
+
+  // Mobile navigation for non-logged-in users
+  const mobileNavigation = [
+    { name: t('nav.home'), href: "/" },
+    { name: t('nav.carpool'), href: "/carpool" },
+    { name: t('nav.rental'), href: "/rental" },
+    { name: t('nav.corporate'), href: "/corporate" },
+    { name: t('nav.vendors'), href: "/vendor" },
     { name: t('nav.blog'), href: "/blog" },
   ];
 
-  // Grouped navigation for logged-in users (mobile)
-  const groupedNavigation = user ? [
+  // Grouped navigation for mobile (both logged-in and non-logged-in)
+  const groupedMobileNavigation = [
     {
       header: t('services.header'),
       items: [
-        { name: t('nav.corporate'), href: "/corporate" },
-        { name: t('nav.rental'), href: "/rental" },
         { name: t('nav.carpool'), href: "/carpool" },
-      ]
-    },
-    {
-      header: t('company.header'),
-      items: [
-        { name: t('nav.about'), href: "/about" },
-        { name: t('nav.contact'), href: "/contact" },
+        { name: t('nav.rental'), href: "/rental" },
+        { name: t('nav.corporate'), href: "/corporate" },
+        { name: t('nav.vendors'), href: "/vendor" },
       ]
     },
     {
       header: t('common.other'),
       items: [
         { name: t('nav.home'), href: "/" },
-        { name: t('nav.portfolio'), href: "/portfolio" },
-        { name: t('nav.vendors'), href: "/vendor" },
         { name: t('nav.blog'), href: "/blog" },
+        { name: t('nav.contact'), href: "/contact" },
       ]
     }
-  ] : null;
+  ];
 
   const handleLogout = async () => {
     try {
@@ -98,6 +116,10 @@ export default function Header() {
   const isActive = (href: string) => {
     if (href === "/") return location === "/";
     return location.startsWith(href);
+  };
+
+  const isOtherServicesActive = (items: { href: string }[]) => {
+    return items.some(item => isActive(item.href));
   };
 
   return (
@@ -117,9 +139,9 @@ export default function Header() {
             </Link>
           </div>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-4">
-            {navigation.map((item) => (
+          {/* Desktop Navigation - Large screens (lg+) */}
+          <nav className="hidden lg:flex items-center space-x-4">
+            {lgNavigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
@@ -134,24 +156,24 @@ export default function Header() {
               </Link>
             ))}
             
-            {/* More About OfficeXpress Dropdown */}
+            {/* Other Services Dropdown - Large screens */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                    isActive("/about") || isActive("/portfolio") || isActive("/blog")
+                    isOtherServicesActive(lgOtherServices)
                       ? "bg-brand-primary text-primary-foreground"
                       : "text-foreground hover:text-primary hover:bg-brand-primary/10"
                   }`}
-                  data-testid="nav-more-about"
+                  data-testid="nav-other-services"
                 >
-                  {t('nav.moreAbout')}
+                  {t('nav.otherServices')}
                   <ChevronDown className="w-3 h-3" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                {moreAboutItems.map((item) => (
+                {lgOtherServices.map((item) => (
                   <DropdownMenuItem key={item.name} asChild>
                     <Link
                       href={item.href}
@@ -271,6 +293,160 @@ export default function Header() {
             )}
           </nav>
 
+          {/* Desktop Navigation - Medium screens (md to lg) */}
+          <nav className="hidden md:flex lg:hidden items-center space-x-4">
+            {mdNavigation.map((item) => (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm ${
+                  isActive(item.href)
+                    ? "bg-brand-primary text-primary-foreground"
+                    : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                }`}
+                data-testid={`nav-md-${item.name.toLowerCase().replace(" ", "-")}`}
+              >
+                {item.name}
+              </Link>
+            ))}
+            
+            {/* Other Services Dropdown - Medium screens */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                    isOtherServicesActive(mdOtherServices)
+                      ? "bg-brand-primary text-primary-foreground"
+                      : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                  }`}
+                  data-testid="nav-md-other-services"
+                >
+                  {t('nav.otherServices')}
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                {mdOtherServices.map((item) => (
+                  <DropdownMenuItem key={item.name} asChild>
+                    <Link
+                      href={item.href}
+                      className={`cursor-pointer ${
+                        isActive(item.href) ? "bg-brand-primary/10" : ""
+                      }`}
+                      data-testid={`dropdown-md-${item.name.toLowerCase().replace(" ", "-")}`}
+                    >
+                      {item.name}
+                    </Link>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            
+            {/* Auth Navigation - Medium screens */}
+            {!authLoading && (
+              <>
+                {user ? (
+                  <>
+                    {/* Wallet Link for all logged-in users */}
+                    <Link
+                      href="/wallet"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                        isActive("/wallet")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-md-wallet"
+                    >
+                      <Wallet className="w-4 h-4" />
+                      My Wallet
+                    </Link>
+                    
+                    {/* Subscriptions Link for all logged-in users */}
+                    <Link
+                      href="/my-subscriptions"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                        isActive("/my-subscriptions")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-md-subscriptions"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Subscriptions
+                    </Link>
+                    
+                    {/* File Complaint Link for all logged-in users */}
+                    <Link
+                      href="/complaints"
+                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 relative ${
+                        isActive("/complaints")
+                          ? "bg-brand-primary text-primary-foreground"
+                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                      }`}
+                      data-testid="nav-md-complaints"
+                    >
+                      <MessageSquarePlus className="w-4 h-4" />
+                      File Complaint
+                      {pendingComplaintsCount > 0 && (
+                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                          {pendingComplaintsCount}
+                        </span>
+                      )}
+                    </Link>
+                    
+                    {user.role === 'customer' && (
+                      <Link
+                        href="/dashboard"
+                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                          isActive("/dashboard")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        data-testid="nav-md-dashboard"
+                      >
+                        <User className="w-4 h-4" />
+                        {t('nav.dashboard')}
+                      </Link>
+                    )}
+                    {(user.role === 'employee' || user.role === 'superadmin') && (
+                      <Link
+                        href="/admin"
+                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
+                          isActive("/admin")
+                            ? "bg-brand-primary text-primary-foreground"
+                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
+                        }`}
+                        data-testid="nav-md-admin"
+                      >
+                        <Settings className="w-4 h-4" />
+                        {t('nav.adminPanel')}
+                      </Link>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleLogout}
+                      className="flex items-center gap-1"
+                      data-testid="button-md-logout"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      {t('auth.logout')}
+                    </Button>
+                  </>
+                ) : (
+                  <Link
+                    href="/login"
+                    className="font-medium transition-colors px-3 py-2 rounded-lg text-sm bg-brand-primary text-primary-foreground hover:bg-brand-primary/90"
+                    data-testid="nav-md-login"
+                  >
+                    {t('auth.login')}
+                  </Link>
+                )}
+              </>
+            )}
+          </nav>
+
           {/* Language Selector, Search & Mobile Menu */}
           <div className="flex items-center space-x-2 absolute right-4 md:relative md:right-auto md:ml-6">
             <LanguageSelector />
@@ -301,37 +477,17 @@ export default function Header() {
         {isMobileMenuOpen && (
           <div className="md:hidden border-t border-border py-4">
             <nav className="flex flex-col space-y-4">
-              {/* Show grouped navigation when logged in, otherwise show regular navigation */}
-              {groupedNavigation ? (
-                groupedNavigation.map((group) => (
-                  <div key={group.header} className="space-y-2">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
-                      {group.header}
-                    </div>
-                    {group.items.map((item) => (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={`font-medium transition-colors px-3 py-2 rounded-lg block ${
-                          isActive(item.href)
-                            ? "bg-brand-primary text-primary-foreground"
-                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                        }`}
-                        onClick={() => setIsMobileMenuOpen(false)}
-                        data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
-                      >
-                        {item.name}
-                      </Link>
-                    ))}
+              {/* Always show grouped navigation on mobile */}
+              {groupedMobileNavigation.map((group) => (
+                <div key={group.header} className="space-y-2">
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
+                    {group.header}
                   </div>
-                ))
-              ) : (
-                <>
-                  {navigation.map((item) => (
+                  {group.items.map((item) => (
                     <Link
                       key={item.name}
                       href={item.href}
-                      className={`font-medium transition-colors px-3 py-2 rounded-lg ${
+                      className={`font-medium transition-colors px-3 py-2 rounded-lg block ${
                         isActive(item.href)
                           ? "bg-brand-primary text-primary-foreground"
                           : "text-foreground hover:text-primary hover:bg-brand-primary/10"
@@ -342,29 +498,17 @@ export default function Header() {
                       {item.name}
                     </Link>
                   ))}
-                  {moreAboutItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      href={item.href}
-                      className={`font-medium transition-colors px-3 py-2 rounded-lg ${
-                        isActive(item.href)
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      data-testid={`mobile-nav-${item.name.toLowerCase().replace(" ", "-")}`}
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                </>
-              )}
+                </div>
+              ))}
               
               {/* Mobile Auth Navigation */}
               {!authLoading && (
                 <>
                   {user ? (
-                    <>
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider px-3 py-1">
+                        {t('nav.account')}
+                      </div>
                       {/* Wallet Link for all logged-in users */}
                       <Link
                         href="/wallet"
@@ -457,7 +601,7 @@ export default function Header() {
                         <LogOut className="w-4 h-4" />
                         {t('auth.logout')}
                       </Button>
-                    </>
+                    </div>
                   ) : (
                     <Link
                       href="/login"

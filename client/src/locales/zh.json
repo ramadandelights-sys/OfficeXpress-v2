@@ -11,7 +11,9 @@
     "blog": "博客",
     "dashboard": "仪表板",
     "adminPanel": "管理面板",
-    "moreAbout": "了解更多关于OfficeXpress"
+    "moreAbout": "了解更多关于OfficeXpress",
+    "otherServices": "其他服务",
+    "account": "账户"
   },
   "auth": {
     "login": "登录",
