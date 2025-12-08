@@ -143,50 +143,37 @@ export function GoogleMapsLocationPicker({
   }, []);
 
   useEffect(() => {
-    if (!mapDialogOpen || !apiReady || !mapContainerRef.current) return;
+    if (!mapDialogOpen || !apiReady) return;
 
-    const defaultCenter = { lat: 23.8103, lng: 90.4125 };
-    const center = selectedCoords || defaultCenter;
+    let timeoutId: NodeJS.Timeout | null = null;
+    let mapInstance: google.maps.Map | null = null;
 
-    const map = new window.google.maps.Map(mapContainerRef.current, {
-      center,
-      zoom: selectedCoords ? 15 : 12,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+    // Small delay to ensure dialog content is rendered
+    const initMap = () => {
+      if (!mapContainerRef.current) {
+        // Retry after a short delay if container not ready
+        timeoutId = setTimeout(initMap, 100);
+        return;
+      }
 
-    mapRef.current = map;
-    placesServiceRef.current = new window.google.maps.places.PlacesService(map);
+      const defaultCenter = { lat: 23.8103, lng: 90.4125 };
+      const center = selectedCoords || defaultCenter;
 
-    if (selectedCoords) {
-      const marker = new window.google.maps.Marker({
-        position: selectedCoords,
-        map,
-        draggable: true,
+      const map = new window.google.maps.Map(mapContainerRef.current, {
+        center,
+        zoom: selectedCoords ? 15 : 12,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
       });
-      markerRef.current = marker;
 
-      marker.addListener("dragend", () => {
-        const pos = marker.getPosition();
-        if (pos) {
-          setSelectedCoords({ lat: pos.lat(), lng: pos.lng() });
-        }
-      });
-    }
+      mapRef.current = map;
+      mapInstance = map;
+      placesServiceRef.current = new window.google.maps.places.PlacesService(map);
 
-    map.addListener("click", (e: google.maps.MapMouseEvent) => {
-      const latLng = e.latLng;
-      if (!latLng) return;
-
-      const newCoords = { lat: latLng.lat(), lng: latLng.lng() };
-      setSelectedCoords(newCoords);
-
-      if (markerRef.current) {
-        markerRef.current.setPosition(newCoords);
-      } else {
+      if (selectedCoords) {
         const marker = new window.google.maps.Marker({
-          position: newCoords,
+          position: selectedCoords,
           map,
           draggable: true,
         });
@@ -199,9 +186,40 @@ export function GoogleMapsLocationPicker({
           }
         });
       }
-    });
+
+      map.addListener("click", (e: google.maps.MapMouseEvent) => {
+        const latLng = e.latLng;
+        if (!latLng) return;
+
+        const newCoords = { lat: latLng.lat(), lng: latLng.lng() };
+        setSelectedCoords(newCoords);
+
+        if (markerRef.current) {
+          markerRef.current.setPosition(newCoords);
+        } else {
+          const marker = new window.google.maps.Marker({
+            position: newCoords,
+            map,
+            draggable: true,
+          });
+          markerRef.current = marker;
+
+          marker.addListener("dragend", () => {
+            const pos = marker.getPosition();
+            if (pos) {
+              setSelectedCoords({ lat: pos.lat(), lng: pos.lng() });
+            }
+          });
+        }
+      });
+    };
+
+    initMap();
 
     return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
       if (markerRef.current) {
         markerRef.current.setMap(null);
         markerRef.current = null;

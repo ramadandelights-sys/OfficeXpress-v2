@@ -151,8 +151,9 @@ export default function CarpoolRouteManagement() {
   // Create pickup point mutation
   const createPickupPointMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
-      // Auto-assign sequence order based on existing points count
-      const nextOrder = pickupPoints.length + 1;
+      // Auto-assign sequence order based on max existing order (to avoid conflicts with hidden points)
+      const maxOrder = pickupPoints.reduce((max, p) => Math.max(max, p.sequenceOrder || 0), 0);
+      const nextOrder = maxOrder + 1;
       return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'pickup', sequenceOrder: nextOrder });
     },
     onSuccess: () => {
@@ -199,8 +200,9 @@ export default function CarpoolRouteManagement() {
   // Create drop-off point mutation
   const createDropOffPointMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
-      // Auto-assign sequence order based on existing points count
-      const nextOrder = dropOffPoints.length + 1;
+      // Auto-assign sequence order based on max existing order (to avoid conflicts with hidden points)
+      const maxOrder = dropOffPoints.reduce((max, p) => Math.max(max, p.sequenceOrder || 0), 0);
+      const nextOrder = maxOrder + 1;
       return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'dropoff', sequenceOrder: nextOrder });
     },
     onSuccess: () => {
