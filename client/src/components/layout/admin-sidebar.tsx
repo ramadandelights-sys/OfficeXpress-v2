@@ -65,7 +65,6 @@ const navGroups: NavGroup[] = [
     icon: <ClipboardList className="h-4 w-4" />,
     items: [
       { title: "Corporate", href: "/admin/bookings/corporate", icon: <Building className="h-4 w-4" />, permission: "corporateBookings" },
-      { title: "Rental", href: "/admin/bookings/rental", icon: <Car className="h-4 w-4" />, permission: "rentalBookings" },
       { title: "Vendor", href: "/admin/bookings/vendor", icon: <UserPlus className="h-4 w-4" />, permission: "vendorRegistrations" },
       { title: "Contact", href: "/admin/bookings/contact", icon: <MessageSquare className="h-4 w-4" />, permission: "contactMessages" },
     ],
@@ -74,6 +73,7 @@ const navGroups: NavGroup[] = [
     title: "Operations",
     icon: <Truck className="h-4 w-4" />,
     items: [
+      { title: "Rental", href: "/admin/operations/rental", icon: <Car className="h-4 w-4" />, permission: "rentalBookings" },
       { title: "Carpool Routes", href: "/admin/operations/routes", icon: <MapPin className="h-4 w-4" />, permission: "carpoolRouteManagement" },
       { title: "Carpool Bookings", href: "/admin/operations/bookings", icon: <Calendar className="h-4 w-4" />, permission: "carpoolBookings" },
       { title: "Drivers", href: "/admin/operations/drivers", icon: <Car className="h-4 w-4" />, permission: "driverManagement" },

@@ -7,13 +7,13 @@ import AdminBlogPage from "./content/blog";
 import AdminPortfolioPage from "./content/portfolio";
 import AdminLegalPage from "./content/legal";
 import AdminCorporatePage from "./bookings/corporate";
-import AdminRentalPage from "./bookings/rental";
 import AdminVendorPage from "./bookings/vendor";
 import AdminContactPage from "./bookings/contact";
 import AdminRoutesPage from "./operations/routes";
 import AdminCarpoolBookingsPage from "./operations/bookings";
 import AdminDriversPage from "./operations/drivers";
 import AdminBlackoutPage from "./operations/blackout";
+import AdminRentalPage from "./operations/rental";
 import AdminWalletsPage from "./finance/wallets";
 import AdminRefundsPage from "./finance/refunds";
 import AdminSubscriptionsPage from "./finance/subscriptions";
@@ -59,13 +59,13 @@ export default function AdminRouter() {
       <Route path="/admin/content/portfolio" component={() => <AdminLayout title="Portfolio Clients"><AdminPortfolioPage /></AdminLayout>} />
       <Route path="/admin/content/legal" component={() => <AdminLayout title="Legal Pages"><AdminLegalPage /></AdminLayout>} />
       <Route path="/admin/bookings/corporate" component={() => <AdminLayout title="Corporate Bookings"><AdminCorporatePage /></AdminLayout>} />
-      <Route path="/admin/bookings/rental" component={() => <AdminLayout title="Rental Bookings"><AdminRentalPage /></AdminLayout>} />
       <Route path="/admin/bookings/vendor" component={() => <AdminLayout title="Vendor Registrations"><AdminVendorPage /></AdminLayout>} />
       <Route path="/admin/bookings/contact" component={() => <AdminLayout title="Contact Messages"><AdminContactPage /></AdminLayout>} />
       <Route path="/admin/operations/routes" component={() => <AdminLayout title="Carpool Routes"><AdminRoutesPage /></AdminLayout>} />
       <Route path="/admin/operations/bookings" component={() => <AdminLayout title="Carpool Bookings"><AdminCarpoolBookingsPage /></AdminLayout>} />
       <Route path="/admin/operations/drivers" component={() => <AdminLayout title="Driver Management"><AdminDriversPage /></AdminLayout>} />
       <Route path="/admin/operations/blackout" component={() => <AdminLayout title="Blackout Dates"><AdminBlackoutPage /></AdminLayout>} />
+      <Route path="/admin/operations/rental" component={() => <AdminLayout title="Rental Bookings"><AdminRentalPage /></AdminLayout>} />
       <Route path="/admin/finance/wallets" component={() => <AdminLayout title="Wallet Management"><AdminWalletsPage /></AdminLayout>} />
       <Route path="/admin/finance/refunds" component={() => <AdminLayout title="Refund Management"><AdminRefundsPage /></AdminLayout>} />
       <Route path="/admin/finance/subscriptions" component={() => <AdminLayout title="Subscription Management"><AdminSubscriptionsPage /></AdminLayout>} />
