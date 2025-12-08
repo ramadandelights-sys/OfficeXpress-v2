@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown, Wallet, Calendar, MessageSquarePlus } from "lucide-react";
+import { Car, Search, Menu, X, User, LogOut, Settings, ChevronDown, Wallet, Calendar, MessageSquarePlus, UserCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useQuery } from "@tanstack/react-query";
@@ -189,97 +189,77 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Auth Navigation */}
+            {/* Profile Dropdown - Large screens */}
             {!authLoading && (
               <>
                 {user ? (
-                  <>
-                    {/* Wallet Link for all logged-in users */}
-                    <Link
-                      href="/wallet"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                        isActive("/wallet")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-wallet"
-                    >
-                      <Wallet className="w-4 h-4" />
-                      My Wallet
-                    </Link>
-                    
-                    {/* Subscriptions Link for all logged-in users */}
-                    <Link
-                      href="/my-subscriptions"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                        isActive("/my-subscriptions")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-subscriptions"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Subscriptions
-                    </Link>
-                    
-                    {/* File Complaint Link for all logged-in users */}
-                    <Link
-                      href="/complaints"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 relative ${
-                        isActive("/complaints")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-complaints"
-                    >
-                      <MessageSquarePlus className="w-4 h-4" />
-                      File Complaint
-                      {pendingComplaintsCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                          {pendingComplaintsCount}
-                        </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 text-foreground hover:text-primary hover:bg-brand-primary/10 relative"
+                        data-testid="nav-profile"
+                      >
+                        <UserCircle className="w-5 h-5" />
+                        {t('nav.profile')}
+                        <ChevronDown className="w-3 h-3" />
+                        {pendingComplaintsCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                            {pendingComplaintsCount}
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/wallet" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-wallet">
+                          <Wallet className="w-4 h-4" />
+                          {t('nav.myWallet')}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-subscriptions" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-subscriptions">
+                          <Calendar className="w-4 h-4" />
+                          {t('nav.subscriptions')}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/complaints" className="cursor-pointer flex items-center gap-2 relative" data-testid="dropdown-complaints">
+                          <MessageSquarePlus className="w-4 h-4" />
+                          {t('nav.fileComplaint')}
+                          {pendingComplaintsCount > 0 && (
+                            <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                              {pendingComplaintsCount}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                      {user.role === 'customer' && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-dashboard">
+                            <User className="w-4 h-4" />
+                            {t('nav.dashboard')}
+                          </Link>
+                        </DropdownMenuItem>
                       )}
-                    </Link>
-                    
-                    {user.role === 'customer' && (
-                      <Link
-                        href="/dashboard"
-                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                          isActive("/dashboard")
-                            ? "bg-brand-primary text-primary-foreground"
-                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                        }`}
-                        data-testid="nav-dashboard"
+                      {(user.role === 'employee' || user.role === 'superadmin') && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-admin">
+                            <Settings className="w-4 h-4" />
+                            {t('nav.adminPanel')}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={handleLogout} 
+                        className="cursor-pointer flex items-center gap-2 text-destructive"
+                        data-testid="dropdown-logout"
                       >
-                        <User className="w-4 h-4" />
-                        {t('nav.dashboard')}
-                      </Link>
-                    )}
-                    {(user.role === 'employee' || user.role === 'superadmin') && (
-                      <Link
-                        href="/admin"
-                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                          isActive("/admin")
-                            ? "bg-brand-primary text-primary-foreground"
-                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                        }`}
-                        data-testid="nav-admin"
-                      >
-                        <Settings className="w-4 h-4" />
-                        {t('nav.adminPanel')}
-                      </Link>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLogout}
-                      className="flex items-center gap-1"
-                      data-testid="button-logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      {t('auth.logout')}
-                    </Button>
-                  </>
+                        <LogOut className="w-4 h-4" />
+                        {t('auth.logout')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   <Link
                     href="/login"
@@ -343,97 +323,77 @@ export default function Header() {
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Auth Navigation - Medium screens */}
+            {/* Profile Dropdown - Medium screens */}
             {!authLoading && (
               <>
                 {user ? (
-                  <>
-                    {/* Wallet Link for all logged-in users */}
-                    <Link
-                      href="/wallet"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                        isActive("/wallet")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-md-wallet"
-                    >
-                      <Wallet className="w-4 h-4" />
-                      My Wallet
-                    </Link>
-                    
-                    {/* Subscriptions Link for all logged-in users */}
-                    <Link
-                      href="/my-subscriptions"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                        isActive("/my-subscriptions")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-md-subscriptions"
-                    >
-                      <Calendar className="w-4 h-4" />
-                      Subscriptions
-                    </Link>
-                    
-                    {/* File Complaint Link for all logged-in users */}
-                    <Link
-                      href="/complaints"
-                      className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 relative ${
-                        isActive("/complaints")
-                          ? "bg-brand-primary text-primary-foreground"
-                          : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                      }`}
-                      data-testid="nav-md-complaints"
-                    >
-                      <MessageSquarePlus className="w-4 h-4" />
-                      File Complaint
-                      {pendingComplaintsCount > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
-                          {pendingComplaintsCount}
-                        </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        className="font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 text-foreground hover:text-primary hover:bg-brand-primary/10 relative"
+                        data-testid="nav-md-profile"
+                      >
+                        <UserCircle className="w-5 h-5" />
+                        {t('nav.profile')}
+                        <ChevronDown className="w-3 h-3" />
+                        {pendingComplaintsCount > 0 && (
+                          <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                            {pendingComplaintsCount}
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-56">
+                      <DropdownMenuItem asChild>
+                        <Link href="/wallet" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-md-wallet">
+                          <Wallet className="w-4 h-4" />
+                          {t('nav.myWallet')}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/my-subscriptions" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-md-subscriptions">
+                          <Calendar className="w-4 h-4" />
+                          {t('nav.subscriptions')}
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/complaints" className="cursor-pointer flex items-center gap-2 relative" data-testid="dropdown-md-complaints">
+                          <MessageSquarePlus className="w-4 h-4" />
+                          {t('nav.fileComplaint')}
+                          {pendingComplaintsCount > 0 && (
+                            <span className="ml-auto bg-destructive text-destructive-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
+                              {pendingComplaintsCount}
+                            </span>
+                          )}
+                        </Link>
+                      </DropdownMenuItem>
+                      {user.role === 'customer' && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/dashboard" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-md-dashboard">
+                            <User className="w-4 h-4" />
+                            {t('nav.dashboard')}
+                          </Link>
+                        </DropdownMenuItem>
                       )}
-                    </Link>
-                    
-                    {user.role === 'customer' && (
-                      <Link
-                        href="/dashboard"
-                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                          isActive("/dashboard")
-                            ? "bg-brand-primary text-primary-foreground"
-                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                        }`}
-                        data-testid="nav-md-dashboard"
+                      {(user.role === 'employee' || user.role === 'superadmin') && (
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin" className="cursor-pointer flex items-center gap-2" data-testid="dropdown-md-admin">
+                            <Settings className="w-4 h-4" />
+                            {t('nav.adminPanel')}
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem 
+                        onClick={handleLogout} 
+                        className="cursor-pointer flex items-center gap-2 text-destructive"
+                        data-testid="dropdown-md-logout"
                       >
-                        <User className="w-4 h-4" />
-                        {t('nav.dashboard')}
-                      </Link>
-                    )}
-                    {(user.role === 'employee' || user.role === 'superadmin') && (
-                      <Link
-                        href="/admin"
-                        className={`font-medium transition-colors px-2 py-2 rounded-lg text-sm flex items-center gap-1 ${
-                          isActive("/admin")
-                            ? "bg-brand-primary text-primary-foreground"
-                            : "text-foreground hover:text-primary hover:bg-brand-primary/10"
-                        }`}
-                        data-testid="nav-md-admin"
-                      >
-                        <Settings className="w-4 h-4" />
-                        {t('nav.adminPanel')}
-                      </Link>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleLogout}
-                      className="flex items-center gap-1"
-                      data-testid="button-md-logout"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      {t('auth.logout')}
-                    </Button>
-                  </>
+                        <LogOut className="w-4 h-4" />
+                        {t('auth.logout')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 ) : (
                   <Link
                     href="/login"

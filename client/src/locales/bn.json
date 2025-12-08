@@ -13,7 +13,11 @@
     "adminPanel": "অ্যাডমিন প্যানেল",
     "moreAbout": "অফিসএক্সপ্রেস সম্পর্কে আরও জানুন",
     "otherServices": "অন্যান্য সেবা",
-    "account": "অ্যাকাউন্ট"
+    "account": "অ্যাকাউন্ট",
+    "profile": "প্রোফাইল",
+    "myWallet": "আমার ওয়ালেট",
+    "subscriptions": "সাবস্ক্রিপশন",
+    "fileComplaint": "অভিযোগ দায়ের"
   },
   "auth": {
     "login": "লগইন",

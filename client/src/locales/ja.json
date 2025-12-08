@@ -13,7 +13,11 @@
     "adminPanel": "管理パネル",
     "moreAbout": "OfficeXpressについて",
     "otherServices": "その他のサービス",
-    "account": "アカウント"
+    "account": "アカウント",
+    "profile": "プロフィール",
+    "myWallet": "マイウォレット",
+    "subscriptions": "サブスクリプション",
+    "fileComplaint": "苦情を申し立てる"
   },
   "auth": {
     "login": "ログイン",

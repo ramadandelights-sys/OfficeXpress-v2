@@ -13,7 +13,11 @@
     "adminPanel": "Admin Panel",
     "moreAbout": "More About OfficeXpress",
     "otherServices": "Other Services",
-    "account": "Account"
+    "account": "Account",
+    "profile": "Profile",
+    "myWallet": "My Wallet",
+    "subscriptions": "Subscriptions",
+    "fileComplaint": "File Complaint"
   },
   "auth": {
     "login": "Login",

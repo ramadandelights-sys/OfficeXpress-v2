@@ -13,7 +13,11 @@
     "adminPanel": "管理面板",
     "moreAbout": "了解更多关于OfficeXpress",
     "otherServices": "其他服务",
-    "account": "账户"
+    "account": "账户",
+    "profile": "个人资料",
+    "myWallet": "我的钱包",
+    "subscriptions": "订阅",
+    "fileComplaint": "提交投诉"
   },
   "auth": {
     "login": "登录",
