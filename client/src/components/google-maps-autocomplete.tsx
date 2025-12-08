@@ -21,34 +21,29 @@ declare global {
   }
 }
 
-let isApiLoading = false;
-let isApiLoaded = false;
-const loadCallbacks: (() => void)[] = [];
+let apiLoadPromise: Promise<void> | null = null;
+let apiLoadError: Error | null = null;
 
 function loadGoogleMapsApi(apiKey: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (isApiLoaded && window.google?.maps?.places) {
-      resolve();
-      return;
-    }
+  if (apiLoadError) {
+    return Promise.reject(apiLoadError);
+  }
 
-    if (isApiLoading) {
-      loadCallbacks.push(() => resolve());
-      return;
-    }
+  if (window.google?.maps?.places) {
+    return Promise.resolve();
+  }
 
-    if (!apiKey) {
-      reject(new Error("Google Maps API key is required"));
-      return;
-    }
+  if (apiLoadPromise) {
+    return apiLoadPromise;
+  }
 
-    isApiLoading = true;
+  if (!apiKey) {
+    apiLoadError = new Error("Google Maps API key is required");
+    return Promise.reject(apiLoadError);
+  }
 
+  apiLoadPromise = new Promise((resolve, reject) => {
     window.initGoogleMapsCallback = () => {
-      isApiLoaded = true;
-      isApiLoading = false;
-      loadCallbacks.forEach(cb => cb());
-      loadCallbacks.length = 0;
       resolve();
     };
 
@@ -57,11 +52,14 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onerror = () => {
-      isApiLoading = false;
-      reject(new Error("Failed to load Google Maps API"));
+      apiLoadError = new Error("Failed to load Google Maps API");
+      apiLoadPromise = null;
+      reject(apiLoadError);
     };
     document.head.appendChild(script);
   });
+
+  return apiLoadPromise;
 }
 
 export function GoogleMapsAutocomplete({
