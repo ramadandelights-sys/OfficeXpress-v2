@@ -22,24 +22,25 @@ declare global {
 }
 
 let apiLoadPromise: Promise<void> | null = null;
-let apiLoadError: Error | null = null;
+let lastApiKey: string | null = null;
 
 function loadGoogleMapsApi(apiKey: string): Promise<void> {
-  if (apiLoadError) {
-    return Promise.reject(apiLoadError);
-  }
-
   if (window.google?.maps?.places) {
     return Promise.resolve();
   }
 
-  if (apiLoadPromise) {
-    return apiLoadPromise;
+  if (!apiKey) {
+    return Promise.reject(new Error("Google Maps API key is required"));
   }
 
-  if (!apiKey) {
-    apiLoadError = new Error("Google Maps API key is required");
-    return Promise.reject(apiLoadError);
+  // If API key changed, reset and try again
+  if (lastApiKey !== apiKey) {
+    apiLoadPromise = null;
+    lastApiKey = apiKey;
+  }
+
+  if (apiLoadPromise) {
+    return apiLoadPromise;
   }
 
   apiLoadPromise = new Promise((resolve, reject) => {
@@ -52,9 +53,9 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onerror = () => {
-      apiLoadError = new Error("Failed to load Google Maps API");
+      console.error("[GoogleMapsAutocomplete] Failed to load Google Maps API");
       apiLoadPromise = null;
-      reject(apiLoadError);
+      reject(new Error("Failed to load Google Maps API"));
     };
     document.head.appendChild(script);
   });
