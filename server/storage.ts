@@ -347,6 +347,30 @@ export interface IStorage {
     timeSlot: string;
     weekdays: string[];
   })[]>;
+  getSubscriptionsByStatus(status: string): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  })[]>;
+  getAllSubscriptionsWithDetails(): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  })[]>;
+  getSubscriptionWithDetails(id: string): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  }) | undefined>;
   getSubscriptionStats(): Promise<{
     totalActive: number;
     totalPendingCancellation: number;
@@ -357,6 +381,7 @@ export interface IStorage {
   }>;
   
   // Admin wallet operations
+  getWalletTransactionsWithDetails(walletId: string): Promise<WalletTransaction[]>;
   getAllWallets(): Promise<(UserWallet & {
     userName: string;
     userPhone: string;
@@ -2096,6 +2121,123 @@ export class DatabaseStorage implements IStorage {
     }));
   }
   
+  async getSubscriptionsByStatus(status: string): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  })[]> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        userName: users.name,
+        userPhone: users.phone,
+        routeName: carpoolRoutes.name,
+        fromLocation: carpoolRoutes.fromLocation,
+        toLocation: carpoolRoutes.toLocation,
+        timeSlot: carpoolTimeSlots.departureTime,
+      })
+      .from(subscriptions)
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .where(eq(subscriptions.status, status))
+      .orderBy(desc(subscriptions.createdAt));
+    
+    return result.map(r => ({
+      ...r.subscription,
+      userName: r.userName,
+      userPhone: r.userPhone,
+      routeName: r.routeName,
+      fromLocation: r.fromLocation,
+      toLocation: r.toLocation,
+      timeSlot: r.timeSlot,
+    }));
+  }
+
+  async getAllSubscriptionsWithDetails(): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  })[]> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        userName: users.name,
+        userPhone: users.phone,
+        routeName: carpoolRoutes.name,
+        fromLocation: carpoolRoutes.fromLocation,
+        toLocation: carpoolRoutes.toLocation,
+        timeSlot: carpoolTimeSlots.departureTime,
+      })
+      .from(subscriptions)
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .orderBy(desc(subscriptions.createdAt));
+    
+    return result.map(r => ({
+      ...r.subscription,
+      userName: r.userName,
+      userPhone: r.userPhone,
+      routeName: r.routeName,
+      fromLocation: r.fromLocation,
+      toLocation: r.toLocation,
+      timeSlot: r.timeSlot,
+    }));
+  }
+
+  async getSubscriptionWithDetails(id: string): Promise<(Subscription & { 
+    userName: string;
+    userPhone: string;
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    timeSlot: string;
+  }) | undefined> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        userName: users.name,
+        userPhone: users.phone,
+        routeName: carpoolRoutes.name,
+        fromLocation: carpoolRoutes.fromLocation,
+        toLocation: carpoolRoutes.toLocation,
+        timeSlot: carpoolTimeSlots.departureTime,
+      })
+      .from(subscriptions)
+      .innerJoin(users, eq(subscriptions.userId, users.id))
+      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .where(eq(subscriptions.id, id));
+    
+    if (result.length === 0) return undefined;
+    
+    const r = result[0];
+    return {
+      ...r.subscription,
+      userName: r.userName,
+      userPhone: r.userPhone,
+      routeName: r.routeName,
+      fromLocation: r.fromLocation,
+      toLocation: r.toLocation,
+      timeSlot: r.timeSlot,
+    };
+  }
+
+  async getWalletTransactionsWithDetails(walletId: string): Promise<WalletTransaction[]> {
+    return await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, walletId))
+      .orderBy(desc(walletTransactions.createdAt));
+  }
+
   async getSubscriptionStats(): Promise<{
     totalActive: number;
     totalPendingCancellation: number;

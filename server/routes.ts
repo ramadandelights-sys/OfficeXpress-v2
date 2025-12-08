@@ -2300,7 +2300,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Fetch related data for the email
       const route = await storage.getCarpoolRoute(booking.routeId);
       const timeSlot = await storage.getCarpoolTimeSlot(booking.timeSlotId);
-      const pickupPoint = await storage.getCarpoolPickupPoint(booking.pickupPointId);
+      const pickupPoint = await storage.getCarpoolPickupPoint(booking.boardingPointId);
       const dropOffPoint = await storage.getCarpoolPickupPoint(booking.dropOffPointId);
       
       if (route && timeSlot && pickupPoint && dropOffPoint) {
@@ -2324,13 +2324,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           customerName: booking.customerName,
           email: booking.email,
           phone: booking.phone,
-          routeName: route.routeName,
+          routeName: route.name,
           fromLocation: route.fromLocation,
           toLocation: route.toLocation,
           travelDate: travelDateFormatted,
           departureTime: timeSlot.departureTime,
-          pickupPoint: pickupPoint.locationName,
-          dropOffPoint: dropOffPoint.locationName,
+          pickupPoint: pickupPoint.name,
+          dropOffPoint: dropOffPoint.name,
           shareLink
         });
       }
@@ -3618,20 +3618,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timeSlotId,
         boardingPointId: pickupPointId,
         dropOffPointId,
-        weekdays: weekdays.join(','),
-        startDate,
-        endDate: endDateObj.toISOString().split('T')[0],
-        monthlyFee: monthlyCost.toString(),
+        startDate: startDateObj,
+        endDate: endDateObj,
+        pricePerTrip: pricePerSeat.toString(),
+        totalMonthlyPrice: monthlyCost.toString(),
         status: 'active'
       });
       
       // Create invoice
+      const billingMonth = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}`;
       const invoice = await storage.createSubscriptionInvoice({
         subscriptionId: subscription.id,
         userId: req.session.userId!,
-        amount: monthlyCost.toString(),
-        status: 'paid',
-        paidAt: new Date()
+        billingMonth,
+        amountDue: monthlyCost.toString(),
+        dueDate: startDateObj
       });
       
       // Deduct from wallet
@@ -3742,7 +3743,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             routeName: route?.name || 'Unknown Route',
             fromLocation: route?.fromLocation || '',
             toLocation: route?.toLocation || '',
-            timeSlot: timeSlot?.slotTime || '',
+            timeSlot: timeSlot?.departureTime || '',
             boardingPoint: boardingPoint?.name || '',
             dropOffPoint: dropOffPoint?.name || '',
             driverName: driver?.name || 'Not Assigned',
@@ -3781,11 +3782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Generate reference ID
-      const referenceId = generateReferenceId();
-      
       const complaint = await storage.createComplaint({
-        referenceId,
         userId,
         tripBookingId: tripBookingId || null,
         category,
@@ -3834,7 +3831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               routeName: route?.name || 'Unknown Route',
               fromLocation: route?.fromLocation || '',
               toLocation: route?.toLocation || '',
-              timeSlot: timeSlot?.slotTime || '',
+              timeSlot: timeSlot?.departureTime || '',
             }
           };
         })
@@ -3881,7 +3878,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   routeName: route?.name || 'Unknown Route',
                   fromLocation: route?.fromLocation || '',
                   toLocation: route?.toLocation || '',
-                  timeSlot: timeSlot?.slotTime || '',
+                  timeSlot: timeSlot?.departureTime || '',
                   driverName: driver?.name || 'Not Assigned',
                 };
               }
@@ -3937,7 +3934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               routeName: route?.name || 'Unknown Route',
               fromLocation: route?.fromLocation || '',
               toLocation: route?.toLocation || '',
-              timeSlot: timeSlot?.slotTime || '',
+              timeSlot: timeSlot?.departureTime || '',
               boardingPoint: boardingPoint?.name || '',
               dropOffPoint: dropOffPoint?.name || '',
               driverName: driver?.name || 'Not Assigned',
@@ -4151,9 +4148,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           walletId,
           amount,
           type as 'credit' | 'debit',
-          reason,
-          performedByUserId,
-          description
+          description ? `${reason}: ${description}` : reason,
+          performedByUserId
         );
         
         res.json({ 
