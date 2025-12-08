@@ -17,7 +17,7 @@ import Vendor from "@/pages/vendor";
 import Contact from "@/pages/contact";
 import Blog from "@/pages/blog";
 import BlogPost from "@/pages/blog-post";
-import Admin from "@/pages/admin";
+import AdminRouter from "@/pages/admin/index";
 import LegalPageView from "@/pages/legal-page";
 import LoginPage from "@/pages/login";
 import SetupSuperAdminPage from "@/pages/setup-superadmin";
@@ -52,7 +52,8 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={BlogPost} />
-      <Route path="/admin" component={Admin} />
+      <Route path="/admin" component={AdminRouter} />
+      <Route path="/admin/:rest*" component={AdminRouter} />
       <Route path="/login" component={LoginPage} />
       <Route path="/setup-superadmin" component={SetupSuperAdminPage} />
       <Route path="/change-password" component={ChangePasswordPage} />
@@ -74,8 +75,9 @@ function Router() {
 function ConditionalHeader() {
   const [location] = useLocation();
   const authPages = ["/login", "/setup-superadmin", "/change-password", "/forgot-password", "/reset-password", "/onboarding", "/survey"];
+  const isAdminPage = location.startsWith("/admin");
   
-  if (authPages.includes(location)) {
+  if (authPages.includes(location) || isAdminPage) {
     return null;
   }
   
@@ -84,22 +86,12 @@ function ConditionalHeader() {
 
 function ConditionalFooter() {
   const [location] = useLocation();
-  const isAdminPage = location === "/admin";
+  const isAdminPage = location.startsWith("/admin");
   const isLegalPage = location === "/terms-and-conditions" || location === "/privacy-policy";
   const authPages = ["/login", "/setup-superadmin", "/change-password", "/forgot-password", "/reset-password", "/onboarding", "/survey"];
   
-  if (authPages.includes(location)) {
+  if (authPages.includes(location) || isAdminPage) {
     return null;
-  }
-  
-  if (isAdminPage) {
-    return (
-      <div className="bg-gray-100 dark:bg-gray-900 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-500 text-sm">
-          OfficeXpress Admin Panel
-        </div>
-      </div>
-    );
   }
   
   if (isLegalPage) {

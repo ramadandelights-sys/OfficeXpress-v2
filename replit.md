@@ -49,7 +49,16 @@ Preferred communication style: Simple, everyday language.
 
 ### System Design Choices
 - **Multi-User Authentication**: Customer, Employee, Superadmin roles with automatic customer account creation from bookings.
-- **Admin Panel**: Comprehensive panel for employee, driver, and driver assignment management with granular permissions.
+- **Admin Panel**: Modern sidebar-based layout with organized pages across 5 categories:
+  - **Dashboard**: Overview and quick stats
+  - **Content**: Blog Posts, Portfolio Clients, Legal Pages
+  - **Bookings**: Corporate, Rental, Vendor, Contact Messages
+  - **Operations**: Carpool Routes, Carpool Bookings, Drivers, Blackout Dates
+  - **Finance**: Wallet Management, Refunds, Subscriptions
+  - **Settings**: Website, Marketing, Employees, Complaints
+  - Mobile-friendly design with collapsible sidebar (hamburger menu on mobile)
+  - Performance optimized with per-page data loading
+  - Routes: /admin/* handled by AdminRouter (client/src/pages/admin/index.tsx)
 - **Email Notifications**: Resend integration for transactional emails with professional templates.
 - **Reference ID Tracking**: Unique 6-character alphanumeric IDs for all form submissions.
 - **Subscription-based Carpool System**: Pure subscription model with monthly route subscriptions, a user wallet system with balance tracking, and automated services for trip generation, subscription renewal, and refunds.

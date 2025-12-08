@@ -34,6 +34,21 @@ interface BlogPostCreatorProps {
   onSave: (data: AdvancedBlogPost) => void;
   isLoading: boolean;
   onCancel?: () => void;
+  initialData?: {
+    title: string;
+    slug: string;
+    content: string;
+    excerpt: string;
+    category: string;
+    tags?: string[] | null;
+    metaDescription?: string | null;
+    metaKeywords?: string | null;
+    readTime?: number | null;
+    author?: string | null;
+    published?: boolean | null;
+    scheduledFor?: string | null;
+    featuredImage?: string | null;
+  };
 }
 
 // Enhanced Content Manager Class
@@ -614,7 +629,7 @@ class EditorContentManager {
   }
 }
 
-export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPostCreatorProps) {
+export default function BlogPostCreator({ onSave, isLoading, onCancel, initialData }: BlogPostCreatorProps) {
   const { toast } = useToast();
   const [newTag, setNewTag] = useState("");
   const [wordCount, setWordCount] = useState(0);
@@ -648,19 +663,19 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel }: BlogPos
   const form = useForm<AdvancedBlogPost>({
     resolver: zodResolver(advancedBlogPostSchema),
     defaultValues: {
-      title: "",
-      slug: "",
-      content: "",
-      excerpt: "",
-      category: "Transportation",
-      tags: [],
-      metaDescription: "",
-      metaKeywords: "",
-      readTime: 5,
-      author: "OfficeXpress Team",
-      published: false,
-      scheduledFor: "",
-      featuredImage: "",
+      title: initialData?.title || "",
+      slug: initialData?.slug || "",
+      content: initialData?.content || "",
+      excerpt: initialData?.excerpt || "",
+      category: initialData?.category || "Transportation",
+      tags: initialData?.tags || [],
+      metaDescription: initialData?.metaDescription || "",
+      metaKeywords: initialData?.metaKeywords || "",
+      readTime: initialData?.readTime || 5,
+      author: initialData?.author || "OfficeXpress Team",
+      published: initialData?.published || false,
+      scheduledFor: initialData?.scheduledFor || "",
+      featuredImage: initialData?.featuredImage || "",
     },
   });
 
