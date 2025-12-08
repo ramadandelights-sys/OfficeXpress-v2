@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { z } from "zod";
-import { SimpleLocationDropdown } from "@/components/simple-location-dropdown";
+import { GoogleMapsAutocomplete } from "@/components/google-maps-autocomplete";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { HoneypotFields } from "@/components/HoneypotFields";
@@ -947,11 +947,12 @@ export default function Rental() {
                                     From *
                                   </FormLabel>
                                   <FormControl>
-                                    <SimpleLocationDropdown
+                                    <GoogleMapsAutocomplete
                                       value={field.value}
-                                      placeholder="Type to search pickup location..."
+                                      placeholder="Search pickup location..."
                                       onSelect={field.onChange}
                                       error={!!form.formState.errors.fromLocation}
+                                      testId="input-from-location"
                                     />
                                   </FormControl>
                                   <FormMessage />
@@ -969,11 +970,12 @@ export default function Rental() {
                                     To *
                                   </FormLabel>
                                   <FormControl>
-                                    <SimpleLocationDropdown
+                                    <GoogleMapsAutocomplete
                                       value={field.value}
-                                      placeholder="Type to search destination..."
+                                      placeholder="Search destination..."
                                       onSelect={field.onChange}
                                       error={!!form.formState.errors.toLocation}
+                                      testId="input-to-location"
                                     />
                                   </FormControl>
                                   <FormMessage />
