@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import DOMPurify from "isomorphic-dompurify";
 import { Eye, Save, Scale, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -273,7 +274,7 @@ export default function LegalPageCreator({ onSave, isLoading, onCancel, initialD
                         
                         {previewMode ? (
                           <div className="p-4 min-h-[400px] prose max-w-none">
-                            <div dangerouslySetInnerHTML={{ __html: watchedContent || "No content to preview" }} />
+                            <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(watchedContent || "No content to preview") }} />
                           </div>
                         ) : (
                           <div
@@ -283,7 +284,7 @@ export default function LegalPageCreator({ onSave, isLoading, onCancel, initialD
                             className="p-4 min-h-[400px] focus:outline-none"
                             style={{ fontSize: `${fontSize}px`, color: textColor }}
                             onInput={updateContentFromEditor}
-                            dangerouslySetInnerHTML={{ __html: field.value || "" }}
+                            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(field.value || "") }}
                             data-testid="editor-legal-content"
                           />
                         )}

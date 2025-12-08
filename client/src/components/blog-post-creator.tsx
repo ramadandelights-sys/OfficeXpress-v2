@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import DOMPurify from "isomorphic-dompurify";
 import { Calendar, Eye, Save, Send, Tag, Image, Clock, Search, Edit, Bold, Italic, Underline, List, ListOrdered, Link, Type, AlignLeft, AlignCenter, AlignRight, Strikethrough, Subscript, Superscript, Quote, Code, Table, Minus, Undo, Redo, Palette, Highlighter, Plus, Minus as FontDecrease, CheckSquare, Copy, Clipboard, RotateCcw } from "lucide-react";
 import ImageUploader from "./ImageUploader";
 import { Button } from "@/components/ui/button";
@@ -74,7 +75,7 @@ class EditorContentManager {
 
   setContent(content: string) {
     if (this.editor) {
-      this.editor.innerHTML = content;
+      this.editor.innerHTML = DOMPurify.sanitize(content);
       this.onContentChange(content);
     }
   }
@@ -99,7 +100,7 @@ class EditorContentManager {
       this.historyIndex--;
       const content = this.history[this.historyIndex];
       if (this.editor) {
-        this.editor.innerHTML = content;
+        this.editor.innerHTML = DOMPurify.sanitize(content);
         // Sync with form state and update word count
         this.onContentChange(content);
       }
@@ -113,7 +114,7 @@ class EditorContentManager {
       this.historyIndex++;
       const content = this.history[this.historyIndex];
       if (this.editor) {
-        this.editor.innerHTML = content;
+        this.editor.innerHTML = DOMPurify.sanitize(content);
         // Sync with form state and update word count
         this.onContentChange(content);
       }
@@ -1006,7 +1007,7 @@ export default function BlogPostCreator({ onSave, isLoading, onCancel, initialDa
                         // Always restore content from form state
                         const formContent = form.getValues("content");
                         if (formContent) {
-                          contentRef.current.innerHTML = formContent;
+                          contentRef.current.innerHTML = DOMPurify.sanitize(formContent);
                           console.log('Auto-restored content from form state');
                         }
                       }
@@ -1938,7 +1939,7 @@ function BlogPostPreview({
         {content ? (
           <div 
             className="prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: content }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
           />
         ) : (
           <div className="text-muted-foreground">

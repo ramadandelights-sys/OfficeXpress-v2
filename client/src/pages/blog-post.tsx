@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
+import DOMPurify from "isomorphic-dompurify";
 import { ArrowLeft, Calendar, Tag, User, Clock, Share } from "lucide-react";
 import { FaFacebook, FaLinkedin, FaTwitter } from "react-icons/fa";
 import { Button } from "@/components/ui/button";
@@ -124,7 +125,7 @@ export default function BlogPostPage() {
               <div 
                 className="text-muted-foreground leading-relaxed"
                 data-testid="blog-post-content"
-                dangerouslySetInnerHTML={{ __html: post.content }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(post.content) }}
               />
             </div>
 
