@@ -2002,10 +2002,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get pickup points for a route (public)
+  // Get pickup points for a route (public) - supports pointType filter
   app.get("/api/carpool/routes/:id/pickup-points", async (req, res) => {
     try {
-      const points = await storage.getCarpoolPickupPoints(req.params.id);
+      const pointType = req.query.pointType as string | undefined;
+      const points = await storage.getCarpoolPickupPoints(req.params.id, pointType);
       res.json(points);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch pickup points" });

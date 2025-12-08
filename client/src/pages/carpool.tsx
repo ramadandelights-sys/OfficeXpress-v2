@@ -77,7 +77,13 @@ export default function CarpoolPage() {
 
   // Fetch pickup points for selected route
   const { data: pickupPoints = [], isLoading: loadingPickupPoints } = useQuery<CarpoolPickupPoint[]>({
-    queryKey: [`/api/carpool/routes/${selectedRoute}/pickup-points`],
+    queryKey: [`/api/carpool/routes/${selectedRoute}/pickup-points?pointType=pickup`],
+    enabled: !!selectedRoute,
+  });
+
+  // Fetch drop-off points for selected route
+  const { data: dropOffPoints = [], isLoading: loadingDropOffPoints } = useQuery<CarpoolPickupPoint[]>({
+    queryKey: [`/api/carpool/routes/${selectedRoute}/pickup-points?pointType=dropoff`],
     enabled: !!selectedRoute,
   });
 
@@ -541,7 +547,7 @@ export default function CarpoolPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {pickupPoints.map((point) => (
+                                {dropOffPoints.map((point) => (
                                   <SelectItem
                                     key={point.id}
                                     value={point.id}
@@ -602,7 +608,7 @@ export default function CarpoolPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Drop-off:</span>
                         <span className="font-medium">
-                          {pickupPoints.find(p => p.id === form.watch('dropOffPointId'))?.name}
+                          {dropOffPoints.find(p => p.id === form.watch('dropOffPointId'))?.name}
                         </span>
                       </div>
                       
