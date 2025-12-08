@@ -43,7 +43,13 @@ export default function AdminRouter() {
   }
 
   if (!user || (user.role !== 'employee' && user.role !== 'superadmin')) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-xl font-semibold">Redirecting to login...</div>
+        </div>
+      </div>
+    );
   }
 
   return (

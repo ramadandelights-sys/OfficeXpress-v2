@@ -52,8 +52,7 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={BlogPost} />
-      <Route path="/admin" component={AdminRouter} />
-      <Route path="/admin/:rest*" component={AdminRouter} />
+      <Route path="/admin/*?" component={AdminRouter} />
       <Route path="/login" component={LoginPage} />
       <Route path="/setup-superadmin" component={SetupSuperAdminPage} />
       <Route path="/change-password" component={ChangePasswordPage} />
