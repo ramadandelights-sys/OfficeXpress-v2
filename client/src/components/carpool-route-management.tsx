@@ -18,6 +18,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { GoogleMapsLocationPicker, type LocationData } from "@/components/google-maps-location-picker";
 import type { CarpoolRoute, CarpoolPickupPoint, CarpoolTimeSlot, CarpoolBlackoutDate } from "@shared/schema";
 import { insertCarpoolRouteSchema, updateCarpoolRouteSchema, insertCarpoolPickupPointSchema, insertCarpoolTimeSlotSchema, insertCarpoolBlackoutDateSchema } from "@shared/schema";
 import { z } from "zod";
@@ -871,7 +872,11 @@ function RouteDialog({
     defaultValues: {
       name: '',
       fromLocation: '',
+      fromLatitude: null,
+      fromLongitude: null,
       toLocation: '',
+      toLatitude: null,
+      toLongitude: null,
       estimatedDistance: '0',
       pricePerSeat: '200',
       description: '',
@@ -886,7 +891,11 @@ function RouteDialog({
         form.reset({
           name: route.name || '',
           fromLocation: route.fromLocation || '',
+          fromLatitude: route.fromLatitude || null,
+          fromLongitude: route.fromLongitude || null,
           toLocation: route.toLocation || '',
+          toLatitude: route.toLatitude || null,
+          toLongitude: route.toLongitude || null,
           estimatedDistance: route.estimatedDistance || '0',
           pricePerSeat: route.pricePerSeat || '200',
           description: route.description || '',
@@ -897,7 +906,11 @@ function RouteDialog({
         form.reset({
           name: '',
           fromLocation: '',
+          fromLatitude: null,
+          fromLongitude: null,
           toLocation: '',
+          toLatitude: null,
+          toLongitude: null,
           estimatedDistance: '0',
           pricePerSeat: '200',
           description: '',
@@ -941,7 +954,20 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>From Location</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Dhaka" data-testid="input-from-location" />
+                      <GoogleMapsLocationPicker
+                        value={{
+                          name: field.value || '',
+                          latitude: form.watch('fromLatitude') ? Number(form.watch('fromLatitude')) : null,
+                          longitude: form.watch('fromLongitude') ? Number(form.watch('fromLongitude')) : null,
+                        }}
+                        placeholder="Search start location..."
+                        onSelect={(location: LocationData) => {
+                          field.onChange(location.name);
+                          form.setValue('fromLatitude', location.latitude ? String(location.latitude) : null);
+                          form.setValue('fromLongitude', location.longitude ? String(location.longitude) : null);
+                        }}
+                        testId="input-from-location"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -955,7 +981,20 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>To Location</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., Chittagong" data-testid="input-to-location" />
+                      <GoogleMapsLocationPicker
+                        value={{
+                          name: field.value || '',
+                          latitude: form.watch('toLatitude') ? Number(form.watch('toLatitude')) : null,
+                          longitude: form.watch('toLongitude') ? Number(form.watch('toLongitude')) : null,
+                        }}
+                        placeholder="Search destination..."
+                        onSelect={(location: LocationData) => {
+                          field.onChange(location.name);
+                          form.setValue('toLatitude', location.latitude ? String(location.latitude) : null);
+                          form.setValue('toLongitude', location.longitude ? String(location.longitude) : null);
+                        }}
+                        testId="input-to-location"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1157,7 +1196,20 @@ function PickupPointDialog({
                 <FormItem>
                   <FormLabel>Location Name</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="e.g., Gulshan 2 Circle" data-testid="input-pickup-point-name" />
+                    <GoogleMapsLocationPicker
+                      value={{
+                        name: field.value || '',
+                        latitude: form.watch('latitude') ? Number(form.watch('latitude')) : null,
+                        longitude: form.watch('longitude') ? Number(form.watch('longitude')) : null,
+                      }}
+                      placeholder="Search for a location..."
+                      onSelect={(location: LocationData) => {
+                        field.onChange(location.name);
+                        form.setValue('latitude', location.latitude ? String(location.latitude) : null);
+                        form.setValue('longitude', location.longitude ? String(location.longitude) : null);
+                      }}
+                      testId="input-pickup-point-name"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
