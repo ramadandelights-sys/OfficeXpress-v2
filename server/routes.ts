@@ -3521,8 +3521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Calculate subscription cost
-  app.post("/api/subscriptions/calculate-cost", isAuthenticated, async (req, res) => {
+  // Calculate subscription cost (public - no auth required for price preview)
+  app.post("/api/subscriptions/calculate-cost", async (req, res) => {
     try {
       const { routeId, weekdays } = req.body;
       
