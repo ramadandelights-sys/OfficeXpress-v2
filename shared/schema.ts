@@ -515,23 +515,30 @@ export const subscriptionInvoices = pgTable("subscription_invoices", {
   index("idx_invoice_user").on(table.userId, table.status),
 ]);
 
-// Vehicle Trips Table - Daily shared trip instances
+// Vehicle Trips Table - Daily shared trip instances (enhanced with AI generation fields)
 export const vehicleTrips = pgTable("vehicle_trips", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tripReferenceId: varchar("trip_reference_id", { length: 10 }).notNull().unique(), // Human-readable trip ID for customer reference
   routeId: varchar("route_id").notNull().references(() => carpoolRoutes.id),
   timeSlotId: varchar("time_slot_id").notNull().references(() => carpoolTimeSlots.id),
   tripDate: text("trip_date").notNull(), // Format: "2024-11-14"
   driverId: varchar("driver_id").references(() => drivers.id),
   vehicleCapacity: integer("vehicle_capacity").notNull().default(4),
   bookedSeats: integer("booked_seats").notNull().default(0),
-  status: text("status").notNull().default("pending_assignment"), // 'pending_assignment', 'assigned', 'in_progress', 'completed', 'cancelled'
+  recommendedVehicleType: text("recommended_vehicle_type"), // 'sedan', '7_seater', '10_seater', '14_seater', '32_seater'
+  status: text("status").notNull().default("pending_assignment"), // 'pending_assignment', 'low_capacity_warning', 'confirmed', 'in_progress', 'completed', 'cancelled'
   departureTime: text("departure_time"),
   completionTime: text("completion_time"),
+  generatedBy: text("generated_by").default("manual"), // 'ai' or 'manual'
+  aiConfidenceScore: numeric("ai_confidence_score", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  aiRationale: text("ai_rationale"), // AI explanation for trip grouping
+  generatedAt: timestamp("generated_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_vehicle_trip_date").on(table.tripDate, table.routeId, table.timeSlotId),
   index("idx_vehicle_trip_status").on(table.status, table.tripDate),
+  index("idx_vehicle_trip_reference").on(table.tripReferenceId),
 ]);
 
 // Trip Bookings Table - Individual user bookings on vehicle trips
@@ -542,6 +549,7 @@ export const tripBookings = pgTable("trip_bookings", {
   userId: varchar("user_id").notNull().references(() => users.id),
   boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
   dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  pickupSequence: integer("pickup_sequence"), // Order in which passengers will be picked up
   status: text("status").notNull().default("expected"), // 'expected', 'picked_up', 'completed', 'no_show', 'cancelled'
   pickupTime: text("pickup_time"),
   dropoffTime: text("dropoff_time"),
@@ -844,11 +852,22 @@ export const insertSubscriptionInvoiceSchema = createInsertSchema(subscriptionIn
 
 export const insertVehicleTripSchema = createInsertSchema(vehicleTrips).omit({
   id: true,
+  tripReferenceId: true,
   bookedSeats: true,
   status: true,
+  generatedAt: true,
   createdAt: true,
   updatedAt: true,
 });
+
+export const updateVehicleTripSchema = createInsertSchema(vehicleTrips).omit({
+  id: true,
+  tripReferenceId: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  id: z.string(),
+}).partial();
 
 export const insertTripBookingSchema = createInsertSchema(tripBookings).omit({
   id: true,
@@ -945,6 +964,7 @@ export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
 export type InsertSubscriptionInvoice = z.infer<typeof insertSubscriptionInvoiceSchema>;
 export type VehicleTrip = typeof vehicleTrips.$inferSelect;
 export type InsertVehicleTrip = z.infer<typeof insertVehicleTripSchema>;
+export type UpdateVehicleTrip = z.infer<typeof updateVehicleTripSchema>;
 export type TripBooking = typeof tripBookings.$inferSelect;
 export type InsertTripBooking = z.infer<typeof insertTripBookingSchema>;
 export type Complaint = typeof complaints.$inferSelect;

@@ -2530,6 +2530,114 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Trip Management API endpoints
+  // Admin: Get AI-generated trips for a specific date
+  app.get("/api/admin/carpool/ai-trips", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { date } = req.query;
+      if (!date || typeof date !== 'string') {
+        return res.status(400).json({ message: "Date parameter is required (YYYY-MM-DD format)" });
+      }
+      const trips = await storage.getVehicleTripsWithDetails(date);
+      res.json(trips);
+    } catch (error) {
+      console.error("Get AI trips error:", error);
+      res.status(500).json({ message: "Failed to fetch AI trips" });
+    }
+  });
+
+  // Admin: Manually trigger AI trip generation for a specific date
+  app.post("/api/admin/carpool/ai-trips/generate", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { date } = req.body;
+      if (!date || typeof date !== 'string') {
+        return res.status(400).json({ message: "Date parameter is required (YYYY-MM-DD format)" });
+      }
+      
+      // Import and create AI trip generator instance
+      const { AITripGeneratorService } = await import('./ai-trip-generator');
+      const generator = new AITripGeneratorService(storage);
+      const result = await generator.generateTripsForDate(new Date(date));
+      
+      res.json({
+        success: true,
+        message: `Generated ${result.tripsCreated} trips for ${date}`,
+        ...result
+      });
+    } catch (error) {
+      console.error("Manual AI trip generation error:", error);
+      res.status(500).json({ message: "Failed to generate AI trips" });
+    }
+  });
+
+  // Admin: Update trip (assign driver, update status)
+  app.patch("/api/admin/carpool/ai-trips/:id", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { driverId, status } = req.body;
+      
+      const updateData: Record<string, any> = {};
+      if (driverId !== undefined) updateData.driverId = driverId;
+      if (status !== undefined) updateData.status = status;
+      
+      const trip = await storage.updateVehicleTrip(id, updateData);
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      res.json(trip);
+    } catch (error) {
+      console.error("Update AI trip error:", error);
+      res.status(500).json({ message: "Failed to update trip" });
+    }
+  });
+
+  // Admin: Merge two trips together
+  app.post("/api/admin/carpool/ai-trips/:id/merge", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { id: targetTripId } = req.params;
+      const { sourceTripId } = req.body;
+      
+      if (!sourceTripId) {
+        return res.status(400).json({ message: "sourceTripId is required" });
+      }
+      
+      const mergedTrip = await storage.mergeVehicleTrips(targetTripId, sourceTripId);
+      res.json({
+        success: true,
+        message: "Trips merged successfully",
+        trip: mergedTrip
+      });
+    } catch (error: any) {
+      console.error("Merge trips error:", error);
+      res.status(500).json({ message: error.message || "Failed to merge trips" });
+    }
+  });
+
+  // Admin: Cancel a trip
+  app.post("/api/admin/carpool/ai-trips/:id/cancel", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      const trip = await storage.updateVehicleTrip(id, { 
+        status: 'cancelled'
+      });
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      res.json({
+        success: true,
+        message: "Trip cancelled successfully",
+        trip
+      });
+    } catch (error) {
+      console.error("Cancel trip error:", error);
+      res.status(500).json({ message: "Failed to cancel trip" });
+    }
+  });
+
   // Holiday API endpoints for blackout date suggestions
   // Admin: Get upcoming holidays for next 12 months
   app.get("/api/admin/holidays/upcoming", hasPermission('carpoolBlackoutDates', 'view'), async (req, res) => {

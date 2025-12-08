@@ -396,6 +396,54 @@ export interface IStorage {
     reason: string,
     adminUserId: string
   ): Promise<WalletTransaction>;
+  
+  // AI Trip Generator operations
+  getCarpoolRouteById(id: string): Promise<CarpoolRoute | undefined>;
+  getCarpoolTimeSlotById(id: string): Promise<CarpoolTimeSlot | undefined>;
+  getCarpoolPickupPointById(id: string): Promise<CarpoolPickupPoint | undefined>;
+  getUserById(id: string): Promise<User | undefined>;
+  isBlackoutDate(date: Date): Promise<boolean>;
+  getActiveSubscriptionsByWeekday(weekday: number): Promise<Subscription[]>;
+  createAIGeneratedTrip(trip: {
+    tripReferenceId: string;
+    routeId: string;
+    timeSlotId: string;
+    tripDate: string;
+    vehicleCapacity: number;
+    recommendedVehicleType: string;
+    status: string;
+    generatedBy: string;
+    aiConfidenceScore: string;
+    aiRationale: string;
+  }): Promise<VehicleTrip>;
+  createTripBookingFromSubscription(booking: {
+    vehicleTripId: string;
+    subscriptionId: string;
+    userId: string;
+    boardingPointId: string;
+    dropOffPointId: string;
+    pickupSequence: number;
+  }): Promise<TripBooking>;
+  getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined>;
+  getVehicleTripsWithDetails(tripDate: string): Promise<(VehicleTrip & {
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    departureTimeSlot: string;
+    driverName: string | null;
+    driverPhone: string | null;
+    passengerCount: number;
+    passengers: {
+      id: string;
+      userName: string;
+      userPhone: string;
+      boardingPointName: string;
+      dropOffPointName: string;
+      pickupSequence: number | null;
+      status: string;
+    }[];
+  })[]>;
+  mergeVehicleTrips(targetTripId: string, sourceTripId: string): Promise<VehicleTrip>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3050,6 +3098,241 @@ export class DatabaseStorage implements IStorage {
       refundsByReason,
       monthlyTrends
     };
+  }
+  
+  // AI Trip Generator operations
+  async getCarpoolRouteById(id: string): Promise<CarpoolRoute | undefined> {
+    const [route] = await db.select().from(carpoolRoutes).where(eq(carpoolRoutes.id, id));
+    return route || undefined;
+  }
+  
+  async getCarpoolTimeSlotById(id: string): Promise<CarpoolTimeSlot | undefined> {
+    const [timeSlot] = await db.select().from(carpoolTimeSlots).where(eq(carpoolTimeSlots.id, id));
+    return timeSlot || undefined;
+  }
+  
+  async getCarpoolPickupPointById(id: string): Promise<CarpoolPickupPoint | undefined> {
+    const [point] = await db.select().from(carpoolPickupPoints).where(eq(carpoolPickupPoints.id, id));
+    return point || undefined;
+  }
+  
+  async getUserById(id: string): Promise<User | undefined> {
+    return this.getUser(id);
+  }
+  
+  async createAIGeneratedTrip(trip: {
+    tripReferenceId: string;
+    routeId: string;
+    timeSlotId: string;
+    tripDate: string;
+    vehicleCapacity: number;
+    recommendedVehicleType: string;
+    status: string;
+    generatedBy: string;
+    aiConfidenceScore: string;
+    aiRationale: string;
+  }): Promise<VehicleTrip> {
+    const [newTrip] = await db
+      .insert(vehicleTrips)
+      .values({
+        tripReferenceId: trip.tripReferenceId,
+        routeId: trip.routeId,
+        timeSlotId: trip.timeSlotId,
+        tripDate: trip.tripDate,
+        vehicleCapacity: trip.vehicleCapacity,
+        bookedSeats: 0,
+        recommendedVehicleType: trip.recommendedVehicleType,
+        status: trip.status,
+        generatedBy: trip.generatedBy,
+        aiConfidenceScore: trip.aiConfidenceScore,
+        aiRationale: trip.aiRationale,
+        generatedAt: new Date(),
+      })
+      .returning();
+    
+    if (!newTrip) throw new Error('Failed to create AI-generated trip');
+    return newTrip;
+  }
+  
+  async createTripBookingFromSubscription(booking: {
+    vehicleTripId: string;
+    subscriptionId: string;
+    userId: string;
+    boardingPointId: string;
+    dropOffPointId: string;
+    pickupSequence: number;
+  }): Promise<TripBooking> {
+    const [newBooking] = await db
+      .insert(tripBookings)
+      .values({
+        vehicleTripId: booking.vehicleTripId,
+        subscriptionId: booking.subscriptionId,
+        userId: booking.userId,
+        boardingPointId: booking.boardingPointId,
+        dropOffPointId: booking.dropOffPointId,
+        pickupSequence: booking.pickupSequence,
+        status: 'expected',
+      })
+      .returning();
+    
+    if (!newBooking) throw new Error('Failed to create trip booking');
+    
+    await db
+      .update(vehicleTrips)
+      .set({ 
+        bookedSeats: sql`${vehicleTrips.bookedSeats} + 1`,
+        updatedAt: new Date() 
+      })
+      .where(eq(vehicleTrips.id, booking.vehicleTripId));
+    
+    return newBooking;
+  }
+  
+  async getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined> {
+    const [trip] = await db
+      .select()
+      .from(vehicleTrips)
+      .where(eq(vehicleTrips.tripReferenceId, tripReferenceId));
+    return trip || undefined;
+  }
+  
+  async getVehicleTripsWithDetails(tripDate: string): Promise<(VehicleTrip & {
+    routeName: string;
+    fromLocation: string;
+    toLocation: string;
+    departureTimeSlot: string;
+    driverName: string | null;
+    driverPhone: string | null;
+    passengerCount: number;
+    passengers: {
+      id: string;
+      userName: string;
+      userPhone: string;
+      boardingPointName: string;
+      dropOffPointName: string;
+      pickupSequence: number | null;
+      status: string;
+    }[];
+  })[]> {
+    const trips = await db
+      .select({
+        trip: vehicleTrips,
+        route: carpoolRoutes,
+        timeSlot: carpoolTimeSlots,
+        driver: drivers,
+      })
+      .from(vehicleTrips)
+      .leftJoin(carpoolRoutes, eq(vehicleTrips.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(vehicleTrips.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(drivers, eq(vehicleTrips.driverId, drivers.id))
+      .where(eq(vehicleTrips.tripDate, tripDate))
+      .orderBy(carpoolTimeSlots.departureTime);
+    
+    const result = [];
+    
+    for (const row of trips) {
+      const bookings = await db
+        .select({
+          booking: tripBookings,
+          user: users,
+          boardingPoint: carpoolPickupPoints,
+        })
+        .from(tripBookings)
+        .leftJoin(users, eq(tripBookings.userId, users.id))
+        .leftJoin(carpoolPickupPoints, eq(tripBookings.boardingPointId, carpoolPickupPoints.id))
+        .where(eq(tripBookings.vehicleTripId, row.trip.id))
+        .orderBy(tripBookings.pickupSequence);
+      
+      const dropOffPoints = await db
+        .select({
+          bookingId: tripBookings.id,
+          dropOff: carpoolPickupPoints,
+        })
+        .from(tripBookings)
+        .leftJoin(carpoolPickupPoints, eq(tripBookings.dropOffPointId, carpoolPickupPoints.id))
+        .where(eq(tripBookings.vehicleTripId, row.trip.id));
+      
+      const dropOffMap = new Map(dropOffPoints.map(d => [d.bookingId, d.dropOff]));
+      
+      result.push({
+        ...row.trip,
+        routeName: row.route?.name || 'Unknown Route',
+        fromLocation: row.route?.fromLocation || '',
+        toLocation: row.route?.toLocation || '',
+        departureTimeSlot: row.timeSlot?.departureTime || '',
+        driverName: row.driver?.name || null,
+        driverPhone: row.driver?.phone || null,
+        passengerCount: bookings.length,
+        passengers: bookings.map(b => ({
+          id: b.booking.id,
+          userName: b.user?.name || 'Unknown',
+          userPhone: b.user?.phone || '',
+          boardingPointName: b.boardingPoint?.name || 'Unknown',
+          dropOffPointName: dropOffMap.get(b.booking.id)?.name || 'Unknown',
+          pickupSequence: b.booking.pickupSequence,
+          status: b.booking.status,
+        })),
+      });
+    }
+    
+    return result;
+  }
+  
+  async mergeVehicleTrips(targetTripId: string, sourceTripId: string): Promise<VehicleTrip> {
+    return await db.transaction(async (tx) => {
+      const [targetTrip] = await tx.select().from(vehicleTrips).where(eq(vehicleTrips.id, targetTripId));
+      const [sourceTrip] = await tx.select().from(vehicleTrips).where(eq(vehicleTrips.id, sourceTripId));
+      
+      if (!targetTrip || !sourceTrip) {
+        throw new Error('One or both trips not found');
+      }
+      
+      const targetBookings = await tx.select().from(tripBookings).where(eq(tripBookings.vehicleTripId, targetTripId));
+      const maxSequence = targetBookings.reduce((max, b) => Math.max(max, b.pickupSequence || 0), 0);
+      
+      const sourceBookings = await tx.select().from(tripBookings).where(eq(tripBookings.vehicleTripId, sourceTripId));
+      
+      for (let i = 0; i < sourceBookings.length; i++) {
+        await tx
+          .update(tripBookings)
+          .set({
+            vehicleTripId: targetTripId,
+            pickupSequence: maxSequence + i + 1,
+            updatedAt: new Date(),
+          })
+          .where(eq(tripBookings.id, sourceBookings[i].id));
+      }
+      
+      const newPassengerCount = targetBookings.length + sourceBookings.length;
+      
+      let newVehicleType = targetTrip.recommendedVehicleType;
+      if (newPassengerCount > 14) newVehicleType = '32_seater';
+      else if (newPassengerCount > 10) newVehicleType = '14_seater';
+      else if (newPassengerCount > 7) newVehicleType = '10_seater';
+      else if (newPassengerCount > 4) newVehicleType = '7_seater';
+      else newVehicleType = 'sedan';
+      
+      const [updatedTrip] = await tx
+        .update(vehicleTrips)
+        .set({
+          bookedSeats: newPassengerCount,
+          recommendedVehicleType: newVehicleType,
+          status: newPassengerCount >= 3 ? 'pending_assignment' : 'low_capacity_warning',
+          updatedAt: new Date(),
+        })
+        .where(eq(vehicleTrips.id, targetTripId))
+        .returning();
+      
+      await tx
+        .update(vehicleTrips)
+        .set({
+          status: 'cancelled',
+          updatedAt: new Date(),
+        })
+        .where(eq(vehicleTrips.id, sourceTripId));
+      
+      return updatedTrip;
+    });
   }
 }
 

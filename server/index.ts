@@ -6,6 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
 import { startCarpoolNotificationService } from "./carpool-notifications";
 import { startTripGeneratorService } from "./trip-generator";
+import { startAITripGeneratorService } from "./ai-trip-generator";
 import { startSubscriptionRenewalService } from "./subscription-renewal";
 import { startRefundProcessorService } from "./refund-processor";
 
@@ -192,6 +193,10 @@ app.use((req, res, next) => {
     // Start automated trip generation service
     log('[Startup] Starting automated trip generation service...');
     startTripGeneratorService(storage);
+    
+    // Start AI-powered trip generation service (runs at 6 PM daily)
+    log('[Startup] Starting AI trip generation service...');
+    startAITripGeneratorService(storage);
     
     // Start automated subscription renewal service
     log('[Startup] Starting subscription renewal service...');
