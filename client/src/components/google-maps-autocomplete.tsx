@@ -49,7 +49,7 @@ function loadGoogleMapsApi(apiKey: string): Promise<void> {
     };
 
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMapsCallback`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=initGoogleMapsCallback`;
     script.async = true;
     script.defer = true;
     script.onerror = () => {
