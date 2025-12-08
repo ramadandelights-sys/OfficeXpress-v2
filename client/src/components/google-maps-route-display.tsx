@@ -272,6 +272,20 @@ export function GoogleMapsRouteDisplay({
         (result, status) => {
           if (status === window.google.maps.DirectionsStatus.OK && result) {
             directionsRenderer.setDirections(result);
+          } else {
+            console.warn('[GoogleMapsRouteDisplay] Directions API failed:', status, '- falling back to polyline');
+            // Fallback: draw a simple polyline connecting all points
+            const path = allPoints
+              .filter(p => p.latitude && p.longitude)
+              .map(p => ({ lat: p.latitude!, lng: p.longitude! }));
+            
+            new window.google.maps.Polyline({
+              path,
+              map,
+              strokeColor: '#4f46e5',
+              strokeWeight: 3,
+              strokeOpacity: 0.7,
+            });
           }
         }
       );
