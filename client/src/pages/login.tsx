@@ -42,8 +42,11 @@ export default function LoginPage() {
       const res = await apiRequest("POST", "/api/auth/register", data);
       return res.json();
     },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    onSuccess: async (data) => {
+      // Wait for the auth query to be invalidated and refetched to ensure session is persisted
+      await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      // Small delay to ensure cookie is properly set
+      await new Promise(resolve => setTimeout(resolve, 100));
       toast({
         title: "Welcome aboard! 🎉",
         description: `Great to have you, ${data.user.name}!`,
