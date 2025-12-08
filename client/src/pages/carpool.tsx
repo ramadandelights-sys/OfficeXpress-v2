@@ -453,28 +453,33 @@ export default function CarpoolPage() {
                       ))}
                     </div>
                   ) : (
-                    <RadioGroup
-                      value={form.watch('timeSlotId')}
-                      onValueChange={(value) => form.setValue('timeSlotId', value)}
-                    >
-                      {timeSlots.map((slot) => (
-                        <div key={slot.id} className="mb-3">
-                          <Label
-                            htmlFor={`slot-${slot.id}`}
-                            className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
-                            data-testid={`timeslot-option-${slot.id}`}
-                          >
-                            <RadioGroupItem value={slot.id} id={`slot-${slot.id}`} />
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-4 h-4 text-gray-500" />
-                                <span className="font-medium">Departure: {slot.departureTime}</span>
+                    <>
+                      <RadioGroup
+                        value={form.watch('timeSlotId')}
+                        onValueChange={(value) => form.setValue('timeSlotId', value)}
+                      >
+                        {timeSlots.map((slot) => (
+                          <div key={slot.id} className="mb-3">
+                            <Label
+                              htmlFor={`slot-${slot.id}`}
+                              className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
+                              data-testid={`timeslot-option-${slot.id}`}
+                            >
+                              <RadioGroupItem value={slot.id} id={`slot-${slot.id}`} />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="w-4 h-4 text-gray-500" />
+                                  <span className="font-medium">Office Time: {slot.departureTime}</span>
+                                </div>
                               </div>
-                            </div>
-                          </Label>
-                        </div>
-                      ))}
-                    </RadioGroup>
+                            </Label>
+                          </div>
+                        ))}
+                      </RadioGroup>
+                      <p className="text-sm text-gray-500 mt-4">
+                        Departure time will be announced once we have a carpool match for you. We will ensure you're reaching office on time!
+                      </p>
+                    </>
                   )}
                 </div>
               )}

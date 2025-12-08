@@ -43,11 +43,12 @@ export interface Subscription {
 }
 
 export interface CostCalculation {
-  weekdays: string[];
-  perSeatPrice: number;
-  monthlyTotal: number;
-  weeklyTotal: number;
-  dailyRate: number;
+  pricePerSeat: number;
+  selectedWeekdays: string[];
+  daysPerWeek: number;
+  estimatedDaysPerMonth: number;
+  monthlyCost: number;
+  currency: string;
 }
 
 // Schema for purchase subscription
@@ -182,7 +183,7 @@ export function useCalculateCost(routeId?: string, weekdays?: string[]) {
 
   return {
     costData: data,
-    monthlyTotal: data?.monthlyTotal ?? 0,
+    monthlyTotal: data?.monthlyCost ?? 0,
     isLoading,
     error,
   };
