@@ -90,6 +90,7 @@ export function GoogleMapsRouteDisplay({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const polylineRef = useRef<google.maps.Polyline | null>(null);
   const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
   const [apiReady, setApiReady] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -160,14 +161,31 @@ export function GoogleMapsRouteDisplay({
     console.log('[GoogleMapsRouteDisplay] Total points to display:', allPoints.length, allPoints.map(p => ({ name: p.name, type: p.type, lat: p.latitude, lng: p.longitude })));
 
     if (allPoints.length === 0) {
+      // Show map centered on Dhaka with no markers
       const defaultCenter = { lat: 23.8103, lng: 90.4125 };
-      mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+      const map = new window.google.maps.Map(mapContainerRef.current, {
         center: defaultCenter,
-        zoom: 10,
+        zoom: 11,
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: true,
       });
+      mapRef.current = map;
+      
+      // Add info window to indicate no coordinates
+      const infoWindow = new window.google.maps.InfoWindow({
+        content: `
+          <div style="padding: 12px; max-width: 250px;">
+            <strong style="color: #666;">No location data available</strong>
+            <p style="color: #888; font-size: 12px; margin-top: 4px;">
+              Pickup and drop-off points need coordinates to display on the map. 
+              Add coordinates using the location picker in the admin panel.
+            </p>
+          </div>
+        `,
+        position: defaultCenter,
+      });
+      infoWindow.open(map);
       return;
     }
 
@@ -246,6 +264,12 @@ export function GoogleMapsRouteDisplay({
       markersRef.current.push(marker);
     });
 
+    // Clean up previous polyline
+    if (polylineRef.current) {
+      polylineRef.current.setMap(null);
+      polylineRef.current = null;
+    }
+
     // Always draw a polyline connecting the points
     if (allPoints.length >= 2) {
       console.log('[GoogleMapsRouteDisplay] Drawing route with', allPoints.length, 'points');
@@ -254,14 +278,20 @@ export function GoogleMapsRouteDisplay({
         .filter(p => p.latitude && p.longitude)
         .map(p => ({ lat: p.latitude!, lng: p.longitude! }));
       
+      console.log('[GoogleMapsRouteDisplay] Polyline path:', path);
+      
       // Draw immediate polyline (always works)
       const polyline = new window.google.maps.Polyline({
         path,
         map,
         strokeColor: '#4f46e5',
-        strokeWeight: 4,
-        strokeOpacity: 0.8,
+        strokeWeight: 5,
+        strokeOpacity: 1,
+        geodesic: true,
+        zIndex: 1,
       });
+      polylineRef.current = polyline;
+      console.log('[GoogleMapsRouteDisplay] Polyline created and set on map');
 
       // Optionally try to get directions for road-following route
       try {
@@ -300,11 +330,14 @@ export function GoogleMapsRouteDisplay({
           },
           (result, status) => {
             if (status === window.google.maps.DirectionsStatus.OK && result) {
+              console.log('[GoogleMapsRouteDisplay] Directions API success, replacing polyline');
               // Hide the simple polyline and show directions route
-              polyline.setMap(null);
+              if (polylineRef.current) {
+                polylineRef.current.setMap(null);
+              }
               directionsRenderer.setDirections(result);
             } else {
-              console.warn('[GoogleMapsRouteDisplay] Directions API unavailable:', status);
+              console.warn('[GoogleMapsRouteDisplay] Directions API status:', status, '- keeping simple polyline');
               // Keep the simple polyline visible
             }
           }
@@ -313,11 +346,17 @@ export function GoogleMapsRouteDisplay({
         console.warn('[GoogleMapsRouteDisplay] Directions request failed:', err);
         // Simple polyline remains visible
       }
+    } else {
+      console.log('[GoogleMapsRouteDisplay] Not enough points for route:', allPoints.length);
     }
 
     return () => {
       markersRef.current.forEach(marker => marker.setMap(null));
       markersRef.current = [];
+      if (polylineRef.current) {
+        polylineRef.current.setMap(null);
+        polylineRef.current = null;
+      }
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setMap(null);
         directionsRendererRef.current = null;
