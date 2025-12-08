@@ -62,6 +62,13 @@ interface AITrip {
   aiRationale: string | null;
 }
 
+function formatTimeWithAmPm(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 export default function AdminAITripsPage() {
   const { hasPermission } = useAuth();
   const { toast } = useToast();
@@ -320,7 +327,7 @@ export default function AdminAITripsPage() {
                               <span data-testid={`text-route-${trip.id}`}>{trip.routeName}</span>
                               <span>•</span>
                               <Clock className="h-3 w-3" />
-                              <span data-testid={`text-time-${trip.id}`}>{trip.departureTimeSlot || 'Not set'}</span>
+                              <span data-testid={`text-time-${trip.id}`}>{trip.departureTimeSlot ? formatTimeWithAmPm(trip.departureTimeSlot) : 'Not set'}</span>
                             </div>
                           </div>
                         </div>

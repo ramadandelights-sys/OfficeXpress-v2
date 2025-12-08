@@ -55,6 +55,13 @@ const weekdayOptions = [
   { value: 'saturday', label: 'Saturday', short: 'Sat', dayNumber: 6 },
 ];
 
+function formatTimeWithAmPm(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 export default function CarpoolPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useWouterLocation();
@@ -475,7 +482,7 @@ export default function CarpoolPage() {
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <Clock className="w-4 h-4 text-gray-500" />
-                                  <span className="font-medium">Office Time: {slot.departureTime}</span>
+                                  <span className="font-medium">Office Time: {formatTimeWithAmPm(slot.departureTime)}</span>
                                 </div>
                               </div>
                             </Label>
@@ -594,7 +601,10 @@ export default function CarpoolPage() {
                       <div className="flex justify-between">
                         <span className="text-gray-600 dark:text-gray-400">Time Slot:</span>
                         <span className="font-medium">
-                          {timeSlots.find(ts => ts.id === form.watch('timeSlotId'))?.departureTime}
+                          {(() => {
+                            const time = timeSlots.find(ts => ts.id === form.watch('timeSlotId'))?.departureTime;
+                            return time ? formatTimeWithAmPm(time) : '';
+                          })()}
                         </span>
                       </div>
                       

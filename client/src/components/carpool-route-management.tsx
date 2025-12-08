@@ -38,6 +38,13 @@ function extractErrorMessage(error: unknown): string {
   return "An unexpected error occurred";
 }
 
+function formatTimeWithAmPm(time: string): string {
+  const [hours, minutes] = time.split(':').map(Number);
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 export default function CarpoolRouteManagement() {
   const { toast } = useToast();
   const [showRouteCreator, setShowRouteCreator] = useState(false);
@@ -636,7 +643,7 @@ export default function CarpoolRouteManagement() {
                   {timeSlots.map((slot) => (
                     <div key={slot.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`time-slot-${slot.id}`}>
                       <div>
-                        <div className="font-medium">{slot.departureTime}</div>
+                        <div className="font-medium">{formatTimeWithAmPm(slot.departureTime)}</div>
                         <div className="text-sm text-gray-500">
                           {slot.isActive ? 'Active' : 'Inactive'}
                         </div>
