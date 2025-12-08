@@ -295,6 +295,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Customer registration endpoint
+  app.post("/api/auth/register", authRateLimiter, async (req: any, res: any) => {
+    try {
+      const { phone, email, name, password } = req.body;
+      
+      // Validate required fields
+      if (!phone || !email || !name || !password) {
+        return res.status(400).json({ message: "Phone, email, name, and password are required" });
+      }
+      
+      // Validate Bangladesh phone number format (must start with 01 and be 11 digits)
+      const phoneRegex = /^01\d{9}$/;
+      if (!phoneRegex.test(phone)) {
+        return res.status(400).json({ message: "Phone number must be in Bangladesh format (01XXXXXXXXX - 11 digits starting with 01)" });
+      }
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address format" });
+      }
+      
+      // Validate password strength
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+      
+      // Check if user already exists
+      const existingUser = await storage.getUserByPhone(phone);
+      if (existingUser) {
+        return res.status(400).json({ message: "An account with this phone number already exists. Please sign in instead." });
+      }
+      
+      // Check if email is already in use
+      const existingEmail = await storage.getUserByEmail(email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "An account with this email already exists." });
+      }
+      
+      // Create new customer account
+      const hashedPassword = await hashPassword(password);
+      const user = await storage.createUser({
+        phone,
+        email,
+        name,
+        password: hashedPassword
+      });
+      
+      // Set role to customer
+      await storage.updateUser(user.id, {
+        role: 'customer',
+        temporaryPassword: false
+      } as any);
+      
+      // Auto-login the user
+      req.session.regenerate((err: any) => {
+        if (err) {
+          console.error("Session regeneration error:", err);
+          return res.status(500).json({ message: "Registration successful but login failed" });
+        }
+        
+        req.session.userId = user.id;
+        req.session.role = 'customer';
+        
+        req.session.save((saveErr: any) => {
+          if (saveErr) {
+            console.error("Session save error:", saveErr);
+            return res.status(500).json({ message: "Registration successful but login failed" });
+          }
+          
+          res.json({
+            message: "Registration successful",
+            user: {
+              id: user.id,
+              phone: user.phone,
+              email: user.email,
+              name: user.name,
+              role: 'customer',
+              temporaryPassword: false
+            }
+          });
+        });
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+      res.status(500).json({ message: "Registration failed. Please try again." });
+    }
+  });
+
   app.get("/api/auth/user", isAuthenticated, async (req: any, res: any) => {
     try {
       const user = await storage.getUser(req.session.userId);
