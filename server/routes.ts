@@ -2207,6 +2207,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin: Reorder pickup points (bulk update sequence order)
+  app.put("/api/admin/carpool/pickup-points/reorder", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
+    try {
+      const { points } = req.body;
+      if (!Array.isArray(points)) {
+        return res.status(400).json({ message: "Points array is required" });
+      }
+      
+      // Update each point's sequence order
+      const updates = await Promise.all(
+        points.map((point: { id: string; sequenceOrder: number }) => 
+          storage.updateCarpoolPickupPoint(point.id, { sequenceOrder: point.sequenceOrder })
+        )
+      );
+      
+      res.json({ success: true, updated: updates.length });
+    } catch (error) {
+      console.error("Reorder pickup points error:", error);
+      res.status(500).json({ message: "Failed to reorder pickup points" });
+    }
+  });
+
   // Admin: Delete pickup point
   app.delete("/api/admin/carpool/pickup-points/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {

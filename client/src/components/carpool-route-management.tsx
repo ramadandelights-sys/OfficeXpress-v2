@@ -2,7 +2,10 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download } from "lucide-react";
+import { Plus, Edit, Trash2, MapPin, Clock, Save, X, CalendarOff, Calendar, Download, GripVertical } from "lucide-react";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -197,6 +200,63 @@ export default function CarpoolRouteManagement() {
       setDeleteDropOffPointId(null);
     },
   });
+
+  // Reorder pickup points mutation
+  const reorderPointsMutation = useMutation({
+    mutationFn: async (points: { id: string; sequenceOrder: number }[]) => {
+      return await apiRequest('PUT', '/api/admin/carpool/pickup-points/reorder', { points });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'] });
+      toast({ title: "Success", description: "Order updated successfully" });
+    },
+    onError: (error) => {
+      toast({ title: "Error", description: extractErrorMessage(error), variant: "destructive" });
+    },
+  });
+
+  // DnD sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for pickup points
+  const handlePickupDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = pickupPoints.findIndex((p) => p.id === active.id);
+      const newIndex = pickupPoints.findIndex((p) => p.id === over.id);
+      const reordered = arrayMove(pickupPoints, oldIndex, newIndex);
+      const updates = reordered.map((point, index) => ({
+        id: point.id,
+        sequenceOrder: index + 1,
+      }));
+      reorderPointsMutation.mutate(updates);
+    }
+  };
+
+  // Handle drag end for drop-off points
+  const handleDropOffDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = dropOffPoints.findIndex((p) => p.id === active.id);
+      const newIndex = dropOffPoints.findIndex((p) => p.id === over.id);
+      const reordered = arrayMove(dropOffPoints, oldIndex, newIndex);
+      const updates = reordered.map((point, index) => ({
+        id: point.id,
+        sequenceOrder: index + 1,
+      }));
+      reorderPointsMutation.mutate(updates);
+    }
+  };
 
   // Create time slot mutation
   const createTimeSlotMutation = useMutation({
@@ -456,24 +516,30 @@ export default function CarpoolRouteManagement() {
                   No pickup points yet
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {pickupPoints.map((point) => (
-                    <div key={point.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`pickup-point-${point.id}`}>
-                      <div>
-                        <div className="font-medium">{point.name}</div>
-                        <div className="text-sm text-gray-500">Order: {point.sequenceOrder}</div>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeletePickupPointId(point.id)}
-                        data-testid={`button-delete-pickup-point-${point.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handlePickupDragEnd}
+                >
+                  <SortableContext
+                    items={pickupPoints.map(p => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {pickupPoints.map((point) => (
+                        <SortablePointItem
+                          key={point.id}
+                          point={point}
+                          onDelete={() => setDeletePickupPointId(point.id)}
+                          testIdPrefix="pickup-point"
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+              {pickupPoints.length > 1 && (
+                <p className="text-xs text-gray-400 mt-2">Drag to reorder</p>
               )}
             </CardContent>
           </Card>
@@ -500,24 +566,30 @@ export default function CarpoolRouteManagement() {
                   No drop-off points yet
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {dropOffPoints.map((point) => (
-                    <div key={point.id} className="flex items-center justify-between p-3 border rounded-lg" data-testid={`dropoff-point-${point.id}`}>
-                      <div>
-                        <div className="font-medium">{point.name}</div>
-                        <div className="text-sm text-gray-500">Order: {point.sequenceOrder}</div>
-                      </div>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => setDeleteDropOffPointId(point.id)}
-                        data-testid={`button-delete-dropoff-point-${point.id}`}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDropOffDragEnd}
+                >
+                  <SortableContext
+                    items={dropOffPoints.map(p => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="space-y-2">
+                      {dropOffPoints.map((point) => (
+                        <SortablePointItem
+                          key={point.id}
+                          point={point}
+                          onDelete={() => setDeleteDropOffPointId(point.id)}
+                          testIdPrefix="dropoff-point"
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+              {dropOffPoints.length > 1 && (
+                <p className="text-xs text-gray-400 mt-2">Drag to reorder</p>
               )}
             </CardContent>
           </Card>
@@ -1555,5 +1627,65 @@ function HolidayImportDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// Sortable Point Item Component for drag and drop
+function SortablePointItem({
+  point,
+  onDelete,
+  testIdPrefix,
+}: {
+  point: CarpoolPickupPoint;
+  onDelete: () => void;
+  testIdPrefix: string;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: point.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between p-3 border rounded-lg bg-white ${
+        isDragging ? 'shadow-lg' : ''
+      }`}
+      data-testid={`${testIdPrefix}-${point.id}`}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none p-1 hover:bg-gray-100 rounded"
+          data-testid={`drag-handle-${point.id}`}
+        >
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </button>
+        <div>
+          <div className="font-medium">{point.name}</div>
+          <div className="text-sm text-gray-500">Order: {point.sequenceOrder}</div>
+        </div>
+      </div>
+      <Button
+        variant="destructive"
+        size="sm"
+        onClick={onDelete}
+        data-testid={`button-delete-${testIdPrefix}-${point.id}`}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
   );
 }
