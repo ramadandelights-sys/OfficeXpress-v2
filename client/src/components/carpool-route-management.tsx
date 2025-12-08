@@ -142,7 +142,9 @@ export default function CarpoolRouteManagement() {
   // Create pickup point mutation
   const createPickupPointMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
-      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'pickup' });
+      // Auto-assign sequence order based on existing points count
+      const nextOrder = pickupPoints.length + 1;
+      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'pickup', sequenceOrder: nextOrder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'pickup'] });
@@ -173,7 +175,9 @@ export default function CarpoolRouteManagement() {
   // Create drop-off point mutation
   const createDropOffPointMutation = useMutation({
     mutationFn: async (data: z.infer<typeof insertCarpoolPickupPointSchema>) => {
-      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'dropoff' });
+      // Auto-assign sequence order based on existing points count
+      const nextOrder = dropOffPoints.length + 1;
+      return await apiRequest('POST', '/api/admin/carpool/pickup-points', { ...data, pointType: 'dropoff', sequenceOrder: nextOrder });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/routes', selectedRoute, 'pickup-points', 'dropoff'] });
@@ -1075,7 +1079,7 @@ function PickupPointDialog({
     defaultValues: {
       routeId,
       name: '',
-      sequenceOrder: 1,
+      sequenceOrder: 1, // Will be auto-assigned by mutation
       latitude: null,
       longitude: null,
     },
@@ -1087,7 +1091,7 @@ function PickupPointDialog({
       form.reset({
         routeId,
         name: '',
-        sequenceOrder: 1,
+        sequenceOrder: 1, // Will be auto-assigned by mutation
         latitude: null,
         longitude: null,
       });
@@ -1118,36 +1122,6 @@ function PickupPointDialog({
                   <FormLabel>Location Name</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="e.g., Gulshan 2 Circle" data-testid="input-pickup-point-name" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="sequenceOrder"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sequence Order</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="number" 
-                      min="1"
-                      value={field.value ?? ''} 
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        field.onChange(value === '' ? '' : parseInt(value) || '');
-                      }}
-                      onBlur={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || !value) {
-                          field.onChange(1);
-                        }
-                      }}
-                      placeholder="Enter order number"
-                      data-testid="input-sequence-order" 
-                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
