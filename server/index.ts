@@ -127,85 +127,101 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  const server = await registerRoutes(app);
+  try {
+    console.log('[Startup] Initializing server...');
+    const server = await registerRoutes(app);
 
-  // API 404 handler - catches unmatched API routes before Vite
-  app.use('/api', (req: Request, res: Response, next: NextFunction) => {
-    // If no route handled this request, return 404 JSON
-    if (!res.headersSent) {
-      res.status(404).json({ 
-        message: `API endpoint not found: ${req.method} ${req.path}` 
-      });
+    // API 404 handler - catches unmatched API routes before Vite
+    app.use('/api', (req: Request, res: Response, next: NextFunction) => {
+      // If no route handled this request, return 404 JSON
+      if (!res.headersSent) {
+        res.status(404).json({ 
+          message: `API endpoint not found: ${req.method} ${req.path}` 
+        });
+      } else {
+        next();
+      }
+    });
+
+    // Global error handler for API routes - ensures JSON responses
+    app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+      // Only handle API routes, let Vite handle others
+      if (!req.path.startsWith('/api')) {
+        return next(err);
+      }
+
+      const status = err.status || err.statusCode || 500;
+      const message = err.message || "Internal Server Error";
+
+      // Log error details in development
+      if (process.env.NODE_ENV === 'development') {
+        console.error('API Error:', {
+          path: req.path,
+          method: req.method,
+          status,
+          message,
+          stack: err.stack
+        });
+      }
+
+      // Always return JSON for API routes - do not rethrow
+      res.status(status).json({ message });
+    });
+
+    // importantly only setup vite in development and after
+    // setting up all the other routes so the catch-all route
+    // doesn't interfere with the other routes
+    if (process.env.NODE_ENV === "development") {
+      await setupVite(app, server);
     } else {
-      next();
-    }
-  });
-
-  // Global error handler for API routes - ensures JSON responses
-  app.use((err: any, req: Request, res: Response, next: NextFunction) => {
-    // Only handle API routes, let Vite handle others
-    if (!req.path.startsWith('/api')) {
-      return next(err);
+      serveStatic(app);
     }
 
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    // Log error details in development
-    if (process.env.NODE_ENV === 'development') {
-      console.error('API Error:', {
-        path: req.path,
-        method: req.method,
-        status,
-        message,
-        stack: err.stack
-      });
-    }
-
-    // Always return JSON for API routes - do not rethrow
-    res.status(status).json({ message });
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
+    // ALWAYS serve the app on the port specified in the environment variable PORT
+    // Other ports are firewalled. Default to 5000 if not specified.
+    // this serves both the API and the client.
+    // It is the only port that is not firewalled.
+    const port = parseInt(process.env.PORT || '5000', 10);
+    const host = "0.0.0.0";
+    
+    console.log(`[Startup] Attempting to start server on ${host}:${port}...`);
+    
+    server.listen({
+      port,
+      host,
+      reusePort: true,
+    }, () => {
+      log(`serving on ${host}:${port}`);
+      
+      // Start background services with error handling
+      try {
+        // Start carpool notification service for insufficient bookings
+        startCarpoolNotificationService(storage);
+        
+        // Start automated trip generation service
+        log('[Startup] Starting automated trip generation service...');
+        startTripGeneratorService(storage);
+        
+        // Start AI-powered trip generation service (runs at 6 PM daily)
+        log('[Startup] Starting AI trip generation service...');
+        startAITripGeneratorService(storage);
+        
+        // Start automated subscription renewal service
+        log('[Startup] Starting subscription renewal service...');
+        startSubscriptionRenewalService(storage);
+        
+        // Start automated refund processor service
+        log('[Startup] Starting refund processor service...');
+        startRefundProcessorService(storage);
+        
+        log('[Startup] All automated services started successfully');
+      } catch (serviceError) {
+        console.error('[Startup] Warning: Some background services failed to start:', serviceError);
+        // Don't crash the server if background services fail
+      }
+    });
+  } catch (error) {
+    console.error('[Startup] Fatal error during server initialization:', error);
+    process.exit(1);
   }
-
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-    
-    // Start carpool notification service for insufficient bookings
-    startCarpoolNotificationService(storage);
-    
-    // Start automated trip generation service
-    log('[Startup] Starting automated trip generation service...');
-    startTripGeneratorService(storage);
-    
-    // Start AI-powered trip generation service (runs at 6 PM daily)
-    log('[Startup] Starting AI trip generation service...');
-    startAITripGeneratorService(storage);
-    
-    // Start automated subscription renewal service
-    log('[Startup] Starting subscription renewal service...');
-    startSubscriptionRenewalService(storage);
-    
-    // Start automated refund processor service
-    log('[Startup] Starting refund processor service...');
-    startRefundProcessorService(storage);
-    
-    log('[Startup] All automated services started successfully');
-  });
 })();
