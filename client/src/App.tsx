@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { MarketingProvider } from "@/contexts/MarketingContext";
 import Header from "@/components/layout/header";
 import Footer from "@/components/layout/footer";
+import FloatingContactButton from "@/components/FloatingContactButton";
 import Home from "@/pages/home";
 import About from "@/pages/about";
 import Corporate from "@/pages/corporate";
@@ -106,6 +107,19 @@ function ConditionalFooter() {
   return <Footer />;
 }
 
+function ConditionalFloatingContact() {
+  const [location] = useLocation();
+  const authPages = ["/login", "/setup-superadmin", "/change-password", "/forgot-password", "/reset-password", "/onboarding", "/survey"];
+  const isAdminPage = location.startsWith("/admin");
+  const isContactPage = location === "/contact";
+  
+  if (authPages.includes(location) || isAdminPage || isContactPage) {
+    return null;
+  }
+  
+  return <FloatingContactButton />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -117,6 +131,7 @@ function App() {
                 <Router />
               </main>
               <ConditionalFooter />
+              <ConditionalFloatingContact />
               <Toaster />
             </div>
         </TooltipProvider>
