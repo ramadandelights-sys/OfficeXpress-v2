@@ -8,6 +8,7 @@ interface RoutePoint {
   longitude: number | null;
   type?: 'start' | 'end' | 'pickup' | 'dropoff';
   isVisible?: boolean;
+  order?: number; // Order within the group (pickup order or dropoff order)
 }
 
 interface GoogleMapsRouteDisplayProps {
@@ -142,15 +143,15 @@ export function GoogleMapsRouteDisplay({
       allPoints.push({ ...startPoint, type: 'start' });
     }
     
-    filteredPickups.forEach(p => {
+    filteredPickups.forEach((p, idx) => {
       if (p.latitude && p.longitude) {
-        allPoints.push({ ...p, type: 'pickup' });
+        allPoints.push({ ...p, type: 'pickup', order: idx + 1 });
       }
     });
     
-    filteredDropoffs.forEach(p => {
+    filteredDropoffs.forEach((p, idx) => {
       if (p.latitude && p.longitude) {
-        allPoints.push({ ...p, type: 'dropoff' });
+        allPoints.push({ ...p, type: 'dropoff', order: idx + 1 });
       }
     });
     
@@ -218,24 +219,30 @@ export function GoogleMapsRouteDisplay({
       dropoff: '#f59e0b',
     };
 
-    allPoints.forEach((point, index) => {
+    allPoints.forEach((point) => {
       if (!point.latitude || !point.longitude) return;
 
       const color = markerColors[point.type || 'pickup'];
+      const isStartOrEnd = point.type === 'start' || point.type === 'end';
+      
+      // For start/end, use icon letters; for pickup/dropoff, use their order number
+      const labelText = isStartOrEnd 
+        ? (point.type === 'start' ? 'S' : 'E')
+        : String(point.order || '');
       
       const marker = new window.google.maps.Marker({
         position: { lat: point.latitude, lng: point.longitude },
         map,
         title: point.name,
         label: {
-          text: String(index + 1),
+          text: labelText,
           color: 'white',
-          fontSize: '12px',
+          fontSize: '11px',
           fontWeight: 'bold',
         },
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 12,
+          scale: 14,
           fillColor: color,
           fillOpacity: 1,
           strokeColor: 'white',
