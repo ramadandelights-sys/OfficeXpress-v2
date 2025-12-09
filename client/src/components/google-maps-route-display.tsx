@@ -138,24 +138,51 @@ export function GoogleMapsRouteDisplay({
       : dropoffPoints.filter(p => p.latitude && p.longitude);
 
     const allPoints: RoutePoint[] = [];
+    let hasStartMarker = false;
+    let hasEndMarker = false;
     
-    if (startPoint?.latitude && startPoint?.longitude) {
-      allPoints.push({ ...startPoint, type: 'start' });
+    // First pickup point becomes the start (S), last dropoff becomes end (E)
+    // All other points are numbered sequentially (1, 2, 3, ...)
+    
+    // Handle pickup points: First one is S, rest are numbered 1, 2, 3, ...
+    if (filteredPickups.length > 0) {
+      // First pickup is the start point (S)
+      const firstPickup = filteredPickups[0];
+      if (firstPickup.latitude && firstPickup.longitude) {
+        allPoints.push({ ...firstPickup, type: 'start' });
+        hasStartMarker = true;
+      }
+      // Add remaining pickups with sequential order numbers (1, 2, 3, ...)
+      filteredPickups.slice(1).forEach((p, idx) => {
+        if (p.latitude && p.longitude) {
+          allPoints.push({ ...p, type: 'pickup', order: idx + 1 });
+        }
+      });
     }
     
-    filteredPickups.forEach((p, idx) => {
-      if (p.latitude && p.longitude) {
-        allPoints.push({ ...p, type: 'pickup', order: idx + 1 });
+    // Handle dropoff points: Last one is E, rest are numbered 1, 2, 3, ...
+    if (filteredDropoffs.length > 0) {
+      // Add all dropoffs except the last with sequential order numbers (1, 2, 3, ...)
+      filteredDropoffs.slice(0, -1).forEach((p, idx) => {
+        if (p.latitude && p.longitude) {
+          allPoints.push({ ...p, type: 'dropoff', order: idx + 1 });
+        }
+      });
+      // Last dropoff is the end point (E)
+      const lastDropoff = filteredDropoffs[filteredDropoffs.length - 1];
+      if (lastDropoff.latitude && lastDropoff.longitude) {
+        allPoints.push({ ...lastDropoff, type: 'end' });
+        hasEndMarker = true;
       }
-    });
+    }
     
-    filteredDropoffs.forEach((p, idx) => {
-      if (p.latitude && p.longitude) {
-        allPoints.push({ ...p, type: 'dropoff', order: idx + 1 });
-      }
-    });
-    
-    if (endPoint?.latitude && endPoint?.longitude) {
+    // Fallback: Ensure both S and E markers exist if coordinates are provided
+    if (!hasStartMarker && startPoint?.latitude && startPoint?.longitude) {
+      // Add start marker from route's start coordinates
+      allPoints.unshift({ ...startPoint, type: 'start' });
+    }
+    if (!hasEndMarker && endPoint?.latitude && endPoint?.longitude) {
+      // Add end marker from route's end coordinates
       allPoints.push({ ...endPoint, type: 'end' });
     }
 

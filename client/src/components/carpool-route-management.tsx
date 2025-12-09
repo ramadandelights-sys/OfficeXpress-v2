@@ -1045,19 +1045,11 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>From Location</FormLabel>
                     <FormControl>
-                      <GoogleMapsLocationPicker
-                        value={{
-                          name: field.value || '',
-                          latitude: form.watch('fromLatitude') ? Number(form.watch('fromLatitude')) : null,
-                          longitude: form.watch('fromLongitude') ? Number(form.watch('fromLongitude')) : null,
-                        }}
-                        placeholder="Search start location..."
-                        onSelect={(location: LocationData) => {
-                          field.onChange(location.name);
-                          form.setValue('fromLatitude', location.latitude ? String(location.latitude) : null);
-                          form.setValue('fromLongitude', location.longitude ? String(location.longitude) : null);
-                        }}
-                        testId="input-from-location"
+                      <Input
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="e.g., Jigatola Bus Stand"
+                        data-testid="input-from-location"
                       />
                     </FormControl>
                     <FormMessage />
@@ -1072,19 +1064,11 @@ function RouteDialog({
                   <FormItem>
                     <FormLabel>To Location</FormLabel>
                     <FormControl>
-                      <GoogleMapsLocationPicker
-                        value={{
-                          name: field.value || '',
-                          latitude: form.watch('toLatitude') ? Number(form.watch('toLatitude')) : null,
-                          longitude: form.watch('toLongitude') ? Number(form.watch('toLongitude')) : null,
-                        }}
-                        placeholder="Search destination..."
-                        onSelect={(location: LocationData) => {
-                          field.onChange(location.name);
-                          form.setValue('toLatitude', location.latitude ? String(location.latitude) : null);
-                          form.setValue('toLongitude', location.longitude ? String(location.longitude) : null);
-                        }}
-                        testId="input-to-location"
+                      <Input
+                        {...field}
+                        value={field.value || ''}
+                        placeholder="e.g., Gulshan 2"
+                        data-testid="input-to-location"
                       />
                     </FormControl>
                     <FormMessage />

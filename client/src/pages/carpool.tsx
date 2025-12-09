@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft, ChevronDown, Eye, Map } from "lucide-react";
+import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft, ChevronDown, Map } from "lucide-react";
 import { GoogleMapsRouteDisplay } from "@/components/google-maps-route-display";
 
 import { Button } from "@/components/ui/button";
@@ -65,8 +65,7 @@ function formatTimeWithAmPm(time: string): string {
 }
 
 function RouteDetailsPanel({ routeId }: { routeId: string }) {
-  const [showMap, setShowMap] = useState(false);
-  
+  // Fetch route for fallback start/end coordinates
   const { data: route } = useQuery<CarpoolRoute>({
     queryKey: [`/api/carpool/routes/${routeId}`],
     enabled: !!routeId,
@@ -84,13 +83,50 @@ function RouteDetailsPanel({ routeId }: { routeId: string }) {
 
   const isLoading = loadingPickup || loadingDropoff;
 
+  // Create defensive copies before sorting to avoid mutating React Query cache
+  const sortedPickups = [...pickupPoints].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+  const sortedDropoffs = [...dropOffPoints].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
+
   return (
     <div className="px-4 pb-4 pt-0 border-t bg-gray-50 dark:bg-gray-800/50" onClick={(e) => e.stopPropagation()}>
       {isLoading ? (
         <div className="py-3 text-sm text-gray-500">Loading route details...</div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3">
+          {/* Map shown automatically - compact size with auto-fit bounds */}
+          <div className="pt-3 mb-4">
+            <GoogleMapsRouteDisplay
+              startPoint={route ? {
+                name: route.fromLocation,
+                latitude: route.fromLatitude ? Number(route.fromLatitude) : null,
+                longitude: route.fromLongitude ? Number(route.fromLongitude) : null,
+              } : undefined}
+              endPoint={route ? {
+                name: route.toLocation,
+                latitude: route.toLatitude ? Number(route.toLatitude) : null,
+                longitude: route.toLongitude ? Number(route.toLongitude) : null,
+              } : undefined}
+              pickupPoints={sortedPickups.map(p => ({
+                name: p.name,
+                latitude: p.latitude ? Number(p.latitude) : null,
+                longitude: p.longitude ? Number(p.longitude) : null,
+                isVisible: p.isVisible !== false,
+              }))}
+              dropoffPoints={sortedDropoffs.map(p => ({
+                name: p.name,
+                latitude: p.latitude ? Number(p.latitude) : null,
+                longitude: p.longitude ? Number(p.longitude) : null,
+                isVisible: p.isVisible !== false,
+              }))}
+              height="180px"
+              showOnlyVisible={true}
+              className="rounded-lg overflow-hidden"
+              testId={`customer-route-map-${routeId}`}
+            />
+          </div>
+
+          {/* Pickup and Dropoff points below map */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
                 <MapPin className="h-3 w-3 text-green-600" />
@@ -100,14 +136,12 @@ function RouteDetailsPanel({ routeId }: { routeId: string }) {
                 <p className="text-xs text-gray-500">No pickup points configured</p>
               ) : (
                 <ul className="space-y-1">
-                  {pickupPoints
-                    .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
-                    .map((point, index) => (
-                      <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                        <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
-                        <span>{point.name}</span>
-                      </li>
-                    ))}
+                  {sortedPickups.map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -120,63 +154,15 @@ function RouteDetailsPanel({ routeId }: { routeId: string }) {
                 <p className="text-xs text-gray-500">No drop-off points configured</p>
               ) : (
                 <ul className="space-y-1">
-                  {dropOffPoints
-                    .sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0))
-                    .map((point, index) => (
-                      <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                        <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
-                        <span>{point.name}</span>
-                      </li>
-                    ))}
+                  {sortedDropoffs.map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
-          </div>
-          
-          {/* Route Map Toggle */}
-          <div className="mt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowMap(!showMap)}
-              className="w-full text-xs"
-              data-testid={`button-toggle-map-${routeId}`}
-            >
-              <Map className="h-3 w-3 mr-1" />
-              {showMap ? 'Hide Route Map' : 'View Route Map'}
-            </Button>
-            
-            {showMap && route && (
-              <div className="mt-3">
-                <GoogleMapsRouteDisplay
-                  startPoint={{
-                    name: route.fromLocation,
-                    latitude: route.fromLatitude ? Number(route.fromLatitude) : null,
-                    longitude: route.fromLongitude ? Number(route.fromLongitude) : null,
-                  }}
-                  endPoint={{
-                    name: route.toLocation,
-                    latitude: route.toLatitude ? Number(route.toLatitude) : null,
-                    longitude: route.toLongitude ? Number(route.toLongitude) : null,
-                  }}
-                  pickupPoints={pickupPoints.map(p => ({
-                    name: p.name,
-                    latitude: p.latitude ? Number(p.latitude) : null,
-                    longitude: p.longitude ? Number(p.longitude) : null,
-                    isVisible: p.isVisible !== false,
-                  }))}
-                  dropoffPoints={dropOffPoints.map(p => ({
-                    name: p.name,
-                    latitude: p.latitude ? Number(p.latitude) : null,
-                    longitude: p.longitude ? Number(p.longitude) : null,
-                    isVisible: p.isVisible !== false,
-                  }))}
-                  height="250px"
-                  showOnlyVisible={true}
-                  testId={`customer-route-map-${routeId}`}
-                />
-              </div>
-            )}
           </div>
         </>
       )}
@@ -448,32 +434,32 @@ export default function CarpoolPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center">
+        {/* Progress Steps - mobile responsive */}
+        <div className="mb-6 sm:mb-8 overflow-x-auto pb-2">
+          <div className="flex justify-between items-center min-w-[320px]">
             {steps.map((step, index) => (
               <div key={step.number} className="flex-1 flex items-center">
                 <div className="flex flex-col items-center flex-1">
                   <div
                     className={cn(
-                      "w-10 h-10 rounded-full flex items-center justify-center font-semibold text-sm",
+                      "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-semibold text-xs sm:text-sm",
                       currentStep >= step.number
                         ? "bg-primary text-primary-foreground"
                         : "bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400"
                     )}
                   >
                     {currentStep > step.number ? (
-                      <CheckCircle2 className="w-5 h-5" />
+                      <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     ) : (
                       step.number
                     )}
                   </div>
-                  <span className="text-xs mt-2 text-gray-600 dark:text-gray-400">{step.title}</span>
+                  <span className="text-[10px] sm:text-xs mt-1 sm:mt-2 text-gray-600 dark:text-gray-400 text-center">{step.title}</span>
                 </div>
                 {index < steps.length - 1 && (
                   <div
                     className={cn(
-                      "h-1 flex-1 mx-2",
+                      "h-0.5 sm:h-1 flex-1 mx-1 sm:mx-2",
                       currentStep > step.number
                         ? "bg-primary"
                         : "bg-gray-200 dark:bg-gray-700"
@@ -519,33 +505,42 @@ export default function CarpoolPage() {
                               className="flex items-start space-x-3 cursor-pointer p-4"
                               data-testid={`route-option-${route.id}`}
                             >
-                              <RadioGroupItem value={route.id} id={route.id} />
-                              <div className="flex-1">
-                                <div className="font-medium">{route.name}</div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  {route.fromLocation} → {route.toLocation}
-                                </div>
-                                <div className="text-sm text-gray-500 mt-1">
-                                  Available: {route.weekdays?.map(d => weekdayOptions.find(w => w.dayNumber === d)?.short || d).join(', ') || 'Mon-Fri'}
-                                </div>
-                                <div className="flex items-center justify-between mt-2">
-                                  <div className="text-sm font-medium text-primary">
-                                    ৳{route.pricePerSeat}/day
+                              <RadioGroupItem value={route.id} id={route.id} className="mt-1 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                {/* Route info and price - responsive layout */}
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-sm sm:text-base">{route.name}</div>
+                                    <div className="text-xs sm:text-sm text-gray-500 mt-1 break-words">
+                                      {route.fromLocation} → {route.toLocation}
+                                    </div>
+                                    <div className="text-xs sm:text-sm text-gray-500 mt-1">
+                                      Available: {route.weekdays?.map(d => weekdayOptions.find(w => w.dayNumber === d)?.short || d).join(', ') || 'Mon-Fri'}
+                                    </div>
                                   </div>
+                                  {/* Price - right aligned on desktop, left on mobile */}
+                                  <div className="flex-shrink-0 sm:flex sm:items-center sm:h-full sm:min-h-[60px]">
+                                    <div className="text-sm font-semibold text-primary whitespace-nowrap">
+                                      ৳{route.pricePerSeat}/day
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* Bottom row: View Route button - lower left with downward arrow */}
+                                <div className="mt-2 sm:mt-3">
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    className="text-xs h-7 px-2"
+                                    className="text-xs h-7 px-2 -ml-2"
                                     onClick={(e) => toggleRouteExpansion(route.id, e)}
-                                    data-testid={`button-view-details-${route.id}`}
+                                    data-testid={`button-view-route-${route.id}`}
                                   >
-                                    <Eye className="h-3 w-3 mr-1" />
-                                    {expandedRoutes.has(route.id) ? 'Hide Details' : 'View Details'}
-                                    {expandedRoutes.has(route.id) ? (
-                                      <ChevronDown className="h-3 w-3 ml-1" />
-                                    ) : (
-                                      <ChevronRight className="h-3 w-3 ml-1" />
-                                    )}
+                                    <Map className="h-3 w-3 mr-1" />
+                                    {expandedRoutes.has(route.id) ? 'Hide Route' : 'View Route'}
+                                    <ChevronDown className={cn(
+                                      "h-3 w-3 ml-1 transition-transform",
+                                      expandedRoutes.has(route.id) && "rotate-180"
+                                    )} />
                                   </Button>
                                 </div>
                               </div>
