@@ -954,8 +954,12 @@ function RouteDialog({
   onSubmit: (data: z.infer<typeof insertCarpoolRouteSchema>) => void;
   isPending: boolean;
 }) {
+  // Use insertCarpoolRouteSchema for creation (stricter), but a relaxed version for editing
+  // The update schema is partial, so we use insertCarpoolRouteSchema but handle validation errors gracefully
   const form = useForm<z.infer<typeof insertCarpoolRouteSchema>>({
-    resolver: zodResolver(insertCarpoolRouteSchema),
+    resolver: route 
+      ? undefined // Skip strict validation for edits - backend uses updateCarpoolRouteSchema
+      : zodResolver(insertCarpoolRouteSchema),
     defaultValues: {
       name: '',
       fromLocation: '',

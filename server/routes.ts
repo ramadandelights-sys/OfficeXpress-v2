@@ -2087,14 +2087,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin: Update carpool route
   app.put("/api/admin/carpool/routes/:id", hasPermission('carpoolRouteManagement', 'edit'), async (req, res) => {
     try {
+      console.log("[Route Update] Received body:", JSON.stringify(req.body));
       const routeData = updateCarpoolRouteSchema.parse({ ...req.body, id: req.params.id });
+      console.log("[Route Update] Parsed data:", JSON.stringify(routeData));
       const route = await storage.updateCarpoolRoute(routeData);
       res.json(route);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("[Route Update] Validation error:", JSON.stringify(error.errors));
         res.status(400).json({ message: "Invalid route data", errors: error.errors });
       } else {
-        console.error("Update route error:", error);
+        console.error("[Route Update] Server error:", error);
         res.status(500).json({ message: "Failed to update route" });
       }
     }
