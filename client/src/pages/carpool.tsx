@@ -87,78 +87,6 @@ function RouteDetailsPanel({ routeId }: { routeId: string }) {
   const sortedPickups = [...pickupPoints].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
   const sortedDropoffs = [...dropOffPoints].sort((a, b) => (a.sequenceOrder || 0) - (b.sequenceOrder || 0));
 
-  const mapComponent = (
-    <GoogleMapsRouteDisplay
-      startPoint={route ? {
-        name: route.fromLocation,
-        latitude: route.fromLatitude ? Number(route.fromLatitude) : null,
-        longitude: route.fromLongitude ? Number(route.fromLongitude) : null,
-      } : undefined}
-      endPoint={route ? {
-        name: route.toLocation,
-        latitude: route.toLatitude ? Number(route.toLatitude) : null,
-        longitude: route.toLongitude ? Number(route.toLongitude) : null,
-      } : undefined}
-      pickupPoints={sortedPickups.map(p => ({
-        name: p.name,
-        latitude: p.latitude ? Number(p.latitude) : null,
-        longitude: p.longitude ? Number(p.longitude) : null,
-        isVisible: p.isVisible !== false,
-      }))}
-      dropoffPoints={sortedDropoffs.map(p => ({
-        name: p.name,
-        latitude: p.latitude ? Number(p.latitude) : null,
-        longitude: p.longitude ? Number(p.longitude) : null,
-        isVisible: p.isVisible !== false,
-      }))}
-      height="100%"
-      showOnlyVisible={true}
-      className="rounded-lg overflow-hidden"
-      testId={`customer-route-map-${routeId}`}
-    />
-  );
-
-  const pointsListComponent = (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-          <MapPin className="h-3 w-3 text-green-600" />
-          Pickup Points ({pickupPoints.length})
-        </h4>
-        {pickupPoints.length === 0 ? (
-          <p className="text-xs text-gray-500">No pickup points configured</p>
-        ) : (
-          <ul className="space-y-1">
-            {sortedPickups.map((point, index) => (
-              <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
-                <span>{point.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div>
-        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-          <MapPin className="h-3 w-3 text-red-600" />
-          Drop-off Points ({dropOffPoints.length})
-        </h4>
-        {dropOffPoints.length === 0 ? (
-          <p className="text-xs text-gray-500">No drop-off points configured</p>
-        ) : (
-          <ul className="space-y-1">
-            {sortedDropoffs.map((point, index) => (
-              <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
-                <span>{point.name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-
   return (
     <div className="px-4 pb-4 pt-0 border-t bg-gray-50 dark:bg-gray-800/50" onClick={(e) => e.stopPropagation()}>
       {isLoading ? (
@@ -168,18 +96,147 @@ function RouteDetailsPanel({ routeId }: { routeId: string }) {
           {/* Mobile: Map on top, lists below */}
           <div className="md:hidden pt-3">
             <div className="mb-4 h-[180px]">
-              {mapComponent}
+              <GoogleMapsRouteDisplay
+                startPoint={route ? {
+                  name: route.fromLocation,
+                  latitude: route.fromLatitude ? Number(route.fromLatitude) : null,
+                  longitude: route.fromLongitude ? Number(route.fromLongitude) : null,
+                } : undefined}
+                endPoint={route ? {
+                  name: route.toLocation,
+                  latitude: route.toLatitude ? Number(route.toLatitude) : null,
+                  longitude: route.toLongitude ? Number(route.toLongitude) : null,
+                } : undefined}
+                pickupPoints={sortedPickups.map(p => ({
+                  name: p.name,
+                  latitude: p.latitude ? Number(p.latitude) : null,
+                  longitude: p.longitude ? Number(p.longitude) : null,
+                  isVisible: p.isVisible !== false,
+                }))}
+                dropoffPoints={sortedDropoffs.map(p => ({
+                  name: p.name,
+                  latitude: p.latitude ? Number(p.latitude) : null,
+                  longitude: p.longitude ? Number(p.longitude) : null,
+                  isVisible: p.isVisible !== false,
+                }))}
+                height="180px"
+                showOnlyVisible={true}
+                className="rounded-lg overflow-hidden"
+                testId={`customer-route-map-${routeId}`}
+              />
             </div>
-            {pointsListComponent}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-green-600" />
+                  Pickup Points ({pickupPoints.length})
+                </h4>
+                {pickupPoints.length === 0 ? (
+                  <p className="text-xs text-gray-500">No pickup points configured</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {sortedPickups.map((point, index) => (
+                      <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                        <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                        <span>{point.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-red-600" />
+                  Drop-off Points ({dropOffPoints.length})
+                </h4>
+                {dropOffPoints.length === 0 ? (
+                  <p className="text-xs text-gray-500">No drop-off points configured</p>
+                ) : (
+                  <ul className="space-y-1">
+                    {sortedDropoffs.map((point, index) => (
+                      <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                        <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                        <span>{point.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
           </div>
 
-          {/* Desktop/Tablet: Lists on left, map on right (1:1 ratio) */}
-          <div className="hidden md:grid md:grid-cols-2 gap-4 pt-3">
-            <div className="flex flex-col justify-start">
-              {pointsListComponent}
+          {/* Desktop/Tablet: 3-column layout - Pickup | Drop-off | Map (1:1:2 ratio) */}
+          <div className="hidden md:grid md:grid-cols-4 gap-4 pt-3">
+            {/* Pickup Points - 1 column */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-green-600" />
+                Pickup Points ({pickupPoints.length})
+              </h4>
+              {pickupPoints.length === 0 ? (
+                <p className="text-xs text-gray-500">No pickup points configured</p>
+              ) : (
+                <ul className="space-y-1">
+                  {sortedPickups.map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-            <div className="aspect-square min-h-[250px]">
-              {mapComponent}
+            
+            {/* Drop-off Points - 1 column */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                <MapPin className="h-3 w-3 text-red-600" />
+                Drop-off Points ({dropOffPoints.length})
+              </h4>
+              {dropOffPoints.length === 0 ? (
+                <p className="text-xs text-gray-500">No drop-off points configured</p>
+              ) : (
+                <ul className="space-y-1">
+                  {sortedDropoffs.map((point, index) => (
+                    <li key={point.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                      <span className="text-gray-400 min-w-[16px]">{index + 1}.</span>
+                      <span>{point.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            
+            {/* Map - 2 columns */}
+            <div className="md:col-span-2 min-h-[250px]">
+              <GoogleMapsRouteDisplay
+                startPoint={route ? {
+                  name: route.fromLocation,
+                  latitude: route.fromLatitude ? Number(route.fromLatitude) : null,
+                  longitude: route.fromLongitude ? Number(route.fromLongitude) : null,
+                } : undefined}
+                endPoint={route ? {
+                  name: route.toLocation,
+                  latitude: route.toLatitude ? Number(route.toLatitude) : null,
+                  longitude: route.toLongitude ? Number(route.toLongitude) : null,
+                } : undefined}
+                pickupPoints={sortedPickups.map(p => ({
+                  name: p.name,
+                  latitude: p.latitude ? Number(p.latitude) : null,
+                  longitude: p.longitude ? Number(p.longitude) : null,
+                  isVisible: p.isVisible !== false,
+                }))}
+                dropoffPoints={sortedDropoffs.map(p => ({
+                  name: p.name,
+                  latitude: p.latitude ? Number(p.latitude) : null,
+                  longitude: p.longitude ? Number(p.longitude) : null,
+                  isVisible: p.isVisible !== false,
+                }))}
+                height="250px"
+                showOnlyVisible={true}
+                className="rounded-lg overflow-hidden"
+                testId={`customer-route-map-${routeId}`}
+              />
             </div>
           </div>
         </>
