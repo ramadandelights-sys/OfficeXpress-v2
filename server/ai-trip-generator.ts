@@ -4,6 +4,9 @@ import { storage } from './storage';
 import type { IStorage } from './storage';
 import { z } from 'zod';
 import type { Subscription, CarpoolRoute, CarpoolTimeSlot, CarpoolPickupPoint, User } from '@shared/schema';
+import { sendAITripPlannerReportEmail, sendDriverAssignmentNeededEmail } from './lib/resend';
+
+const ADMIN_EMAIL = 'hesham@officexpress.org';
 
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -247,6 +250,24 @@ export class AITripGeneratorService {
       const duration = Date.now() - startTime;
       console.log(`[AITripGenerator] Completed in ${duration}ms. Trips: ${tripsGenerated}, Low capacity: ${lowCapacityTrips}, Passengers: ${passengersAssigned}`);
 
+      // Send email report to admin
+      await this.sendExecutionReportEmail({
+        tripDate,
+        bookingsReceived: activeSubscriptions.length,
+        tripsCreated: tripsGenerated,
+        passengersAssigned,
+        lowCapacityTrips,
+        generatedBy,
+        errors,
+        isWeekend: false,
+        isBlackout: false,
+      });
+
+      // Send driver assignment needed notifications if trips were created
+      if (tripsGenerated > 0) {
+        await this.notifyAdminsForDriverAssignment(tripDate, tripGrouping.trips, subscriptionsWithDetails);
+      }
+
       return {
         date: tripDate,
         dayOfWeek,
@@ -261,6 +282,20 @@ export class AITripGeneratorService {
     } catch (error: any) {
       console.error('[AITripGenerator] Fatal error:', error);
       errors.push(`Fatal error: ${error.message}`);
+      
+      // Still send error report to admin
+      await this.sendExecutionReportEmail({
+        tripDate: new Date().toISOString().split('T')[0],
+        bookingsReceived: 0,
+        tripsCreated: tripsGenerated,
+        passengersAssigned,
+        lowCapacityTrips,
+        generatedBy: 'fallback',
+        errors,
+        isWeekend: false,
+        isBlackout: false,
+      });
+      
       return {
         date: '',
         dayOfWeek: 0,
@@ -274,6 +309,101 @@ export class AITripGeneratorService {
       };
     } finally {
       this.isRunning = false;
+    }
+  }
+
+  // Send execution report email to admin
+  private async sendExecutionReportEmail(data: {
+    tripDate: string;
+    bookingsReceived: number;
+    tripsCreated: number;
+    passengersAssigned: number;
+    lowCapacityTrips: number;
+    generatedBy: 'ai' | 'fallback';
+    errors: string[];
+    isWeekend: boolean;
+    isBlackout: boolean;
+  }) {
+    try {
+      await sendAITripPlannerReportEmail({
+        adminEmail: ADMIN_EMAIL,
+        timestamp: new Date(),
+        tripDate: data.tripDate,
+        bookingsReceived: data.bookingsReceived,
+        tripsCreated: data.tripsCreated,
+        passengersAssigned: data.passengersAssigned,
+        lowCapacityTrips: data.lowCapacityTrips,
+        generatedBy: data.generatedBy,
+        errors: data.errors,
+        isWeekend: data.isWeekend,
+        isBlackout: data.isBlackout,
+      });
+      console.log('[AITripGenerator] Execution report email sent successfully');
+    } catch (emailError) {
+      console.error('[AITripGenerator] Failed to send execution report email:', emailError);
+    }
+  }
+
+  // Notify admins/employees with driver assignment permission
+  private async notifyAdminsForDriverAssignment(
+    tripDate: string,
+    trips: AITripGrouping['trips'],
+    subscriptionsWithDetails: EnrichedSubscription[]
+  ) {
+    try {
+      // Get users with driver assignment permission
+      const usersWithPermission = await this.storage.getUsersWithDriverAssignmentPermission();
+      
+      if (usersWithPermission.length === 0) {
+        console.log('[AITripGenerator] No users found with driver assignment permission');
+        return;
+      }
+      
+      for (const tripData of trips) {
+        const firstSub = subscriptionsWithDetails.find(s => s.id === tripData.passengerIds[0]);
+        const routeName = firstSub?.route?.name || 'Unknown Route';
+        const departureTime = firstSub?.timeSlot?.departureTime || 'Unknown Time';
+        
+        // Generate a reference for notification
+        const tripRef = `TRP-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+        
+        // Create in-app notifications and send emails to each user with permission
+        for (const user of usersWithPermission) {
+          // Create in-app notification
+          await this.storage.createNotification({
+            userId: user.id,
+            type: 'driver_assignment_needed',
+            title: 'Driver Assignment Required',
+            message: `A new carpool trip needs driver assignment: ${routeName} on ${tripDate} at ${departureTime} (${tripData.passengerIds.length} passengers)`,
+            metadata: {
+              tripDate,
+              routeId: tripData.routeId,
+              timeSlotId: tripData.timeSlotId,
+              passengerCount: tripData.passengerIds.length,
+              recommendedVehicle: tripData.recommendedVehicleType,
+            } as Record<string, any>,
+          });
+          
+          // Send email if user has email
+          if (user.email) {
+            await sendDriverAssignmentNeededEmail({
+              email: user.email,
+              recipientName: user.name,
+              tripReferenceId: tripRef,
+              tripDate,
+              routeName,
+              departureTime,
+              passengerCount: tripData.passengerIds.length,
+              recommendedVehicle: VEHICLE_TYPES[tripData.recommendedVehicleType]?.label || tripData.recommendedVehicleType,
+              tripType: 'carpool',
+            });
+          }
+        }
+      }
+      
+      console.log(`[AITripGenerator] Sent driver assignment notifications to ${usersWithPermission.length} users for ${trips.length} trips`);
+    } catch (notifyError) {
+      console.error('[AITripGenerator] Failed to send driver assignment notifications:', notifyError);
     }
   }
 

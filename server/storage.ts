@@ -108,6 +108,7 @@ export interface IStorage {
   updateUser(id: string, data: Partial<Omit<User, 'id' | 'createdAt'>>): Promise<User>;
   deleteUser(id: string): Promise<void>;
   getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]>;
+  getUsersWithDriverAssignmentPermission(): Promise<User[]>;
   linkExistingBookingsToUser(userId: string, phone: string): Promise<void>;
   
   // Onboarding token operations
@@ -498,6 +499,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]> {
     return await db.select().from(users).where(eq(users.role, role));
+  }
+
+  async getUsersWithDriverAssignmentPermission(): Promise<User[]> {
+    // Get all superadmins (they have all permissions by default)
+    const superadmins = await db.select().from(users).where(eq(users.role, 'superadmin'));
+    
+    // Get employees with driverAssignment permission set to true
+    const employees = await db.select().from(users).where(eq(users.role, 'employee'));
+    const employeesWithPermission = employees.filter(emp => 
+      emp.permissions && (emp.permissions as any).driverAssignment === true
+    );
+    
+    return [...superadmins, ...employeesWithPermission];
   }
 
   async linkExistingBookingsToUser(userId: string, phone: string): Promise<void> {

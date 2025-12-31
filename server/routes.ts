@@ -54,7 +54,7 @@ import {
 import { z } from "zod";
 import { db } from "./db";
 import { sql, eq } from "drizzle-orm";
-import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey, sendCarpoolBookingConfirmation, sendCarpoolDriverAssignmentEmail } from "./lib/resend";
+import { sendEmailNotification, sendEmployeeOnboardingEmail, sendBookingNotificationEmail, emailWrapper, sendCompletionEmailWithSurvey, sendCarpoolBookingConfirmation, sendCarpoolDriverAssignmentEmail, sendCarpoolTripDriverAssignedEmail } from "./lib/resend";
 import { getUncachableResendClient } from "./resend-client";
 import { nanoid } from "nanoid";
 import rateLimit from "express-rate-limit";
@@ -2788,6 +2788,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { driverId, status } = req.body;
       
+      // Get the trip before update to check previous driver state
+      const tripBefore = await storage.getVehicleTrip(id);
+      if (!tripBefore) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
       const updateData: Record<string, any> = {};
       if (driverId !== undefined) updateData.driverId = driverId;
       if (status !== undefined) updateData.status = status;
@@ -2796,6 +2802,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!trip) {
         return res.status(404).json({ message: "Trip not found" });
       }
+      
+      // If driver was assigned or changed, notify all passengers
+      if (driverId && driverId !== tripBefore.driverId) {
+        try {
+          const driver = await storage.getDriver(driverId);
+          const route = await storage.getCarpoolRouteById(trip.routeId);
+          const timeSlot = await storage.getCarpoolTimeSlotById(trip.timeSlotId);
+          
+          // Get all passengers in this trip
+          const tripBookings = await storage.getTripBookingsByVehicleTrip(id);
+          
+          for (const booking of tripBookings) {
+            const user = await storage.getUserById(booking.userId);
+            const pickupPoint = await storage.getCarpoolPickupPointById(booking.boardingPointId);
+            const dropOffPoint = await storage.getCarpoolPickupPointById(booking.dropOffPointId);
+            
+            if (user) {
+              const notificationType = tripBefore.driverId ? 'driver_changed' : 'driver_assigned';
+              
+              // Create in-app notification
+              await storage.createNotification({
+                userId: user.id,
+                type: notificationType,
+                title: notificationType === 'driver_changed' ? 'Driver Updated' : 'Driver Assigned to Your Trip',
+                message: notificationType === 'driver_changed' 
+                  ? `Your driver for the trip on ${trip.tripDate} has been changed to ${driver?.name}`
+                  : `A driver (${driver?.name}) has been assigned to your trip on ${trip.tripDate}`,
+                metadata: {
+                  tripId: trip.id,
+                  tripReferenceId: trip.tripReferenceId,
+                  tripDate: trip.tripDate,
+                  driverName: driver?.name,
+                  driverPhone: driver?.phone,
+                } as Record<string, any>,
+              });
+              
+              // Send email if user has email
+              if (user.email && driver && route && timeSlot && pickupPoint && dropOffPoint) {
+                await sendCarpoolTripDriverAssignedEmail({
+                  email: user.email,
+                  customerName: user.name,
+                  tripReferenceId: trip.tripReferenceId,
+                  tripDate: trip.tripDate,
+                  routeName: route.name,
+                  departureTime: timeSlot.departureTime,
+                  pickupPoint: pickupPoint.name,
+                  dropOffPoint: dropOffPoint.name,
+                  driverName: driver.name,
+                  driverPhone: driver.phone,
+                  vehicleInfo: `${driver.vehicleMake} ${driver.vehicleModel}`,
+                  licensePlate: driver.licensePlate,
+                });
+              }
+            }
+          }
+          
+          console.log(`[Routes] Sent driver assignment notifications to ${tripBookings.length} passengers for trip ${trip.tripReferenceId}`);
+        } catch (notifyError) {
+          console.error('[Routes] Failed to send driver assignment notifications:', notifyError);
+          // Don't fail the entire operation if notifications fail
+        }
+      }
+      
       res.json(trip);
     } catch (error) {
       console.error("Update AI trip error:", error);
