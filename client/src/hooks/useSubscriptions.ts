@@ -59,6 +59,7 @@ const purchaseSubscriptionSchema = z.object({
   pickupPointId: z.string().min(1, "Pickup point is required"),
   dropOffPointId: z.string().min(1, "Drop-off point is required"),
   startDate: z.string().min(1, "Start date is required"),
+  paymentMethod: z.enum(["online", "cash"]).default("online"),
 });
 
 export type PurchaseSubscriptionData = z.infer<typeof purchaseSubscriptionSchema>;

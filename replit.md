@@ -63,7 +63,8 @@ Preferred communication style: Simple, everyday language.
 - **Email Notifications**: Resend integration for transactional emails with professional templates.
 - **Reference ID Tracking**: Unique 6-character alphanumeric IDs for all form submissions.
 - **Subscription-based Carpool System**: Pure subscription model with monthly route subscriptions, a user wallet system with balance tracking, and automated services for trip generation, subscription renewal, and refunds.
-- **AI-Powered Trip Generation**: GPT-based daily trip optimization with vehicle recommendations (sedan: 1-4, 7-seater: 5-7, 10-seater: 8-10, 14-seater: 11-14, 32-seater: 15+ passengers), low-capacity warnings (<3 passengers), unique trip reference IDs, and fallback rule-based grouping if AI fails. Runs daily at 6 PM via node-cron schedule.
+- **AI-Powered Trip Generation**: GPT-based daily trip optimization with vehicle recommendations (sedan: 1-4, 7-seater: 5-7, 10-seater: 8-10, 14-seater: 11-14, 32-seater: 15+ passengers), unique trip reference IDs, and fallback rule-based grouping if AI fails. Runs daily at 6 PM via node-cron schedule. **Minimum 3 passengers required** - trips with fewer than 3 bookings are skipped (not created).
+- **Flexible Payment Options**: Customers can choose between cash payment (pay driver directly per trip) or online payment (prepay from wallet balance) when booking subscriptions.
 - **Complaint Management**: Users can file complaints with categories and severity, managed by admin.
 - **Bangladesh Holidays Integration**: Static holiday data for 2024-2026, manageable by admin as blackout dates.
 

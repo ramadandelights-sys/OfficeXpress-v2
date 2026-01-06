@@ -201,10 +201,17 @@ export class AITripGeneratorService {
       }
 
       for (const tripData of tripGrouping.trips) {
+        // Skip trips with fewer than minimum passengers
+        if (tripData.passengerIds.length < MIN_PASSENGERS_FOR_TRIP) {
+          console.log(`[AITripGenerator] Skipping trip - only ${tripData.passengerIds.length} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+          lowCapacityTrips++;
+          continue;
+        }
+        
         try {
           const tripReferenceId = generateTripReferenceId();
           const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType];
-          const status = tripData.isLowCapacity ? 'low_capacity_warning' : 'pending_assignment';
+          const status = 'pending_assignment'; // No more low_capacity_warning status
 
           const vehicleTrip = await this.storage.createAIGeneratedTrip({
             tripReferenceId,
@@ -220,9 +227,6 @@ export class AITripGeneratorService {
           });
 
           tripsGenerated++;
-          if (tripData.isLowCapacity) {
-            lowCapacityTrips++;
-          }
 
           for (let i = 0; i < tripData.passengerIds.length; i++) {
             const subscriptionId = tripData.passengerIds[i];
@@ -479,8 +483,8 @@ RULES:
 1. Group passengers by same route AND same time slot (office entry time)
 2. Order pickup sequence by boarding point sequence number (lower = earlier pickup)
 3. Recommend smallest vehicle that fits all passengers in the group
-4. Mark trips with fewer than ${MIN_PASSENGERS_FOR_TRIP} passengers as "isLowCapacity: true"
-5. Each passenger should be assigned to exactly one trip
+4. SKIP (do not create) trips with fewer than ${MIN_PASSENGERS_FOR_TRIP} passengers - set "isLowCapacity: false" for all trips you create
+5. Each passenger should be assigned to exactly one trip (passengers on low-capacity routes go to unassignedPassengers)
 6. Provide confidence score (0-1) based on optimization quality
 7. Provide brief rationale for each trip grouping
 
@@ -541,6 +545,13 @@ Respond with valid JSON in this exact format:
       );
 
       const passengerCount = sorted.length;
+      
+      // Skip routes with fewer than minimum passengers - don't create trips for them
+      if (passengerCount < MIN_PASSENGERS_FOR_TRIP) {
+        console.log(`[AITripGenerator] Skipping route ${sorted[0].routeId} - only ${passengerCount} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+        continue;
+      }
+      
       let vehicleType: 'sedan' | '7_seater' | '10_seater' | '14_seater' | '32_seater' = 'sedan';
       
       if (passengerCount > 14) vehicleType = '32_seater';
@@ -556,7 +567,7 @@ Respond with valid JSON in this exact format:
         pickupSequence: sorted.map((s: EnrichedSubscription) => s.id),
         rationale: 'Generated using rule-based fallback (AI unavailable)',
         confidenceScore: 0.7,
-        isLowCapacity: passengerCount < MIN_PASSENGERS_FOR_TRIP,
+        isLowCapacity: false, // Only trips meeting minimum are created
       });
     }
 
@@ -605,9 +616,15 @@ Respond with valid JSON in this exact format:
     const createdTrips = [];
 
     for (const tripData of tripGrouping.trips) {
+      // Skip trips with fewer than minimum passengers
+      if (tripData.passengerIds.length < MIN_PASSENGERS_FOR_TRIP) {
+        console.log(`[AITripGenerator] Skipping trip - only ${tripData.passengerIds.length} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+        continue;
+      }
+      
       const tripReferenceId = generateTripReferenceId();
       const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType];
-      const status = tripData.isLowCapacity ? 'low_capacity_warning' : 'pending_assignment';
+      const status = 'pending_assignment'; // No more low_capacity_warning status
 
       const vehicleTrip = await this.storage.createAIGeneratedTrip({
         tripReferenceId,
@@ -642,7 +659,7 @@ Respond with valid JSON in this exact format:
         tripReferenceId,
         passengerCount: tripData.passengerIds.length,
         recommendedVehicle: tripData.recommendedVehicleType,
-        isLowCapacity: tripData.isLowCapacity,
+        isLowCapacity: false, // All created trips meet minimum requirement
       });
     }
 
@@ -650,7 +667,7 @@ Respond with valid JSON in this exact format:
       date: tripDate,
       generatedBy,
       tripsGenerated: createdTrips.length,
-      lowCapacityTrips: createdTrips.filter(t => t.isLowCapacity).length,
+      lowCapacityTrips: 0, // We no longer create low capacity trips
       passengersAssigned: subscriptionsWithDetails.length,
       trips: createdTrips,
     };

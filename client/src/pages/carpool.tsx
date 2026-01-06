@@ -260,6 +260,7 @@ export default function CarpoolPage() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
@@ -409,8 +410,8 @@ export default function CarpoolPage() {
   const handlePurchase = async () => {
     const formData = form.getValues();
     
-    // Check wallet balance
-    if (balance < monthlyTotal) {
+    // For online payment, check wallet balance
+    if (paymentMethod === 'online' && balance < monthlyTotal) {
       setShowTopUpDialog(true);
       return;
     }
@@ -423,6 +424,7 @@ export default function CarpoolPage() {
       await purchaseSubscription.mutateAsync({
         ...formData,
         startDate,
+        paymentMethod,
       });
       setPurchaseComplete(true);
     } catch (error) {
@@ -473,15 +475,30 @@ export default function CarpoolPage() {
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mb-4">
                 <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
-              <CardTitle className="text-2xl">Subscription Activated!</CardTitle>
+              <CardTitle className="text-2xl">
+                {paymentMethod === 'cash' ? 'Booking Confirmed!' : 'Subscription Activated!'}
+              </CardTitle>
               <CardDescription className="text-base mt-2">
-                Your carpool subscription has been successfully activated. You'll receive an email confirmation shortly.
+                {paymentMethod === 'cash' 
+                  ? 'Your carpool booking has been confirmed. Please pay the driver directly for each trip.'
+                  : 'Your carpool subscription has been successfully activated. You\'ll receive an email confirmation shortly.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Monthly Fee</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">৳{monthlyTotal.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                  {paymentMethod === 'cash' ? 'Per Trip Fee' : 'Monthly Fee'}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ৳{paymentMethod === 'cash' 
+                    ? (parseFloat(selectedRouteDetails?.pricePerSeat || '0')).toFixed(2)
+                    : monthlyTotal.toFixed(2)}
+                </p>
+                {paymentMethod === 'cash' && (
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-2">
+                    Pay cash directly to the driver for each trip
+                  </p>
+                )}
               </div>
               
               <div className="flex gap-4 justify-center pt-4">
@@ -863,38 +880,87 @@ export default function CarpoolPage() {
                       </div>
                     </div>
 
-                    {/* Wallet Balance Check */}
+                    {/* Payment Method Selection */}
                     <div className="border rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="w-5 h-5 text-gray-500" />
-                          <span className="text-gray-600 dark:text-gray-400">Wallet Balance:</span>
+                      <h4 className="font-medium mb-3">Select Payment Method</h4>
+                      <RadioGroup
+                        value={paymentMethod}
+                        onValueChange={(value: "online" | "cash") => setPaymentMethod(value)}
+                        className="space-y-3"
+                      >
+                        <div 
+                          className={cn(
+                            "flex items-center space-x-3 border rounded-lg p-3 cursor-pointer transition-colors",
+                            paymentMethod === 'cash' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700'
+                          )}
+                          onClick={() => setPaymentMethod('cash')}
+                        >
+                          <RadioGroupItem value="cash" id="cash" data-testid="radio-cash-payment" />
+                          <Label htmlFor="cash" className="flex-1 cursor-pointer">
+                            <div className="font-medium">Cash Payment to Driver</div>
+                            <div className="text-sm text-gray-500">Pay the driver directly for each trip</div>
+                          </Label>
                         </div>
-                        <span className={cn(
-                          "font-semibold",
-                          balance >= monthlyTotal ? "text-green-600" : "text-red-600"
-                        )}>
-                          ৳{balance.toFixed(2)}
-                        </span>
-                      </div>
-                      
-                      {balance < monthlyTotal && (
-                        <Alert className="mt-3">
-                          <AlertCircle className="h-4 w-4" />
-                          <AlertDescription>
-                            Insufficient balance. You need ৳{(monthlyTotal - balance).toFixed(2)} more.
-                            <Button
-                              variant="link"
-                              className="p-0 h-auto ml-1"
-                              onClick={() => setShowTopUpDialog(true)}
-                              data-testid="button-topup-inline"
-                            >
-                              Top up now
-                            </Button>
-                          </AlertDescription>
-                        </Alert>
-                      )}
+                        
+                        <div 
+                          className={cn(
+                            "flex items-center space-x-3 border rounded-lg p-3 cursor-pointer transition-colors",
+                            paymentMethod === 'online' ? 'border-primary bg-primary/5' : 'border-gray-200 dark:border-gray-700'
+                          )}
+                          onClick={() => setPaymentMethod('online')}
+                        >
+                          <RadioGroupItem value="online" id="online" data-testid="radio-online-payment" />
+                          <Label htmlFor="online" className="flex-1 cursor-pointer">
+                            <div className="font-medium">Online Payment (Wallet)</div>
+                            <div className="text-sm text-gray-500">Pay upfront from your wallet balance</div>
+                          </Label>
+                        </div>
+                      </RadioGroup>
                     </div>
+
+                    {/* Wallet Balance Check - only shown for online payment */}
+                    {paymentMethod === 'online' && (
+                      <div className="border rounded-lg p-4">
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center gap-2">
+                            <Wallet className="w-5 h-5 text-gray-500" />
+                            <span className="text-gray-600 dark:text-gray-400">Wallet Balance:</span>
+                          </div>
+                          <span className={cn(
+                            "font-semibold",
+                            balance >= monthlyTotal ? "text-green-600" : "text-red-600"
+                          )}>
+                            ৳{balance.toFixed(2)}
+                          </span>
+                        </div>
+                        
+                        {balance < monthlyTotal && (
+                          <Alert className="mt-3">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              Insufficient balance. You need ৳{(monthlyTotal - balance).toFixed(2)} more.
+                              <Button
+                                variant="link"
+                                className="p-0 h-auto ml-1"
+                                onClick={() => setShowTopUpDialog(true)}
+                                data-testid="button-topup-inline"
+                              >
+                                Top up now
+                              </Button>
+                            </AlertDescription>
+                          </Alert>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Cash payment note */}
+                    {paymentMethod === 'cash' && (
+                      <Alert className="bg-amber-50 dark:bg-amber-900/20 border-amber-200">
+                        <AlertDescription className="text-amber-800 dark:text-amber-200">
+                          You will pay ৳{(parseFloat(selectedRouteDetails?.pricePerSeat || '0')).toFixed(2)} per trip directly to the driver.
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 </div>
               )}
@@ -923,10 +989,12 @@ export default function CarpoolPage() {
             ) : (
               <Button
                 onClick={handlePurchase}
-                disabled={purchaseSubscription.isPending || balance < monthlyTotal}
+                disabled={purchaseSubscription.isPending || (paymentMethod === 'online' && balance < monthlyTotal)}
                 data-testid="button-confirm-purchase"
               >
-                {purchaseSubscription.isPending ? "Processing..." : "Confirm & Subscribe"}
+                {purchaseSubscription.isPending ? "Processing..." : (
+                  paymentMethod === 'cash' ? "Confirm Booking" : "Confirm & Subscribe"
+                )}
               </Button>
             )}
           </CardFooter>

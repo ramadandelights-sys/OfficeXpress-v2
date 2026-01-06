@@ -493,6 +493,7 @@ export const subscriptions = pgTable("subscriptions", {
   totalMonthlyPrice: numeric("total_monthly_price", { precision: 10, scale: 2 }).notNull(),
   discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }).default('0.00'),
   status: text("status").notNull().default("active"), // 'active', 'cancelled', 'expired'
+  paymentMethod: text("payment_method").notNull().default("online"), // 'online' (wallet) or 'cash' (pay to driver)
   cancellationDate: timestamp("cancellation_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

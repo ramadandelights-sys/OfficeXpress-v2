@@ -3954,12 +3954,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pickupPointId,
         dropOffPointId,
         weekdays,
-        startDate
+        startDate,
+        paymentMethod = 'online' // 'online' (wallet) or 'cash' (pay to driver)
       } = req.body;
       
       // Validate required fields
       if (!routeId || !timeSlotId || !pickupPointId || !dropOffPointId || !weekdays || !startDate) {
         return res.status(400).json({ message: "All fields are required" });
+      }
+      
+      // Validate payment method
+      if (!['online', 'cash'].includes(paymentMethod)) {
+        return res.status(400).json({ message: "Invalid payment method" });
       }
       
       // Get route and time slot details
@@ -3977,23 +3983,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pricePerSeat = parseFloat(route.pricePerSeat);
       const monthlyCost = totalDays * pricePerSeat;
       
-      // Get or create wallet
-      let wallet = await storage.getUserWallet(req.session.userId!);
-      if (!wallet) {
-        wallet = await storage.createUserWallet({
-          userId: req.session.userId!,
-          balance: "0",
-        });
-      }
-      
-      // Check wallet balance
-      const currentBalance = parseFloat(wallet.balance);
-      if (currentBalance < monthlyCost) {
-        return res.status(400).json({ 
-          message: "Insufficient wallet balance",
-          required: monthlyCost,
-          current: currentBalance
-        });
+      // For online payment, check wallet balance
+      if (paymentMethod === 'online') {
+        // Get or create wallet
+        let wallet = await storage.getUserWallet(req.session.userId!);
+        if (!wallet) {
+          wallet = await storage.createUserWallet({
+            userId: req.session.userId!,
+            balance: "0",
+          });
+        }
+        
+        // Check wallet balance
+        const currentBalance = parseFloat(wallet.balance);
+        if (currentBalance < monthlyCost) {
+          return res.status(400).json({ 
+            message: "Insufficient wallet balance",
+            required: monthlyCost,
+            current: currentBalance
+          });
+        }
+        
+        // Deduct from wallet for online payments
+        await storage.updateWalletBalance(wallet.id, -monthlyCost);
       }
       
       // Calculate end date (1 month from start)
@@ -4001,7 +4013,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDateObj = new Date(startDateObj);
       endDateObj.setMonth(endDateObj.getMonth() + 1);
       
-      // Create subscription
+      // Create subscription with payment method
       const subscription = await storage.createSubscription({
         userId: req.session.userId!,
         routeId,
@@ -4012,7 +4024,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         endDate: endDateObj,
         pricePerTrip: pricePerSeat.toString(),
         totalMonthlyPrice: monthlyCost.toString(),
-        status: 'active'
+        status: 'active',
+        paymentMethod
       });
       
       // Create invoice
@@ -4025,13 +4038,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: startDateObj
       });
       
-      // Deduct from wallet
-      await storage.updateWalletBalance(wallet.id, -monthlyCost);
-      
       res.json({
         subscription,
         invoice,
-        message: "Subscription purchased successfully"
+        paymentMethod,
+        monthlyFee: monthlyCost,
+        message: paymentMethod === 'cash' 
+          ? "Subscription created successfully! Please pay the driver directly for each trip."
+          : "Subscription purchased successfully"
       });
     } catch (error: any) {
       console.error('Subscription purchase error:', error);
