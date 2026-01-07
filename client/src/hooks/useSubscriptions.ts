@@ -35,6 +35,7 @@ export interface Subscription {
   dropOffPointId: string;
   dropOffPointName: string;
   monthlyFee: number;
+  paymentMethod: 'online' | 'cash';
   status: 'active' | 'pending_cancellation' | 'cancelled' | 'expired';
   startDate: string;
   endDate?: string;
@@ -46,8 +47,11 @@ export interface CostCalculation {
   pricePerSeat: number;
   selectedWeekdays: string[];
   daysPerWeek: number;
-  estimatedDaysPerMonth: number;
+  serviceableDays: number;
+  totalDaysInMonth: number;
+  blackoutDaysExcluded: number;
   monthlyCost: number;
+  monthEndDate: string;
   currency: string;
 }
 
@@ -170,6 +174,7 @@ export function useCalculateCost(routeId?: string, weekdays?: string[]) {
       const response = await apiRequest('POST', '/api/subscriptions/calculate-cost', {
         routeId,
         weekdays,
+        startDate: new Date().toISOString(),
       });
       
       if (!response.ok) {
@@ -185,6 +190,8 @@ export function useCalculateCost(routeId?: string, weekdays?: string[]) {
   return {
     costData: data,
     monthlyTotal: data?.monthlyCost ?? 0,
+    serviceableDays: data?.serviceableDays ?? 0,
+    blackoutDaysExcluded: data?.blackoutDaysExcluded ?? 0,
     isLoading,
     error,
   };
@@ -211,9 +218,12 @@ export function usePurchaseSubscription() {
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions'] });
       queryClient.invalidateQueries({ queryKey: ['/api/subscriptions/active'] });
       
+      const isCash = data.paymentMethod === 'cash';
       toast({
-        title: "Subscription Purchased!",
-        description: `Your subscription has been activated. Monthly fee: ৳${data.monthlyFee.toFixed(2)}`,
+        title: isCash ? "Booking Confirmed!" : "Subscription Purchased!",
+        description: isCash 
+          ? `Your carpool booking has been confirmed. Pay the driver directly for each trip.`
+          : `Your subscription has been activated. Monthly fee: ৳${data.monthlyFee.toFixed(2)}`,
       });
     },
     onError: (error: any) => {

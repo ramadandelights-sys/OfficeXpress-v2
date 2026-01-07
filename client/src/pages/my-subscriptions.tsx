@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, MapPin, Clock, DollarSign, ChevronRight, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import { format } from "date-fns";
 
@@ -33,8 +33,35 @@ export default function MySubscriptionsPage() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   
   // Redirect to login if not authenticated
-  if (!authLoading && !user) {
-    setLocation("/login");
+  useEffect(() => {
+    if (!authLoading && !user) {
+      setLocation("/login");
+    }
+  }, [authLoading, user, setLocation]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+        <div className="max-w-6xl mx-auto">
+          <Skeleton className="h-12 w-64 mb-4" />
+          <Skeleton className="h-6 w-96 mb-8" />
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+            <Skeleton className="h-24" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-48" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if not authenticated (will redirect)
+  if (!user) {
     return null;
   }
   
@@ -116,14 +143,16 @@ export default function MySubscriptionsPage() {
           
           <Card data-testid="card-monthly-spending">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base text-gray-600 dark:text-gray-400">Monthly Spending</CardTitle>
+              <CardTitle className="text-base text-gray-600 dark:text-gray-400">Monthly Spending (Online)</CardTitle>
             </CardHeader>
             <CardContent>
               {subscriptionsLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
                 <p className="text-3xl font-bold text-primary" data-testid="text-monthly-total">
-                  ৳{activeSubscriptions.reduce((sum, sub) => sum + sub.monthlyFee, 0).toFixed(2)}
+                  ৳{activeSubscriptions
+                    .filter(sub => sub.paymentMethod === 'online')
+                    .reduce((sum, sub) => sum + sub.monthlyFee, 0).toFixed(2)}
                 </p>
               )}
             </CardContent>
@@ -193,7 +222,14 @@ export default function MySubscriptionsPage() {
                         Subscription started on {format(new Date(subscription.startDate), 'MMMM dd, yyyy')}
                       </CardDescription>
                     </div>
-                    {getStatusBadge(subscription.status)}
+                    <div className="flex items-center gap-2">
+                      {subscription.paymentMethod === 'cash' && (
+                        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+                          Cash
+                        </Badge>
+                      )}
+                      {getStatusBadge(subscription.status)}
+                    </div>
                   </div>
                 </CardHeader>
                 
@@ -239,12 +275,20 @@ export default function MySubscriptionsPage() {
                     {/* Right Column - Pricing and Actions */}
                     <div className="space-y-4">
                       <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Fee</span>
-                          <span className="text-2xl font-bold text-primary">
-                            ৳{subscription.monthlyFee.toFixed(2)}
-                          </span>
-                        </div>
+                        {subscription.paymentMethod === 'cash' ? (
+                          <div className="text-center py-2">
+                            <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+                              Pay cash directly to driver for each trip
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Fee</span>
+                            <span className="text-2xl font-bold text-primary">
+                              ৳{subscription.monthlyFee.toFixed(2)}
+                            </span>
+                          </div>
+                        )}
                         {subscription.status === 'pending_cancellation' && subscription.endDate && (
                           <Alert className="mt-3">
                             <AlertTriangle className="h-4 w-4" />

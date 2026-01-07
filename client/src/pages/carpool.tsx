@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -262,6 +262,11 @@ export default function CarpoolPage() {
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
+  // Scroll to top when step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({
     queryKey: ['/api/carpool/routes'],
@@ -286,7 +291,7 @@ export default function CarpoolPage() {
   });
 
   // Calculate cost when route and weekdays are selected
-  const { monthlyTotal, isLoading: calculatingCost } = useCalculateCost(
+  const { monthlyTotal, serviceableDays, blackoutDaysExcluded, isLoading: calculatingCost } = useCalculateCost(
     selectedRoute,
     selectedWeekdays
   );
@@ -691,7 +696,12 @@ export default function CarpoolPage() {
                         Estimated monthly cost: <strong>৳{monthlyTotal.toFixed(2)}</strong>
                         <br />
                         <span className="text-xs text-gray-500">
-                          ({selectedWeekdays.length} days × 4.33 weeks × ৳{selectedRouteDetails?.pricePerSeat})
+                          ({serviceableDays} serviceable days remaining × ৳{selectedRouteDetails?.pricePerSeat} per trip)
+                          {blackoutDaysExcluded > 0 && (
+                            <span className="block text-orange-600 dark:text-orange-400">
+                              ({blackoutDaysExcluded} blackout day{blackoutDaysExcluded > 1 ? 's' : ''} excluded)
+                            </span>
+                          )}
                         </span>
                       </AlertDescription>
                     </Alert>
@@ -872,11 +882,20 @@ export default function CarpoolPage() {
                       
                       <div className="border-t pt-3 mt-3">
                         <div className="flex justify-between items-center">
-                          <span className="font-semibold">Monthly Fee:</span>
+                          <span className="font-semibold">
+                            {paymentMethod === 'cash' ? 'Per Trip Fee:' : 'Monthly Fee:'}
+                          </span>
                           <span className="text-2xl font-bold text-primary">
-                            ৳{monthlyTotal.toFixed(2)}
+                            ৳{paymentMethod === 'cash' 
+                              ? (parseFloat(selectedRouteDetails?.pricePerSeat || '0')).toFixed(2)
+                              : monthlyTotal.toFixed(2)}
                           </span>
                         </div>
+                        {paymentMethod === 'cash' && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            Pay cash directly to the driver for each trip
+                          </p>
+                        )}
                       </div>
                     </div>
 

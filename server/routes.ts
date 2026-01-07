@@ -3913,7 +3913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Calculate subscription cost (public - no auth required for price preview)
   app.post("/api/subscriptions/calculate-cost", async (req, res) => {
     try {
-      const { routeId, weekdays } = req.body;
+      const { routeId, weekdays, startDate } = req.body;
       
       if (!routeId || !weekdays || !Array.isArray(weekdays)) {
         return res.status(400).json({ message: "Route ID and weekdays are required" });
@@ -3924,19 +3924,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Route not found" });
       }
       
-      // Calculate monthly cost based on weekdays
-      const weeksPerMonth = 4.33; // Average weeks per month
-      const daysPerWeek = weekdays.length;
-      const totalDays = Math.round(daysPerWeek * weeksPerMonth);
+      // Use provided startDate or default to today
+      const { startOfDay, endOfMonth, eachDayOfInterval, getDay } = await import('date-fns');
+      const fromDate = startDate ? startOfDay(new Date(startDate)) : startOfDay(new Date());
+      const monthEnd = endOfMonth(fromDate);
+      
+      // Map weekday names to day numbers (0=Sunday, 1=Monday, etc.)
+      const weekdayNameToNumber: Record<string, number> = {
+        'sunday': 0, 'monday': 1, 'tuesday': 2, 'wednesday': 3,
+        'thursday': 4, 'friday': 5, 'saturday': 6
+      };
+      const selectedDayNumbers = weekdays.map((w: string) => weekdayNameToNumber[w.toLowerCase()]).filter((n: number | undefined) => n !== undefined);
+      
+      // Get all days from startDate to end of month
+      const allDaysInRange = eachDayOfInterval({ start: fromDate, end: monthEnd });
+      
+      // Filter to only matching weekdays
+      const matchingWeekdays = allDaysInRange.filter(date => selectedDayNumbers.includes(getDay(date)));
+      
+      // Fetch active blackout dates
+      const blackoutDates = await storage.getActiveCarpoolBlackoutDates();
+      
+      // Filter out blackout dates
+      const serviceableDays = matchingWeekdays.filter(date => {
+        const dateTime = date.getTime();
+        return !blackoutDates.some(blackout => {
+          const blackoutStart = new Date(blackout.startDate).setHours(0, 0, 0, 0);
+          const blackoutEnd = new Date(blackout.endDate).setHours(23, 59, 59, 999);
+          return dateTime >= blackoutStart && dateTime <= blackoutEnd;
+        });
+      });
+      
       const pricePerSeat = parseFloat(route.pricePerSeat);
-      const monthlyCost = totalDays * pricePerSeat;
+      const monthlyCost = serviceableDays.length * pricePerSeat;
       
       res.json({
         pricePerSeat,
         selectedWeekdays: weekdays,
-        daysPerWeek,
-        estimatedDaysPerMonth: totalDays,
+        daysPerWeek: weekdays.length,
+        serviceableDays: serviceableDays.length,
+        totalDaysInMonth: matchingWeekdays.length,
+        blackoutDaysExcluded: matchingWeekdays.length - serviceableDays.length,
         monthlyCost,
+        monthEndDate: monthEnd.toISOString(),
         currency: "BDT"
       });
     } catch (error) {
