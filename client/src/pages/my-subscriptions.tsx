@@ -274,7 +274,7 @@ export default function MySubscriptionsPage() {
                         <div>
                           <p className="font-medium text-sm text-gray-600 dark:text-gray-400">Weekdays</p>
                           <p className="text-sm">
-                            {subscription.weekdays.map(day => weekdayMapping[day] || day).join(', ')}
+                            {(subscription.weekdays || []).map(day => weekdayMapping[day] || day).join(', ') || 'Not specified'}
                           </p>
                         </div>
                       </div>
