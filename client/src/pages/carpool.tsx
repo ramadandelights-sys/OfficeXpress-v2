@@ -260,32 +260,29 @@ export default function CarpoolPage() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
-  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  const [bookedWeekdays, setBookedWeekdays] = useState<number[]>([]);
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
-  // Fetch booked dates when phone changes
+  // Fetch booked weekdays when user is authenticated
   useEffect(() => {
-    const phone = form.watch('phone');
-    if (phone && phone.length === 11) {
-      fetch(`/api/carpool/bookings/by-phone/${phone}`)
-        .then(res => res.json())
-        .then(data => setBookedDates(Array.isArray(data) ? data : []))
+    if (user?.phone) {
+      fetch(`/api/carpool/bookings/by-phone/${user.phone}`)
+        .then(res => res.ok ? res.json() : [])
+        .then(data => {
+          if (Array.isArray(data)) {
+            // Extract unique weekday numbers from booked dates
+            const weekdays = data.map((dateStr: string) => new Date(dateStr).getDay());
+            setBookedWeekdays(Array.from(new Set(weekdays)));
+          }
+        })
         .catch(err => console.error("Error fetching booked dates:", err));
     }
-  }, [form.watch('phone')]);
+  }, [user?.phone]);
 
-  // Helper to check if a weekday is already booked in current month/next month
+  // Helper to check if a weekday is already booked
   const isWeekdayDisabled = (dayNumber: number) => {
-    if (bookedDates.length === 0) return false;
-    
-    // This is a simplified check for the upcoming serviceable days
-    // In a real scenario, we might want to check specific dates
-    // For now, we'll check if any booked date matches this day of the week
-    return bookedDates.some(dateStr => {
-      const date = new Date(dateStr);
-      return date.getDay() === dayNumber;
-    });
+    return bookedWeekdays.includes(dayNumber);
   };
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
   // Scroll to top when step changes or purchase completes
   useEffect(() => {
