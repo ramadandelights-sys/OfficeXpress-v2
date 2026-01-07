@@ -293,8 +293,26 @@ export interface IStorage {
   // Subscription operations
   createSubscription(subscription: InsertSubscription): Promise<Subscription>;
   getSubscription(id: string): Promise<Subscription | undefined>;
-  getActiveSubscriptionsByUser(userId: string): Promise<Subscription[]>;
-  getAllSubscriptionsByUser(userId: string): Promise<Subscription[]>;
+  getActiveSubscriptionsByUser(userId: string): Promise<(Subscription & { 
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
+  })[]>;
+  getAllSubscriptionsByUser(userId: string): Promise<(Subscription & { 
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
+  })[]>;
   getActiveSubscriptions(): Promise<Subscription[]>;
   updateSubscription(id: string, data: Partial<Omit<Subscription, 'id' | 'userId' | 'createdAt'>>): Promise<Subscription>;
   cancelSubscription(id: string): Promise<Subscription>;
@@ -346,12 +364,14 @@ export interface IStorage {
   
   // Admin subscription operations
   getAllSubscriptions(): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
     weekdays: string[];
   })[]>;
   getSubscriptionsByStatus(status: string): Promise<(Subscription & { 
@@ -361,6 +381,8 @@ export interface IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   })[]>;
   getAllSubscriptionsWithDetails(): Promise<(Subscription & { 
     userName: string | null;
@@ -369,6 +391,8 @@ export interface IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   })[]>;
   getSubscriptionWithDetails(id: string): Promise<(Subscription & { 
     userName: string | null;
@@ -377,6 +401,8 @@ export interface IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   }) | undefined>;
   getSubscriptionStats(): Promise<{
     totalActive: number;
@@ -1804,10 +1830,34 @@ export class DatabaseStorage implements IStorage {
     return subscription || undefined;
   }
   
-  async getActiveSubscriptionsByUser(userId: string): Promise<Subscription[]> {
-    return await db
-      .select()
+  async getActiveSubscriptionsByUser(userId: string): Promise<(Subscription & { 
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
+  })[]> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        userName: users.name,
+        userPhone: users.phone,
+        routeName: carpoolRoutes.name,
+        fromLocation: carpoolRoutes.fromLocation,
+        toLocation: carpoolRoutes.toLocation,
+        timeSlot: carpoolTimeSlots.departureTime,
+        pickupPointName: pickupPoints.name,
+        dropOffPointName: dropOffPoints.name,
+      })
       .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(
         and(
           eq(subscriptions.userId, userId),
@@ -1815,14 +1865,62 @@ export class DatabaseStorage implements IStorage {
         )
       )
       .orderBy(desc(subscriptions.createdAt));
+
+    return result.map(r => ({
+      ...r.subscription,
+      userName: r.userName || 'Unknown User',
+      userPhone: r.userPhone || '',
+      routeName: r.routeName || 'Unknown Route',
+      fromLocation: r.fromLocation || '',
+      toLocation: r.toLocation || '',
+      timeSlot: r.timeSlot || '',
+      pickupPointName: r.pickupPointName || 'Not specified',
+      dropOffPointName: r.dropOffPointName || 'Not specified',
+    }));
   }
   
-  async getAllSubscriptionsByUser(userId: string): Promise<Subscription[]> {
-    return await db
-      .select()
+  async getAllSubscriptionsByUser(userId: string): Promise<(Subscription & { 
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
+  })[]> {
+    const result = await db
+      .select({
+        subscription: subscriptions,
+        userName: users.name,
+        userPhone: users.phone,
+        routeName: carpoolRoutes.name,
+        fromLocation: carpoolRoutes.fromLocation,
+        toLocation: carpoolRoutes.toLocation,
+        timeSlot: carpoolTimeSlots.departureTime,
+        pickupPointName: pickupPoints.name,
+        dropOffPointName: dropOffPoints.name,
+      })
       .from(subscriptions)
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(eq(subscriptions.userId, userId))
       .orderBy(desc(subscriptions.createdAt));
+    
+    return result.map(r => ({
+      ...r.subscription,
+      userName: r.userName || 'Unknown User',
+      userPhone: r.userPhone || '',
+      routeName: r.routeName || 'Unknown Route',
+      fromLocation: r.fromLocation || '',
+      toLocation: r.toLocation || '',
+      timeSlot: r.timeSlot || '',
+      pickupPointName: r.pickupPointName || 'Not specified',
+      dropOffPointName: r.dropOffPointName || 'Not specified',
+    }));
   }
   
   async getActiveSubscriptions(): Promise<Subscription[]> {
@@ -2258,6 +2356,8 @@ export class DatabaseStorage implements IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   })[]> {
     const result = await db
       .select({
@@ -2268,11 +2368,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
+        pickupPointName: pickupPoints.name,
+        dropOffPointName: dropOffPoints.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(eq(subscriptions.status, status))
       .orderBy(desc(subscriptions.createdAt));
     
@@ -2284,6 +2388,8 @@ export class DatabaseStorage implements IStorage {
       fromLocation: r.fromLocation || '',
       toLocation: r.toLocation || '',
       timeSlot: r.timeSlot || '',
+      pickupPointName: r.pickupPointName || 'Not specified',
+      dropOffPointName: r.dropOffPointName || 'Not specified',
     }));
   }
 
@@ -2294,6 +2400,8 @@ export class DatabaseStorage implements IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   })[]> {
     const result = await db
       .select({
@@ -2304,11 +2412,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
+        pickupPointName: pickupPoints.name,
+        dropOffPointName: dropOffPoints.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .orderBy(desc(subscriptions.createdAt));
     
     return result.map(r => ({
@@ -2319,6 +2431,8 @@ export class DatabaseStorage implements IStorage {
       fromLocation: r.fromLocation || '',
       toLocation: r.toLocation || '',
       timeSlot: r.timeSlot || '',
+      pickupPointName: r.pickupPointName || 'Not specified',
+      dropOffPointName: r.dropOffPointName || 'Not specified',
     }));
   }
 
@@ -2329,6 +2443,8 @@ export class DatabaseStorage implements IStorage {
     fromLocation: string | null;
     toLocation: string | null;
     timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
   }) | undefined> {
     const result = await db
       .select({
@@ -2339,11 +2455,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
+        pickupPointName: pickupPoints.name,
+        dropOffPointName: dropOffPoints.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(eq(subscriptions.id, id));
     
     if (result.length === 0) return undefined;
@@ -2357,6 +2477,8 @@ export class DatabaseStorage implements IStorage {
       fromLocation: r.fromLocation || '',
       toLocation: r.toLocation || '',
       timeSlot: r.timeSlot || '',
+      pickupPointName: r.pickupPointName || 'Not specified',
+      dropOffPointName: r.dropOffPointName || 'Not specified',
     };
   }
 
