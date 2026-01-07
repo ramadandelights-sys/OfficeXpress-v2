@@ -452,6 +452,17 @@ export default function CarpoolPage() {
         startDate,
         paymentMethod,
       });
+      
+      // Refetch subscribed weekdays to update disabled state
+      fetch('/api/subscriptions/weekdays')
+        .then(res => res.ok ? res.json() : {})
+        .then((data: Record<string, string[]>) => {
+          if (data && typeof data === 'object') {
+            setSubscribedWeekdays(data);
+          }
+        })
+        .catch(err => console.error("Error refetching subscribed weekdays:", err));
+      
       setPurchaseComplete(true);
     } catch (error) {
       // Error is handled by the mutation hook

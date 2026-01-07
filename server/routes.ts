@@ -2626,14 +2626,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/subscriptions/weekdays", isAuthenticated, async (req, res) => {
     try {
       const subscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
-      // Return a map of routeId to subscribed weekdays
+      // Return a map of routeId to deduplicated subscribed weekdays
       const subscribedWeekdays: Record<string, string[]> = {};
+      const now = new Date();
       for (const sub of subscriptions) {
+        // Only include subscriptions that haven't ended yet
+        if (sub.endDate && new Date(sub.endDate) < now) continue;
+        
         if (!subscribedWeekdays[sub.routeId]) {
           subscribedWeekdays[sub.routeId] = [];
         }
-        if (sub.weekdays) {
-          subscribedWeekdays[sub.routeId].push(...sub.weekdays);
+        if (sub.weekdays && Array.isArray(sub.weekdays)) {
+          for (const day of sub.weekdays) {
+            if (!subscribedWeekdays[sub.routeId].includes(day)) {
+              subscribedWeekdays[sub.routeId].push(day);
+            }
+          }
         }
       }
       res.json(subscribedWeekdays);
@@ -4052,7 +4060,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Check for overlapping weekdays with existing active subscriptions on the same route
       const existingSubscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
+      const now = new Date();
       const overlappingSubscription = existingSubscriptions.find(sub => {
+        // Skip expired subscriptions
+        if (sub.endDate && new Date(sub.endDate) < now) return false;
         if (sub.routeId !== routeId) return false; // Only check same route
         const subWeekdays = sub.weekdays || [];
         return weekdays.some((day: string) => subWeekdays.includes(day));
