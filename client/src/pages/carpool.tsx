@@ -260,6 +260,31 @@ export default function CarpoolPage() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+
+  // Fetch booked dates when phone changes
+  useEffect(() => {
+    const phone = form.watch('phone');
+    if (phone && phone.length === 11) {
+      fetch(`/api/carpool/bookings/by-phone/${phone}`)
+        .then(res => res.json())
+        .then(data => setBookedDates(Array.isArray(data) ? data : []))
+        .catch(err => console.error("Error fetching booked dates:", err));
+    }
+  }, [form.watch('phone')]);
+
+  // Helper to check if a weekday is already booked in current month/next month
+  const isWeekdayDisabled = (dayNumber: number) => {
+    if (bookedDates.length === 0) return false;
+    
+    // This is a simplified check for the upcoming serviceable days
+    // In a real scenario, we might want to check specific dates
+    // For now, we'll check if any booked date matches this day of the week
+    return bookedDates.some(dateStr => {
+      const date = new Date(dateStr);
+      return date.getDay() === dayNumber;
+    });
+  };
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
   // Scroll to top when step changes or purchase completes
@@ -670,22 +695,27 @@ export default function CarpoolPage() {
                       ) : (
                         weekdayOptions
                           .filter((weekday) => selectedRouteDetails?.weekdays?.includes(weekday.dayNumber) ?? false)
-                          .map((weekday) => (
-                            <div key={weekday.value} className="flex items-center space-x-3">
-                              <Checkbox
-                                id={weekday.value}
-                                checked={form.watch('weekdays').includes(weekday.value)}
-                                onCheckedChange={() => handleWeekdayToggle(weekday.value)}
-                                data-testid={`checkbox-weekday-${weekday.value}`}
-                              />
-                              <Label
-                                htmlFor={weekday.value}
-                                className="cursor-pointer"
-                              >
-                                {weekday.label}
-                              </Label>
-                            </div>
-                          ))
+                          .map((weekday) => {
+                            const isDisabled = isWeekdayDisabled(weekday.dayNumber);
+                            return (
+                              <div key={weekday.value} className="flex items-center space-x-3">
+                                <Checkbox
+                                  id={weekday.value}
+                                  checked={form.watch('weekdays').includes(weekday.value)}
+                                  onCheckedChange={() => handleWeekdayToggle(weekday.value)}
+                                  disabled={isDisabled}
+                                  data-testid={`checkbox-weekday-${weekday.value}`}
+                                />
+                                <Label
+                                  htmlFor={weekday.value}
+                                  className={cn("cursor-pointer", isDisabled && "text-gray-400 cursor-not-allowed")}
+                                >
+                                  {weekday.label}
+                                  {isDisabled && <span className="ml-2 text-xs italic">(Already booked)</span>}
+                                </Label>
+                              </div>
+                            );
+                          })
                       )}
                   </div>
 

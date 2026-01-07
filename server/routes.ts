@@ -2606,6 +2606,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get booked dates for a user by phone (public)
+  app.get("/api/carpool/bookings/by-phone/:phone", async (req, res) => {
+    try {
+      const { phone } = req.params;
+      const bookings = await storage.getCarpoolBookingsByPhone(phone);
+      // Only return active/pending travel dates
+      const bookedDates = bookings
+        .filter(b => b.status !== 'cancelled' && b.status !== 'rejected')
+        .map(b => b.travelDate);
+      res.json(bookedDates);
+    } catch (error) {
+      console.error("Get booked dates error:", error);
+      res.status(500).json({ message: "Failed to fetch booked dates" });
+    }
+  });
+
   // Admin: Assign driver to carpool booking
   app.put("/api/admin/carpool/bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req, res) => {
     try {
