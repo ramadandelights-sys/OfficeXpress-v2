@@ -262,10 +262,10 @@ export default function CarpoolPage() {
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
-  // Scroll to top when step changes
+  // Scroll to top when step changes or purchase completes
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentStep]);
+  }, [currentStep, purchaseComplete]);
 
   // Fetch available routes
   const { data: routes = [], isLoading: loadingRoutes } = useQuery<CarpoolRoute[]>({

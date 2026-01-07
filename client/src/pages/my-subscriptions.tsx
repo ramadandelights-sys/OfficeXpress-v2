@@ -27,20 +27,22 @@ export default function MySubscriptionsPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [, setLocation] = useWouterLocation();
   const { toast } = useToast();
-  const { subscriptions, activeSubscriptions, isLoading: subscriptionsLoading } = useSubscriptions();
+  const { subscriptions, activeSubscriptions, isLoading: subscriptionsLoading, error: subscriptionsError } = useSubscriptions();
   const cancelSubscription = useCancelSubscription();
   
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [hasRedirected, setHasRedirected] = useState(false);
   
-  // Redirect to login if not authenticated
+  // Redirect to login if not authenticated (only once)
   useEffect(() => {
-    if (!authLoading && !user) {
+    if (!authLoading && !user && !hasRedirected) {
+      setHasRedirected(true);
       setLocation("/login");
     }
-  }, [authLoading, user, setLocation]);
+  }, [authLoading, user, hasRedirected, setLocation]);
 
-  // Show loading while checking auth
-  if (authLoading) {
+  // Show loading while checking auth or subscriptions
+  if (authLoading || (!user && !hasRedirected)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
         <div className="max-w-6xl mx-auto">
@@ -60,9 +62,39 @@ export default function MySubscriptionsPage() {
     );
   }
 
-  // Don't render if not authenticated (will redirect)
+  // Show login message if not authenticated
   if (!user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Please log in to view your subscriptions
+          </h1>
+          <Button onClick={() => setLocation("/login")}>
+            Go to Login
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if subscriptions failed to load
+  if (subscriptionsError) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 py-12 px-4">
+        <div className="max-w-6xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Failed to load subscriptions
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
+            Please try refreshing the page
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Refresh Page
+          </Button>
+        </div>
+      </div>
+    );
   }
   
   // Handle subscription cancellation
@@ -151,8 +183,8 @@ export default function MySubscriptionsPage() {
               ) : (
                 <p className="text-3xl font-bold text-primary" data-testid="text-monthly-total">
                   ৳{activeSubscriptions
-                    .filter(sub => sub.paymentMethod === 'online')
-                    .reduce((sum, sub) => sum + sub.monthlyFee, 0).toFixed(2)}
+                    .filter(sub => sub.paymentMethod === 'online' || !sub.paymentMethod)
+                    .reduce((sum, sub) => sum + (typeof sub.monthlyFee === 'number' ? sub.monthlyFee : parseFloat(sub.monthlyFee) || 0), 0).toFixed(2)}
                 </p>
               )}
             </CardContent>
