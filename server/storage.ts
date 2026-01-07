@@ -355,28 +355,28 @@ export interface IStorage {
     weekdays: string[];
   })[]>;
   getSubscriptionsByStatus(status: string): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   })[]>;
   getAllSubscriptionsWithDetails(): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   })[]>;
   getSubscriptionWithDetails(id: string): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   }) | undefined>;
   getSubscriptionStats(): Promise<{
     totalActive: number;
@@ -2252,12 +2252,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getSubscriptionsByStatus(status: string): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   })[]> {
     const result = await db
       .select({
@@ -2270,30 +2270,30 @@ export class DatabaseStorage implements IStorage {
         timeSlot: carpoolTimeSlots.departureTime,
       })
       .from(subscriptions)
-      .innerJoin(users, eq(subscriptions.userId, users.id))
-      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
-      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
       .where(eq(subscriptions.status, status))
       .orderBy(desc(subscriptions.createdAt));
     
     return result.map(r => ({
       ...r.subscription,
-      userName: r.userName,
-      userPhone: r.userPhone,
-      routeName: r.routeName,
-      fromLocation: r.fromLocation,
-      toLocation: r.toLocation,
-      timeSlot: r.timeSlot,
+      userName: r.userName || 'Unknown User',
+      userPhone: r.userPhone || '',
+      routeName: r.routeName || 'Unknown Route',
+      fromLocation: r.fromLocation || '',
+      toLocation: r.toLocation || '',
+      timeSlot: r.timeSlot || '',
     }));
   }
 
   async getAllSubscriptionsWithDetails(): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   })[]> {
     const result = await db
       .select({
@@ -2306,29 +2306,29 @@ export class DatabaseStorage implements IStorage {
         timeSlot: carpoolTimeSlots.departureTime,
       })
       .from(subscriptions)
-      .innerJoin(users, eq(subscriptions.userId, users.id))
-      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
-      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
       .orderBy(desc(subscriptions.createdAt));
     
     return result.map(r => ({
       ...r.subscription,
-      userName: r.userName,
-      userPhone: r.userPhone,
-      routeName: r.routeName,
-      fromLocation: r.fromLocation,
-      toLocation: r.toLocation,
-      timeSlot: r.timeSlot,
+      userName: r.userName || 'Unknown User',
+      userPhone: r.userPhone || '',
+      routeName: r.routeName || 'Unknown Route',
+      fromLocation: r.fromLocation || '',
+      toLocation: r.toLocation || '',
+      timeSlot: r.timeSlot || '',
     }));
   }
 
   async getSubscriptionWithDetails(id: string): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
   }) | undefined> {
     const result = await db
       .select({
@@ -2341,9 +2341,9 @@ export class DatabaseStorage implements IStorage {
         timeSlot: carpoolTimeSlots.departureTime,
       })
       .from(subscriptions)
-      .innerJoin(users, eq(subscriptions.userId, users.id))
-      .innerJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
-      .innerJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
       .where(eq(subscriptions.id, id));
     
     if (result.length === 0) return undefined;
@@ -2351,12 +2351,12 @@ export class DatabaseStorage implements IStorage {
     const r = result[0];
     return {
       ...r.subscription,
-      userName: r.userName,
-      userPhone: r.userPhone,
-      routeName: r.routeName,
-      fromLocation: r.fromLocation,
-      toLocation: r.toLocation,
-      timeSlot: r.timeSlot,
+      userName: r.userName || 'Unknown User',
+      userPhone: r.userPhone || '',
+      routeName: r.routeName || 'Unknown Route',
+      fromLocation: r.fromLocation || '',
+      toLocation: r.toLocation || '',
+      timeSlot: r.timeSlot || '',
     };
   }
 
