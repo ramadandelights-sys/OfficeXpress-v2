@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, Wallet, ChevronRight, ChevronLeft, ChevronDown, Map } from "lucide-react";
+import { MapPin, Clock, Calendar, CheckCircle2, AlertCircle, AlertTriangle, Wallet, ChevronRight, ChevronLeft, ChevronDown, Map } from "lucide-react";
 import { GoogleMapsRouteDisplay } from "@/components/google-maps-route-display";
 
 import { Button } from "@/components/ui/button";
@@ -261,26 +261,58 @@ export default function CarpoolPage() {
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
   const [subscribedWeekdays, setSubscribedWeekdays] = useState<Record<string, string[]>>({});
+  const [subscriptionSchedule, setSubscriptionSchedule] = useState<Record<string, Array<{routeId: string, routeName: string, departureTime: string, timeSlotId: string}>>>({});
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
-  // Fetch already-subscribed weekdays when user is authenticated
+  // Fetch already-subscribed weekdays and schedule when user is authenticated
+  const fetchSubscriptionData = () => {
+    if (!user) return;
+    
+    // Fetch weekdays
+    fetch('/api/subscriptions/weekdays')
+      .then(res => res.ok ? res.json() : {})
+      .then((data: Record<string, string[]>) => {
+        if (data && typeof data === 'object') {
+          setSubscribedWeekdays(data);
+        }
+      })
+      .catch(err => console.error("Error fetching subscribed weekdays:", err));
+    
+    // Fetch schedule for time conflict detection
+    fetch('/api/subscriptions/schedule')
+      .then(res => res.ok ? res.json() : {})
+      .then((data: Record<string, Array<{routeId: string, routeName: string, departureTime: string, timeSlotId: string}>>) => {
+        if (data && typeof data === 'object') {
+          setSubscriptionSchedule(data);
+        }
+      })
+      .catch(err => console.error("Error fetching subscription schedule:", err));
+  };
+
   useEffect(() => {
-    if (user) {
-      fetch('/api/subscriptions/weekdays')
-        .then(res => res.ok ? res.json() : {})
-        .then((data: Record<string, string[]>) => {
-          if (data && typeof data === 'object') {
-            setSubscribedWeekdays(data);
-          }
-        })
-        .catch(err => console.error("Error fetching subscribed weekdays:", err));
-    }
+    fetchSubscriptionData();
   }, [user]);
 
   // Helper to check if a weekday is already subscribed for the selected route
   const isWeekdayDisabled = (weekdayValue: string) => {
     if (!selectedRoute || !subscribedWeekdays[selectedRoute]) return false;
     return subscribedWeekdays[selectedRoute].includes(weekdayValue);
+  };
+
+  // Helper to check for time conflicts with selected time slot
+  const getTimeConflicts = (departureTime: string): Array<{weekday: string, routeName: string}> => {
+    const conflicts: Array<{weekday: string, routeName: string}> = [];
+    for (const weekday of selectedWeekdays) {
+      const existingSlots = subscriptionSchedule[weekday] || [];
+      for (const slot of existingSlots) {
+        // Skip if same route (handled separately)
+        if (slot.routeId === selectedRoute) continue;
+        if (slot.departureTime === departureTime) {
+          conflicts.push({ weekday, routeName: slot.routeName });
+        }
+      }
+    }
+    return conflicts;
   };
 
   // Scroll to top when step changes or purchase completes
@@ -453,15 +485,8 @@ export default function CarpoolPage() {
         paymentMethod,
       });
       
-      // Refetch subscribed weekdays to update disabled state
-      fetch('/api/subscriptions/weekdays')
-        .then(res => res.ok ? res.json() : {})
-        .then((data: Record<string, string[]>) => {
-          if (data && typeof data === 'object') {
-            setSubscribedWeekdays(data);
-          }
-        })
-        .catch(err => console.error("Error refetching subscribed weekdays:", err));
+      // Refetch subscription data to update disabled state for next booking
+      fetchSubscriptionData();
       
       setPurchaseComplete(true);
     } catch (error) {
@@ -766,23 +791,42 @@ export default function CarpoolPage() {
                         value={form.watch('timeSlotId')}
                         onValueChange={(value) => form.setValue('timeSlotId', value)}
                       >
-                          {timeSlots?.map((slot) => (
-                          <div key={slot.id} className="mb-3">
-                            <Label
-                              htmlFor={`slot-${slot.id}`}
-                              className="flex items-center space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800"
-                              data-testid={`timeslot-option-${slot.id}`}
-                            >
-                              <RadioGroupItem value={slot.id} id={`slot-${slot.id}`} />
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2">
-                                  <Clock className="w-4 h-4 text-gray-500" />
-                                  <span className="font-medium">Office Time: {formatTimeWithAmPm(slot.departureTime)}</span>
-                                </div>
+                          {timeSlots?.map((slot) => {
+                            const conflicts = getTimeConflicts(slot.departureTime);
+                            const hasConflict = conflicts.length > 0;
+                            return (
+                              <div key={slot.id} className="mb-3">
+                                <Label
+                                  htmlFor={`slot-${slot.id}`}
+                                  className={cn(
+                                    "flex items-center space-x-3 cursor-pointer p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800",
+                                    hasConflict && "border-orange-300 bg-orange-50 dark:bg-orange-900/20"
+                                  )}
+                                  data-testid={`timeslot-option-${slot.id}`}
+                                >
+                                  <RadioGroupItem value={slot.id} id={`slot-${slot.id}`} />
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <Clock className="w-4 h-4 text-gray-500" />
+                                      <span className="font-medium">Office Time: {formatTimeWithAmPm(slot.departureTime)}</span>
+                                      {hasConflict && (
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-800 dark:text-orange-100">
+                                          <AlertTriangle className="w-3 h-3 mr-1" />
+                                          Conflict
+                                        </span>
+                                      )}
+                                    </div>
+                                    {hasConflict && (
+                                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                        You already have a subscription for {conflicts[0].routeName} at this time on {conflicts.map(c => c.weekday).join(', ')}.
+                                        Selecting this will be rejected.
+                                      </p>
+                                    )}
+                                  </div>
+                                </Label>
                               </div>
-                            </Label>
-                          </div>
-                        ))}
+                            );
+                          })}
                       </RadioGroup>
                       <p className="text-sm text-gray-500 mt-4">
                         Departure time will be announced once we have a carpool match for you. We will ensure you're reaching office on time!

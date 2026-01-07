@@ -2651,6 +2651,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get user's subscription schedule with departure times (for time conflict detection)
+  app.get("/api/subscriptions/schedule", isAuthenticated, async (req, res) => {
+    try {
+      const subscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
+      const now = new Date();
+      
+      // Build schedule: weekday -> list of {routeId, routeName, departureTime}
+      const schedule: Record<string, Array<{routeId: string, routeName: string, departureTime: string, timeSlotId: string}>> = {};
+      
+      for (const sub of subscriptions) {
+        // Skip expired subscriptions
+        if (sub.endDate && new Date(sub.endDate) < now) continue;
+        if (!sub.weekdays || !Array.isArray(sub.weekdays)) continue;
+        
+        // Get route and time slot details
+        const route = await storage.getCarpoolRoute(sub.routeId);
+        const timeSlot = await storage.getCarpoolTimeSlot(sub.timeSlotId);
+        if (!route || !timeSlot) continue;
+        
+        for (const weekday of sub.weekdays) {
+          if (!schedule[weekday]) {
+            schedule[weekday] = [];
+          }
+          // Check if this exact entry already exists (avoid duplicates)
+          const exists = schedule[weekday].some(
+            entry => entry.routeId === sub.routeId && entry.departureTime === timeSlot.departureTime
+          );
+          if (!exists) {
+            schedule[weekday].push({
+              routeId: sub.routeId,
+              routeName: route.name,
+              departureTime: timeSlot.departureTime,
+              timeSlotId: sub.timeSlotId
+            });
+          }
+        }
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      console.error("Get subscription schedule error:", error);
+      res.status(500).json({ message: "Failed to fetch subscription schedule" });
+    }
+  });
+
   // Admin: Assign driver to carpool booking
   app.put("/api/admin/carpool/bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req, res) => {
     try {
@@ -4081,6 +4126,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get route and time slot details
       const route = await storage.getCarpoolRoute(routeId);
       const timeSlot = await storage.getCarpoolTimeSlot(timeSlotId);
+      
+      // Check for time slot conflicts across different routes
+      // (same departure time on same weekday = conflict)
+      if (timeSlot) {
+        const newDepartureTime = timeSlot.departureTime;
+        for (const sub of existingSubscriptions) {
+          // Skip expired subscriptions and same route (already checked above)
+          if (sub.endDate && new Date(sub.endDate) < now) continue;
+          if (sub.routeId === routeId) continue; // Same route already handled
+          
+          const subWeekdays = sub.weekdays || [];
+          const conflictingDays = weekdays.filter((day: string) => subWeekdays.includes(day));
+          
+          if (conflictingDays.length > 0) {
+            // Get the time slot for this existing subscription
+            const existingTimeSlot = await storage.getCarpoolTimeSlot(sub.timeSlotId);
+            if (existingTimeSlot && existingTimeSlot.departureTime === newDepartureTime) {
+              const existingRoute = await storage.getCarpoolRoute(sub.routeId);
+              return res.status(400).json({
+                message: `Time conflict: You already have a subscription for ${existingRoute?.name || 'another route'} at ${newDepartureTime} on ${conflictingDays.join(', ')}. You cannot book two trips at the same time.`,
+                conflictType: 'time_overlap'
+              });
+            }
+          }
+        }
+      }
       
       if (!route || !timeSlot) {
         return res.status(404).json({ message: "Route or time slot not found" });
