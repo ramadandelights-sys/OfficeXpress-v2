@@ -380,9 +380,9 @@ export default function MySubscriptionsPage() {
       <AlertDialog open={!!cancellingId} onOpenChange={() => setCancellingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
+            <AlertDialogTitle>Request Cancellation?</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to cancel this subscription? You'll continue to have access until the end of the current billing period, but it won't renew automatically.
+              To ensure trip continuity and passenger safety, cancellations require admin review. Would you like to submit a cancellation request for this subscription? An admin will contact you to confirm.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -391,10 +391,10 @@ export default function MySubscriptionsPage() {
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => cancellingId && handleCancelSubscription(cancellingId)}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-amber-600 hover:bg-amber-700"
               data-testid="button-cancel-dialog-yes"
             >
-              Yes, Cancel Subscription
+              Submit Cancellation Request
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

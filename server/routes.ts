@@ -4234,7 +4234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Cancel subscription (at month end)
+  // Cancel subscription (modified to create a ticket)
   app.post("/api/subscriptions/:id/cancel", isAuthenticated, async (req, res) => {
     try {
       const subscription = await storage.getSubscription(req.params.id);
@@ -4246,20 +4246,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (subscription.userId !== req.session.userId) {
         return res.status(403).json({ message: "Unauthorized" });
       }
-      
-      // Mark as pending cancellation (will be cancelled at end date)
-      const updated = await storage.updateSubscription(subscription.id, {
-        status: 'pending_cancellation',
-        cancellationDate: new Date()
+
+      // Instead of cancelling, create a complaint/ticket
+      await storage.createComplaint({
+        userId: req.session.userId!,
+        category: "Subscription Cancellation",
+        title: `Cancellation Request: ${subscription.id}`,
+        description: `User requested cancellation for subscription ${subscription.id}.`,
+        severity: "medium",
+        status: "open"
       });
       
       res.json({
-        subscription: updated,
-        message: `Subscription will be cancelled on ${subscription.endDate}`
+        message: "Cancellation request submitted for admin review. An admin will contact you shortly."
       });
     } catch (error) {
       console.error('Cancel subscription error:', error);
-      res.status(500).json({ message: "Failed to cancel subscription" });
+      res.status(500).json({ message: "Failed to submit cancellation request" });
     }
   });
   
