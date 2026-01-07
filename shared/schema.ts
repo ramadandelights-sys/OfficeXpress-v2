@@ -487,6 +487,7 @@ export const subscriptions = pgTable("subscriptions", {
   timeSlotId: varchar("time_slot_id").notNull().references(() => carpoolTimeSlots.id),
   boardingPointId: varchar("boarding_point_id").notNull().references(() => carpoolPickupPoints.id),
   dropOffPointId: varchar("drop_off_point_id").notNull().references(() => carpoolPickupPoints.id),
+  weekdays: text("weekdays").array().default([]), // ['sunday', 'monday', etc.] - days user subscribed to
   startDate: timestamp("start_date").notNull(),
   endDate: timestamp("end_date").notNull(),
   pricePerTrip: numeric("price_per_trip", { precision: 10, scale: 2 }).notNull(),

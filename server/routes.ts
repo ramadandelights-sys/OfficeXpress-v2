@@ -2622,6 +2622,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get subscribed weekdays for logged-in user (for preventing duplicate subscriptions)
+  app.get("/api/subscriptions/weekdays", isAuthenticated, async (req, res) => {
+    try {
+      const subscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
+      // Return a map of routeId to subscribed weekdays
+      const subscribedWeekdays: Record<string, string[]> = {};
+      for (const sub of subscriptions) {
+        if (!subscribedWeekdays[sub.routeId]) {
+          subscribedWeekdays[sub.routeId] = [];
+        }
+        if (sub.weekdays) {
+          subscribedWeekdays[sub.routeId].push(...sub.weekdays);
+        }
+      }
+      res.json(subscribedWeekdays);
+    } catch (error) {
+      console.error("Get subscribed weekdays error:", error);
+      res.status(500).json({ message: "Failed to fetch subscribed weekdays" });
+    }
+  });
+
   // Admin: Assign driver to carpool booking
   app.put("/api/admin/carpool/bookings/:id/assign-driver", hasPermission('driverAssignment'), async (req, res) => {
     try {
@@ -4029,6 +4050,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid payment method" });
       }
       
+      // Check for overlapping weekdays with existing active subscriptions on the same route
+      const existingSubscriptions = await storage.getActiveSubscriptionsByUser(req.session.userId!);
+      const overlappingSubscription = existingSubscriptions.find(sub => {
+        if (sub.routeId !== routeId) return false; // Only check same route
+        const subWeekdays = sub.weekdays || [];
+        return weekdays.some((day: string) => subWeekdays.includes(day));
+      });
+      
+      if (overlappingSubscription) {
+        const overlappingDays = weekdays.filter((day: string) => 
+          (overlappingSubscription.weekdays || []).includes(day)
+        );
+        return res.status(400).json({ 
+          message: `You already have an active subscription for ${overlappingDays.join(', ')} on this route. Please cancel your existing subscription first or select different days.`
+        });
+      }
+      
       // Get route and time slot details
       const route = await storage.getCarpoolRoute(routeId);
       const timeSlot = await storage.getCarpoolTimeSlot(timeSlotId);
@@ -4074,13 +4112,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDateObj = new Date(startDateObj);
       endDateObj.setMonth(endDateObj.getMonth() + 1);
       
-      // Create subscription with payment method
+      // Create subscription with payment method and weekdays
       const subscription = await storage.createSubscription({
         userId: req.session.userId!,
         routeId,
         timeSlotId,
         boardingPointId: pickupPointId,
         dropOffPointId,
+        weekdays, // Store the selected weekdays
         startDate: startDateObj,
         endDate: endDateObj,
         pricePerTrip: pricePerSeat.toString(),

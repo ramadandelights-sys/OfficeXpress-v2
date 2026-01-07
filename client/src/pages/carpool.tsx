@@ -260,28 +260,27 @@ export default function CarpoolPage() {
   const [selectedWeekdays, setSelectedWeekdays] = useState<string[]>([]);
   const [purchaseComplete, setPurchaseComplete] = useState(false);
   const [expandedRoutes, setExpandedRoutes] = useState<Set<string>>(new Set());
-  const [bookedWeekdays, setBookedWeekdays] = useState<number[]>([]);
+  const [subscribedWeekdays, setSubscribedWeekdays] = useState<Record<string, string[]>>({});
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
 
-  // Fetch booked weekdays when user is authenticated
+  // Fetch already-subscribed weekdays when user is authenticated
   useEffect(() => {
-    if (user?.phone) {
-      fetch(`/api/carpool/bookings/by-phone/${user.phone}`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => {
-          if (Array.isArray(data)) {
-            // Extract unique weekday numbers from booked dates
-            const weekdays = data.map((dateStr: string) => new Date(dateStr).getDay());
-            setBookedWeekdays(Array.from(new Set(weekdays)));
+    if (user) {
+      fetch('/api/subscriptions/weekdays')
+        .then(res => res.ok ? res.json() : {})
+        .then((data: Record<string, string[]>) => {
+          if (data && typeof data === 'object') {
+            setSubscribedWeekdays(data);
           }
         })
-        .catch(err => console.error("Error fetching booked dates:", err));
+        .catch(err => console.error("Error fetching subscribed weekdays:", err));
     }
-  }, [user?.phone]);
+  }, [user]);
 
-  // Helper to check if a weekday is already booked
-  const isWeekdayDisabled = (dayNumber: number) => {
-    return bookedWeekdays.includes(dayNumber);
+  // Helper to check if a weekday is already subscribed for the selected route
+  const isWeekdayDisabled = (weekdayValue: string) => {
+    if (!selectedRoute || !subscribedWeekdays[selectedRoute]) return false;
+    return subscribedWeekdays[selectedRoute].includes(weekdayValue);
   };
 
   // Scroll to top when step changes or purchase completes
@@ -693,7 +692,7 @@ export default function CarpoolPage() {
                         weekdayOptions
                           .filter((weekday) => selectedRouteDetails?.weekdays?.includes(weekday.dayNumber) ?? false)
                           .map((weekday) => {
-                            const isDisabled = isWeekdayDisabled(weekday.dayNumber);
+                            const isDisabled = isWeekdayDisabled(weekday.value);
                             return (
                               <div key={weekday.value} className="flex items-center space-x-3">
                                 <Checkbox
