@@ -2579,7 +2579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin: Get all carpool bookings
-  app.get("/api/admin/carpool/bookings", hasPermission('carpoolBookings', 'view'), async (req, res) => {
+  app.get("/api/admin/carpool/bookings", isAuthenticated, isEmployeeOrAdmin, hasPermission('carpoolBookings', 'view'), async (req, res) => {
     try {
       const bookings = await storage.getCarpoolBookings();
       res.json(bookings);

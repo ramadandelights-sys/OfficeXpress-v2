@@ -32,27 +32,14 @@ interface Subscription {
   createdAt: string;
   updatedAt: string;
   // Joined fields from API
-  user?: {
-    name: string;
-    phone: string;
-    email: string;
-  };
-  route?: {
-    name: string;
-    fromArea: string;
-    toArea: string;
-    weekdays: string[];
-  };
-  timeSlot?: {
-    pickupTime: string;
-    dropOffTime: string;
-  };
-  boardingPoint?: {
-    name: string;
-  };
-  dropOffPoint?: {
-    name: string;
-  };
+  userName?: string;
+  userPhone?: string;
+  userEmail?: string;
+  routeName?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  timeSlot?: string;
+  weekdays?: string[];
 }
 
 interface SubscriptionInvoice {
@@ -126,9 +113,9 @@ export default function AdminSubscriptionManagement() {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
-      sub.user?.name?.toLowerCase().includes(query) ||
-      sub.user?.phone?.includes(query) ||
-      sub.route?.name?.toLowerCase().includes(query)
+      sub.userName?.toLowerCase().includes(query) ||
+      sub.userPhone?.includes(query) ||
+      sub.routeName?.toLowerCase().includes(query)
     );
   });
 
@@ -156,17 +143,13 @@ export default function AdminSubscriptionManagement() {
 
     const data = filteredSubscriptions.map(sub => ({
       id: sub.id,
-      userName: sub.user?.name || '',
-      userPhone: formatPhoneNumber(sub.user?.phone || ''),
-      userEmail: sub.user?.email || '',
-      route: sub.route?.name || '',
-      fromArea: sub.route?.fromArea || '',
-      toArea: sub.route?.toArea || '',
-      weekdays: sub.route?.weekdays?.join(', ') || '',
-      boardingPoint: sub.boardingPoint?.name || '',
-      dropOffPoint: sub.dropOffPoint?.name || '',
-      pickupTime: sub.timeSlot?.pickupTime || '',
-      dropOffTime: sub.timeSlot?.dropOffTime || '',
+      userName: sub.userName || '',
+      userPhone: formatPhoneNumber(sub.userPhone || ''),
+      userEmail: sub.userEmail || '',
+      route: sub.routeName || '',
+      fromArea: sub.fromLocation || '',
+      toArea: sub.toLocation || '',
+      weekdays: sub.weekdays?.join(', ') || '',
       pricePerTrip: sub.pricePerTrip,
       monthlyPrice: sub.totalMonthlyPrice,
       discount: sub.discountAmount,
@@ -354,10 +337,10 @@ export default function AdminSubscriptionManagement() {
                       <TableBody>
                         {group.subscriptions.map((sub) => (
                           <TableRow key={sub.id}>
-                            <TableCell>{sub.user?.name}</TableCell>
-                            <TableCell>{formatPhoneNumber(sub.user?.phone || '')}</TableCell>
+                            <TableCell>{sub.userName}</TableCell>
+                            <TableCell>{formatPhoneNumber(sub.userPhone || '')}</TableCell>
                             <TableCell>
-                              {sub.timeSlot?.pickupTime} - {sub.timeSlot?.dropOffTime}
+                              {sub.timeSlot}
                             </TableCell>
                             <TableCell>৳{sub.totalMonthlyPrice}</TableCell>
                             <TableCell>{getStatusBadge(sub.status)}</TableCell>
@@ -409,33 +392,33 @@ export default function AdminSubscriptionManagement() {
                     </TableRow>
                   ) : (
                     filteredSubscriptions.map((sub) => (
-                      <TableRow key={sub.id} data-testid={`row-subscription-${sub.id}`}>
-                        <TableCell>{sub.user?.name}</TableCell>
-                        <TableCell>{formatPhoneNumber(sub.user?.phone || '')}</TableCell>
-                        <TableCell>{sub.route?.name}</TableCell>
-                        <TableCell>
-                          {sub.timeSlot?.pickupTime} - {sub.timeSlot?.dropOffTime}
-                        </TableCell>
-                        <TableCell>{sub.route?.weekdays?.join(', ')}</TableCell>
-                        <TableCell>৳{sub.totalMonthlyPrice}</TableCell>
-                        <TableCell>{getStatusBadge(sub.status)}</TableCell>
-                        <TableCell>{format(new Date(sub.startDate), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>{format(new Date(sub.endDate), 'MMM dd, yyyy')}</TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSubscription(sub);
-                              setShowInvoiceDialog(true);
-                            }}
-                            data-testid={`button-view-invoices-${sub.id}`}
-                          >
-                            <Eye className="mr-2 h-4 w-4" />
-                            Invoices
-                          </Button>
-                        </TableCell>
-                      </TableRow>
+                          <TableRow key={sub.id} data-testid={`row-subscription-${sub.id}`}>
+                            <TableCell>{sub.userName}</TableCell>
+                            <TableCell>{formatPhoneNumber(sub.userPhone || '')}</TableCell>
+                            <TableCell>{sub.routeName}</TableCell>
+                            <TableCell>
+                              {sub.timeSlot}
+                            </TableCell>
+                            <TableCell>{sub.weekdays?.join(', ')}</TableCell>
+                            <TableCell>৳{sub.totalMonthlyPrice}</TableCell>
+                            <TableCell>{getStatusBadge(sub.status)}</TableCell>
+                            <TableCell>{format(new Date(sub.startDate), 'MMM dd, yyyy')}</TableCell>
+                            <TableCell>{format(new Date(sub.endDate), 'MMM dd, yyyy')}</TableCell>
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedSubscription(sub);
+                                  setShowInvoiceDialog(true);
+                                }}
+                                data-testid={`button-view-invoices-${sub.id}`}
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                Invoices
+                              </Button>
+                            </TableCell>
+                          </TableRow>
                     ))
                   )}
                 </TableBody>
@@ -453,8 +436,8 @@ export default function AdminSubscriptionManagement() {
             <DialogDescription>
               {selectedSubscription && (
                 <div className="mt-2 space-y-1">
-                  <p>User: {selectedSubscription.user?.name} ({formatPhoneNumber(selectedSubscription.user?.phone || '')})</p>
-                  <p>Route: {selectedSubscription.route?.name}</p>
+                  <p>User: {selectedSubscription.userName} ({formatPhoneNumber(selectedSubscription.userPhone || '')})</p>
+                  <p>Route: {selectedSubscription.routeName}</p>
                   <p>Monthly Fee: ৳{selectedSubscription.totalMonthlyPrice}</p>
                 </div>
               )}

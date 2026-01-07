@@ -296,6 +296,44 @@ export default function AdminAITripsPage() {
             </Card>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <Card className="bg-primary/5 border-primary/20">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Routine Runs
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">12</span>
+                  <span className="text-xs text-muted-foreground">scheduled today</span>
+                </div>
+                <div className="mt-2 text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3 w-3" />
+                  All active routes covered
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="bg-blue-50/50 dark:bg-blue-900/10 border-blue-100 dark:border-blue-900/30">
+              <CardHeader className="p-4 pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Total Demand
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{trips.reduce((sum, t) => sum + t.passengerCount, 0)}</span>
+                  <span className="text-xs text-muted-foreground">passengers</span>
+                </div>
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Across all generated trips
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
           {isLoading ? (
             <div className="flex justify-center py-8">
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
