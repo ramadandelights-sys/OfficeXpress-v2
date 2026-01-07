@@ -4127,32 +4127,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const route = await storage.getCarpoolRoute(routeId);
       const timeSlot = await storage.getCarpoolTimeSlot(timeSlotId);
       
-      // Check for time slot conflicts across different routes
-      // (same departure time on same weekday = conflict)
-      if (timeSlot) {
-        const newDepartureTime = timeSlot.departureTime;
-        for (const sub of existingSubscriptions) {
-          // Skip expired subscriptions and same route (already checked above)
-          if (sub.endDate && new Date(sub.endDate) < now) continue;
-          if (sub.routeId === routeId) continue; // Same route already handled
-          
-          const subWeekdays = sub.weekdays || [];
-          const conflictingDays = weekdays.filter((day: string) => subWeekdays.includes(day));
-          
-          if (conflictingDays.length > 0) {
-            // Get the time slot for this existing subscription
-            const existingTimeSlot = await storage.getCarpoolTimeSlot(sub.timeSlotId);
-            if (existingTimeSlot && existingTimeSlot.departureTime === newDepartureTime) {
-              const existingRoute = await storage.getCarpoolRoute(sub.routeId);
-              return res.status(400).json({
-                message: `Time conflict: You already have a subscription for ${existingRoute?.name || 'another route'} at ${newDepartureTime} on ${conflictingDays.join(', ')}. You cannot book two trips at the same time.`,
-                conflictType: 'time_overlap'
-              });
-            }
-          }
-        }
-      }
-      
       if (!route || !timeSlot) {
         return res.status(404).json({ message: "Route or time slot not found" });
       }

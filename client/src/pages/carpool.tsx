@@ -818,8 +818,7 @@ export default function CarpoolPage() {
                                     </div>
                                     {hasConflict && (
                                       <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                                        You already have a subscription for {conflicts[0].routeName} at this time on {conflicts.map(c => c.weekday).join(', ')}.
-                                        Selecting this will be rejected.
+                                        Warning: You already have a subscription for {conflicts[0].routeName} at this time on {conflicts.map(c => c.weekday).join(', ')}.
                                       </p>
                                     )}
                                   </div>
