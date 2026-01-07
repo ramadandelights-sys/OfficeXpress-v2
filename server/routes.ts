@@ -2497,6 +2497,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/carpool/bookings", async (req, res) => {
     try {
       const bookingData = insertCarpoolBookingSchema.parse(req.body);
+      
+      // Check for existing active booking for the same phone/email on the same day
+      const existingBookings = await storage.getCarpoolBookingsByPhone(bookingData.phone);
+      const isDuplicate = existingBookings.some(b => 
+        b.travelDate === bookingData.travelDate && 
+        b.status !== 'cancelled' &&
+        b.status !== 'rejected'
+      );
+
+      if (isDuplicate) {
+        return res.status(400).json({ 
+          message: "You already have an active booking for this date. Please manage your existing booking or contact support if you need to make changes." 
+        });
+      }
+
       const booking = await storage.createCarpoolBooking(bookingData);
       
       // Fetch related data for the email
