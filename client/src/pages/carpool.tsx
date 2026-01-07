@@ -617,7 +617,7 @@ export default function CarpoolPage() {
                                   </div>
                                   {/* Price - right aligned on desktop, left on mobile */}
                                   <div className="flex-shrink-0 sm:flex sm:items-center sm:h-full sm:min-h-[60px]">
-                                    <div className="text-sm font-semibold text-primary whitespace-nowrap">
+                                    <div className="text-sm font-semibold text-primary/80 dark:text-primary/90 whitespace-nowrap">
                                       ৳{route.pricePerSeat}/day
                                     </div>
                                   </div>
