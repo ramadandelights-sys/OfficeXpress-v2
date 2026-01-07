@@ -235,7 +235,7 @@ export default function MySubscriptionsPage() {
           </Card>
         ) : (
           <div className="space-y-4">
-            {subscriptions.map((subscription) => (
+            {subscriptions?.map((subscription) => (
               <Card 
                 key={subscription.id} 
                 className={cn(

@@ -729,7 +729,7 @@ export default function CarpoolPage() {
                         value={form.watch('timeSlotId')}
                         onValueChange={(value) => form.setValue('timeSlotId', value)}
                       >
-                        {timeSlots.map((slot) => (
+                          {timeSlots?.map((slot) => (
                           <div key={slot.id} className="mb-3">
                             <Label
                               htmlFor={`slot-${slot.id}`}
@@ -780,7 +780,7 @@ export default function CarpoolPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {pickupPoints.map((point) => (
+                                {pickupPoints?.map((point) => (
                                   <SelectItem
                                     key={point.id}
                                     value={point.id}
@@ -812,7 +812,7 @@ export default function CarpoolPage() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {dropOffPoints.map((point) => (
+                                {dropOffPoints?.map((point) => (
                                   <SelectItem
                                     key={point.id}
                                     value={point.id}
