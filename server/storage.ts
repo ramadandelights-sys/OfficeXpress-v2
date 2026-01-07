@@ -98,6 +98,11 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+
+// Create aliases for pickup and drop-off points (same table, different uses)
+const pickupPoints = alias(carpoolPickupPoints, 'pickup_points');
+const dropOffPoints = alias(carpoolPickupPoints, 'drop_off_points');
 
 export interface IStorage {
   // User operations
