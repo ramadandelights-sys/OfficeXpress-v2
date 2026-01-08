@@ -55,6 +55,12 @@ function generateTripReferenceId(): string {
   return `${prefix}${timestamp}${random}`;
 }
 
+export function startAITripGeneratorService(storage: IStorage) {
+  const service = new AITripGeneratorService(storage);
+  service.start();
+  return service;
+}
+
 export class AITripGeneratorService {
   private storage: IStorage;
   private cronJob: cron.ScheduledTask | null = null;
@@ -468,13 +474,13 @@ DATE: ${tripDate}
 BOOKINGS BY ROUTE AND TIME SLOT:
 ${Array.from(routeGroups.entries()).map(([key, subs]) => {
   const first = subs[0];
-  return \`
-Route: \${first.routeName} (ID: \${first.routeId})
-Office Entry Time: \${first.officeEntryTime} (Time Slot ID: \${first.timeSlotId})
-Passengers (\${subs.length}):
-\${subs.map(s => \`  - ID: \${s.id}, Name: \${s.passengerName}, Pickup: \${s.boardingPointName} (seq: \${s.boardingPointSequence}), Drop: \${s.dropOffPointName} (seq: \${s.dropOffPointSequence})\`).join('\\n')}
-\`;
-}).join('\\n---\\n')}
+  return `
+Route: ${first.routeName} (ID: ${first.routeId})
+Office Entry Time: ${first.officeEntryTime} (Time Slot ID: ${first.timeSlotId})
+Passengers (${subs.length}):
+${subs.map(s => `  - ID: ${s.id}, Name: ${s.passengerName}, Pickup: ${s.boardingPointName} (seq: ${s.boardingPointSequence}), Drop: ${s.dropOffPointName} (seq: ${s.dropOffPointSequence})`).join('\n')}
+`;
+}).join('\n---\n')}
 
 VEHICLE OPTIONS:
 - sedan: 4 passengers max
@@ -666,7 +672,7 @@ Respond with valid JSON in this exact format:
     }
 
     return { 
-      message: \`Successfully generated \${createdTrips.length} trips\`, 
+      message: `Successfully generated ${createdTrips.length} trips`, 
       date: tripDate, 
       tripsGenerated: createdTrips.length 
     };
