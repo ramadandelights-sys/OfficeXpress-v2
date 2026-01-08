@@ -27,7 +27,7 @@ const VEHICLE_TYPES = {
   '32_seater': { label: '32-Seater', capacity: 32, minPassengers: 15 },
 } as const;
 
-const MIN_PASSENGERS_FOR_TRIP = 3;
+const MIN_PASSENGERS_FOR_TRIP = 1;
 
 const AITripGroupingSchema = z.object({
   trips: z.array(z.object({

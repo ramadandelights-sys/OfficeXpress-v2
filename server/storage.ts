@@ -1053,10 +1053,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createMarketingSettings(settingsData: InsertMarketingSettings): Promise<MarketingSettings> {
-    const [settings] = await db.insert(marketingSettings).values([{
-      ...settingsData,
-      conversionGoals: settingsData.conversionGoals || []
-    }]).returning();
+    const [settings] = await db.insert(marketingSettings).values(settingsData).returning();
     return settings;
   }
 
@@ -1095,7 +1092,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createLegalPage(pageData: InsertLegalPage): Promise<LegalPage> {
-    const [page] = await db.insert(legalPages).values([pageData]).returning();
+    const [page] = await db.insert(legalPages).values(pageData).returning();
     return page;
   }
 
@@ -1121,7 +1118,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createWebsiteSettings(settingsData: InsertWebsiteSettings): Promise<WebsiteSettings> {
-    const [settings] = await db.insert(websiteSettings).values([settingsData]).returning();
+    const [settings] = await db.insert(websiteSettings).values(settingsData).returning();
     return settings;
   }
 
@@ -1142,7 +1139,7 @@ export class DatabaseStorage implements IStorage {
 
   // Notifications implementation
   async createNotification(notificationData: InsertNotification): Promise<Notification> {
-    const [notification] = await db.insert(notifications).values([notificationData]).returning();
+    const [notification] = await db.insert(notifications).values(notificationData).returning();
     return notification;
   }
 
@@ -2321,25 +2318,34 @@ export class DatabaseStorage implements IStorage {
   
   // Admin subscription operations
   async getAllSubscriptions(): Promise<(Subscription & { 
-    userName: string;
-    userPhone: string;
-    routeName: string;
-    fromLocation: string;
-    toLocation: string;
-    timeSlot: string;
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    pickupPointName: string | null;
+    dropOffPointName: string | null;
     weekdays: string[];
   })[]> {
+    const pickupPointsTable = alias(carpoolPickupPoints, 'pickupPoints');
+    const dropOffPointsTable = alias(carpoolPickupPoints, 'dropOffPoints');
+
     const result = await db
       .select({
         subscription: subscriptions,
         user: users,
         route: carpoolRoutes,
-        timeSlot: carpoolTimeSlots
+        timeSlot: carpoolTimeSlots,
+        pickupPoint: pickupPointsTable,
+        dropOffPoint: dropOffPointsTable,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(pickupPointsTable, eq(subscriptions.boardingPointId, pickupPointsTable.id))
+      .leftJoin(dropOffPointsTable, eq(subscriptions.dropOffPointId, dropOffPointsTable.id))
       .orderBy(desc(subscriptions.createdAt));
       
     return result.map(row => ({
@@ -2350,7 +2356,9 @@ export class DatabaseStorage implements IStorage {
       fromLocation: row.route?.fromLocation || '',
       toLocation: row.route?.toLocation || '',
       timeSlot: row.timeSlot?.departureTime || '',
-      weekdays: []
+      pickupPointName: row.pickupPoint?.name || 'Not specified',
+      dropOffPointName: row.dropOffPoint?.name || 'Not specified',
+      weekdays: row.subscription.weekdays || []
     }));
   }
   
@@ -2364,8 +2372,8 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   })[]> {
-    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
-    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+    const pickupPointsTable = alias(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = alias(carpoolPickupPoints, "dropOffPoints");
 
     const result = await db
       .select({
@@ -2411,8 +2419,8 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   })[]> {
-    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
-    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+    const pickupPointsTable = alias(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = alias(carpoolPickupPoints, "dropOffPoints");
 
     const result = await db
       .select({
@@ -2457,8 +2465,8 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   }) | undefined> {
-    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
-    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+    const pickupPointsTable = alias(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = alias(carpoolPickupPoints, "dropOffPoints");
 
     const result = await db
       .select({
