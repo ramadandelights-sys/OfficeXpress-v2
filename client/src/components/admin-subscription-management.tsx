@@ -328,6 +328,7 @@ export default function AdminSubscriptionManagement() {
                         <TableRow>
                           <TableHead>User</TableHead>
                           <TableHead>Phone</TableHead>
+                          <TableHead>Route</TableHead>
                           <TableHead>Time Slot</TableHead>
                           <TableHead>Monthly Fee</TableHead>
                           <TableHead>Status</TableHead>
@@ -339,6 +340,7 @@ export default function AdminSubscriptionManagement() {
                           <TableRow key={sub.id}>
                             <TableCell>{sub.userName}</TableCell>
                             <TableCell>{formatPhoneNumber(sub.userPhone || '')}</TableCell>
+                            <TableCell>{sub.routeName}</TableCell>
                             <TableCell>
                               {sub.timeSlot}
                             </TableCell>

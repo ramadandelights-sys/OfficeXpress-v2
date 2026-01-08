@@ -2364,6 +2364,9 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   })[]> {
+    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+
     const result = await db
       .select({
         subscription: subscriptions,
@@ -2373,15 +2376,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
-        pickupPointName: pickupPoints.name,
-        dropOffPointName: dropOffPoints.name,
+        pickupPointName: pickupPointsTable.name,
+        dropOffPointName: dropOffPointsTable.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
-      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
-      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
+      .leftJoin(pickupPointsTable, eq(subscriptions.boardingPointId, pickupPointsTable.id))
+      .leftJoin(dropOffPointsTable, eq(subscriptions.dropOffPointId, dropOffPointsTable.id))
       .where(eq(subscriptions.status, status))
       .orderBy(desc(subscriptions.createdAt));
     
@@ -2408,6 +2411,9 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   })[]> {
+    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+
     const result = await db
       .select({
         subscription: subscriptions,
@@ -2417,15 +2423,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
-        pickupPointName: pickupPoints.name,
-        dropOffPointName: dropOffPoints.name,
+        pickupPointName: pickupPointsTable.name,
+        dropOffPointName: dropOffPointsTable.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
-      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
-      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
+      .leftJoin(pickupPointsTable, eq(subscriptions.boardingPointId, pickupPointsTable.id))
+      .leftJoin(dropOffPointsTable, eq(subscriptions.dropOffPointId, dropOffPointsTable.id))
       .orderBy(desc(subscriptions.createdAt));
     
     return result.map(r => ({
@@ -2451,6 +2457,9 @@ export class DatabaseStorage implements IStorage {
     pickupPointName: string | null;
     dropOffPointName: string | null;
   }) | undefined> {
+    const pickupPointsTable = aliasedTable(carpoolPickupPoints, "pickupPoints");
+    const dropOffPointsTable = aliasedTable(carpoolPickupPoints, "dropOffPoints");
+
     const result = await db
       .select({
         subscription: subscriptions,
@@ -2460,15 +2469,15 @@ export class DatabaseStorage implements IStorage {
         fromLocation: carpoolRoutes.fromLocation,
         toLocation: carpoolRoutes.toLocation,
         timeSlot: carpoolTimeSlots.departureTime,
-        pickupPointName: pickupPoints.name,
-        dropOffPointName: dropOffPoints.name,
+        pickupPointName: pickupPointsTable.name,
+        dropOffPointName: dropOffPointsTable.name,
       })
       .from(subscriptions)
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
-      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
-      .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
+      .leftJoin(pickupPointsTable, eq(subscriptions.boardingPointId, pickupPointsTable.id))
+      .leftJoin(dropOffPointsTable, eq(subscriptions.dropOffPointId, dropOffPointsTable.id))
       .where(eq(subscriptions.id, id));
     
     if (result.length === 0) return undefined;
