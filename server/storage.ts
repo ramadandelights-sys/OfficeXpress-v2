@@ -415,7 +415,9 @@ export interface IStorage {
     totalCancelled: number;
     totalExpired: number;
     totalRevenue: number;
-    monthlyRevenue: number;
+    monthlyRecurringRevenue: number;
+    averageSubscriptionValue: number;
+    subscriptionsByRoute: Array<{ routeId: string; routeName: string; count: number; revenue: number; }>;
   }>;
   
   // Admin wallet operations
@@ -2519,11 +2521,10 @@ export class DatabaseStorage implements IStorage {
     totalCancelled: number;
     totalExpired: number;
     totalRevenue: number;
-    monthlyRevenue: number;
+    monthlyRecurringRevenue: number;
+    averageSubscriptionValue: number;
+    subscriptionsByRoute: Array<{ routeId: string; routeName: string; count: number; revenue: number; }>;
   }> {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
     // Get counts by status
     const statusCounts = await db
       .select({
@@ -2540,19 +2541,43 @@ export class DatabaseStorage implements IStorage {
         monthlyRevenue: sql<number>`coalesce(sum(case when ${subscriptions.status} = 'active' then ${subscriptions.totalMonthlyPrice} else 0 end), 0)::float`
       })
       .from(subscriptions);
+    
+    // Get subscriptions by route
+    const routeStats = await db
+      .select({
+        routeId: subscriptions.routeId,
+        routeName: carpoolRoutes.name,
+        count: sql<number>`count(*)::int`,
+        revenue: sql<number>`coalesce(sum(${subscriptions.totalMonthlyPrice}), 0)::float`
+      })
+      .from(subscriptions)
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .where(eq(subscriptions.status, 'active'))
+      .groupBy(subscriptions.routeId, carpoolRoutes.name);
       
     const counts = statusCounts.reduce((acc, row) => {
       acc[row.status] = Number(row.count);
       return acc;
     }, {} as Record<string, number>);
     
+    const totalActive = counts['active'] || 0;
+    const monthlyRecurringRevenue = Number(revenueStats[0]?.monthlyRevenue || 0);
+    const averageSubscriptionValue = totalActive > 0 ? monthlyRecurringRevenue / totalActive : 0;
+    
     return {
-      totalActive: counts['active'] || 0,
+      totalActive,
       totalPendingCancellation: counts['pending_cancellation'] || 0,
       totalCancelled: counts['cancelled'] || 0,
       totalExpired: counts['expired'] || 0,
       totalRevenue: Number(revenueStats[0]?.totalRevenue || 0),
-      monthlyRevenue: Number(revenueStats[0]?.monthlyRevenue || 0)
+      monthlyRecurringRevenue,
+      averageSubscriptionValue,
+      subscriptionsByRoute: routeStats.map(r => ({
+        routeId: r.routeId,
+        routeName: r.routeName || 'Unknown Route',
+        count: Number(r.count),
+        revenue: Number(r.revenue)
+      }))
     };
   }
   

@@ -39,6 +39,8 @@ export type UserPermissions = {
   driverAssignment?: boolean; // Special: stays as boolean (it's an action, not CRUD)
   employeeManagement?: PermissionLevel;
   complaintManagement?: PermissionLevel;
+  subscriptionManagement?: PermissionLevel; // Finance: subscription management
+  walletManagement?: PermissionLevel; // Finance: wallet and refund management
 };
 
 export const users = pgTable("users", {
