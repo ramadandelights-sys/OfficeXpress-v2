@@ -2169,6 +2169,7 @@ export class DatabaseStorage implements IStorage {
       .insert(complaints)
       .values({
         ...complaint,
+        status: complaint.status || "open",
         referenceId
       })
       .returning();
