@@ -1858,7 +1858,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
-      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(pickupPoints, eq(subscriptions.boardingPointId, pickupPoints.id))
       .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(
         and(
@@ -1907,7 +1907,7 @@ export class DatabaseStorage implements IStorage {
       .leftJoin(users, eq(subscriptions.userId, users.id))
       .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
       .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
-      .leftJoin(pickupPoints, eq(subscriptions.pickupPointId, pickupPoints.id))
+      .leftJoin(pickupPoints, eq(subscriptions.boardingPointId, pickupPoints.id))
       .leftJoin(dropOffPoints, eq(subscriptions.dropOffPointId, dropOffPoints.id))
       .where(eq(subscriptions.userId, userId))
       .orderBy(desc(subscriptions.createdAt));
