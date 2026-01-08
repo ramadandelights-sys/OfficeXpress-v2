@@ -64,7 +64,7 @@ export class AITripGeneratorService {
     this.storage = storage;
   }
 
-  start(cronSchedule: string = '0 18 * * *', enabled: boolean = true) {
+  start(cronSchedule: string = '0 20 * * *', enabled: boolean = true) {
     if (!enabled) {
       console.log('[AITripGenerator] Service is disabled by configuration');
       return;
@@ -80,7 +80,11 @@ export class AITripGeneratorService {
     console.log(`[AITripGenerator] Starting service with schedule: ${cronSchedule}`);
 
     this.cronJob = cron.schedule(cronSchedule, async () => {
+      console.log(`[AITripGenerator] Running scheduled trip generation at ${new Date().toISOString()}`);
       await this.generateTripsForNextDay();
+    }, {
+      scheduled: true,
+      timezone: "Asia/Dhaka"
     });
 
     console.log('[AITripGenerator] Service started successfully');
@@ -506,7 +510,7 @@ Respond with valid JSON in this exact format:
 }`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: 'You are a trip optimization expert. Always respond with valid JSON matching the requested schema.' },
         { role: 'user', content: prompt }

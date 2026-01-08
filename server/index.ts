@@ -207,9 +207,9 @@ app.use((req, res, next) => {
         log('[Startup] Starting automated trip generation service...');
         startTripGeneratorService(storage);
         
-        // Start AI-powered trip generation service (runs at 6 PM daily)
+        // Start AI-powered trip generation service (runs at 8 PM daily)
         log('[Startup] Starting AI trip generation service...');
-        startAITripGeneratorService(storage);
+        startAITripGeneratorService(storage, '0 20 * * *');
         
         // Start automated subscription renewal service
         log('[Startup] Starting subscription renewal service...');
