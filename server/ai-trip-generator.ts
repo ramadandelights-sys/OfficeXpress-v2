@@ -27,7 +27,7 @@ const VEHICLE_TYPES = {
   '32_seater': { label: '32-Seater', capacity: 32, minPassengers: 15 },
 } as const;
 
-const MIN_PASSENGERS_FOR_TRIP = 1;
+const MIN_PASSENGERS_FOR_TRIP = 3;
 
 const AITripGroupingSchema = z.object({
   trips: z.array(z.object({
@@ -214,7 +214,7 @@ export class AITripGeneratorService {
         
         try {
           const tripReferenceId = generateTripReferenceId();
-          const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType];
+          const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType as keyof typeof VEHICLE_TYPES];
           const status = 'pending_assignment'; // No more low_capacity_warning status
 
           const vehicleTrip = await this.storage.createAIGeneratedTrip({
@@ -402,7 +402,7 @@ export class AITripGeneratorService {
               routeName,
               departureTime,
               passengerCount: tripData.passengerIds.length,
-              recommendedVehicle: VEHICLE_TYPES[tripData.recommendedVehicleType]?.label || tripData.recommendedVehicleType,
+              recommendedVehicle: VEHICLE_TYPES[tripData.recommendedVehicleType as keyof typeof VEHICLE_TYPES]?.label || tripData.recommendedVehicleType,
               tripType: 'carpool',
             });
           }
@@ -468,13 +468,13 @@ DATE: ${tripDate}
 BOOKINGS BY ROUTE AND TIME SLOT:
 ${Array.from(routeGroups.entries()).map(([key, subs]) => {
   const first = subs[0];
-  return `
-Route: ${first.routeName} (ID: ${first.routeId})
-Office Entry Time: ${first.officeEntryTime} (Time Slot ID: ${first.timeSlotId})
-Passengers (${subs.length}):
-${subs.map(s => `  - ID: ${s.id}, Name: ${s.passengerName}, Pickup: ${s.boardingPointName} (seq: ${s.boardingPointSequence}), Drop: ${s.dropOffPointName} (seq: ${s.dropOffPointSequence})`).join('\n')}
-`;
-}).join('\n---\n')}
+  return \`
+Route: \${first.routeName} (ID: \${first.routeId})
+Office Entry Time: \${first.officeEntryTime} (Time Slot ID: \${first.timeSlotId})
+Passengers (\${subs.length}):
+\${subs.map(s => \`  - ID: \${s.id}, Name: \${s.passengerName}, Pickup: \${s.boardingPointName} (seq: \${s.boardingPointSequence}), Drop: \${s.dropOffPointName} (seq: \${s.dropOffPointSequence})\`).join('\\n')}
+\`;
+}).join('\\n---\\n')}
 
 VEHICLE OPTIONS:
 - sedan: 4 passengers max
@@ -487,7 +487,7 @@ RULES:
 1. Group passengers by same route AND same time slot (office entry time)
 2. Order pickup sequence by boarding point sequence number (lower = earlier pickup)
 3. Recommend smallest vehicle that fits all passengers in the group
-4. SKIP (do not create) trips with fewer than ${MIN_PASSENGERS_FOR_TRIP} passengers - set "isLowCapacity: false" for all trips you create
+4. SKIP (do not create) trips with fewer than 3 passengers - set "isLowCapacity: false" for all trips you create
 5. Each passenger should be assigned to exactly one trip (passengers on low-capacity routes go to unassignedPassengers)
 6. Provide confidence score (0-1) based on optimization quality
 7. Provide brief rationale for each trip grouping
@@ -625,77 +625,50 @@ Respond with valid JSON in this exact format:
         console.log(`[AITripGenerator] Skipping trip - only ${tripData.passengerIds.length} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
         continue;
       }
-      
-      const tripReferenceId = generateTripReferenceId();
-      const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType];
-      const status = 'pending_assignment'; // No more low_capacity_warning status
 
-      const vehicleTrip = await this.storage.createAIGeneratedTrip({
-        tripReferenceId,
-        routeId: tripData.routeId,
-        timeSlotId: tripData.timeSlotId,
-        tripDate,
-        vehicleCapacity: vehicleConfig.capacity,
-        recommendedVehicleType: tripData.recommendedVehicleType,
-        status,
-        generatedBy,
-        aiConfidenceScore: tripData.confidenceScore.toString(),
-        aiRationale: tripData.rationale,
-      });
+      try {
+        const tripReferenceId = generateTripReferenceId();
+        const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType as keyof typeof VEHICLE_TYPES];
+        const status = 'pending_assignment';
 
-      for (let i = 0; i < tripData.passengerIds.length; i++) {
-        const subscriptionId = tripData.passengerIds[i];
-        const subscription = subscriptionsWithDetails.find(s => s.id === subscriptionId);
-        if (subscription) {
-          await this.storage.createTripBookingFromSubscription({
-            vehicleTripId: vehicleTrip.id,
-            subscriptionId: subscription.id,
-            userId: subscription.userId,
-            boardingPointId: subscription.boardingPointId,
-            dropOffPointId: subscription.dropOffPointId,
-            pickupSequence: tripData.pickupSequence.indexOf(subscriptionId) + 1,
-          });
+        const vehicleTrip = await this.storage.createAIGeneratedTrip({
+          tripReferenceId,
+          routeId: tripData.routeId,
+          timeSlotId: tripData.timeSlotId,
+          tripDate,
+          vehicleCapacity: vehicleConfig.capacity,
+          recommendedVehicleType: tripData.recommendedVehicleType,
+          status,
+          generatedBy,
+          aiConfidenceScore: tripData.confidenceScore.toString(),
+          aiRationale: tripData.rationale,
+        });
+
+        for (let i = 0; i < tripData.passengerIds.length; i++) {
+          const subscriptionId = tripData.passengerIds[i];
+          const subscription = subscriptionsWithDetails.find(s => s.id === subscriptionId);
+          if (subscription) {
+            await this.storage.createTripBookingFromSubscription({
+              vehicleTripId: vehicleTrip.id,
+              subscriptionId: subscription.id,
+              userId: subscription.userId,
+              boardingPointId: subscription.boardingPointId,
+              dropOffPointId: subscription.dropOffPointId,
+              pickupSequence: tripData.pickupSequence.indexOf(subscriptionId) + 1,
+            });
+          }
         }
+        
+        createdTrips.push(vehicleTrip);
+      } catch (e) {
+        console.error('Error in manual trip generation:', e);
       }
-
-      createdTrips.push({
-        id: vehicleTrip.id,
-        tripReferenceId,
-        passengerCount: tripData.passengerIds.length,
-        recommendedVehicle: tripData.recommendedVehicleType,
-        isLowCapacity: false, // All created trips meet minimum requirement
-      });
     }
 
-    return {
-      date: tripDate,
-      generatedBy,
-      tripsGenerated: createdTrips.length,
-      lowCapacityTrips: 0, // We no longer create low capacity trips
-      passengersAssigned: subscriptionsWithDetails.length,
-      trips: createdTrips,
+    return { 
+      message: \`Successfully generated \${createdTrips.length} trips\`, 
+      date: tripDate, 
+      tripsGenerated: createdTrips.length 
     };
   }
-}
-
-let aiTripGeneratorInstance: AITripGeneratorService | null = null;
-
-export function getAITripGeneratorService(storage: IStorage): AITripGeneratorService {
-  if (!aiTripGeneratorInstance) {
-    aiTripGeneratorInstance = new AITripGeneratorService(storage);
-  }
-  return aiTripGeneratorInstance;
-}
-
-export function startAITripGeneratorService(
-  storage: IStorage,
-  schedule?: string,
-  enabled?: boolean
-) {
-  const service = getAITripGeneratorService(storage);
-  const cronSchedule = schedule || process.env.AI_TRIP_GENERATION_SCHEDULE || '0 18 * * *';
-  const isEnabled = enabled !== undefined ? enabled : process.env.AI_TRIP_GENERATION_ENABLED !== 'false';
-  
-  service.start(cronSchedule, isEnabled);
-  return service;
 }

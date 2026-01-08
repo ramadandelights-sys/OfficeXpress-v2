@@ -3376,7 +3376,7 @@ export class DatabaseStorage implements IStorage {
     if (!newTrip) throw new Error('Failed to create AI-generated trip');
     return newTrip;
   }
-  
+
   async createTripBookingFromSubscription(booking: {
     vehicleTripId: string;
     subscriptionId: string;
