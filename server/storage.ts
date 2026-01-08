@@ -97,7 +97,7 @@ import {
   type UpdateComplaint
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, or, ilike, like, sql, lt, and } from "drizzle-orm";
+import { eq, desc, or, ilike, like, sql, lt, and, inArray } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 
 // Create aliases for pickup and drop-off points (same table, different uses)
@@ -2602,6 +2602,11 @@ export class DatabaseStorage implements IStorage {
     // Get transaction stats for each wallet
     const walletIds = walletsWithUsers.map(w => w.wallet.id);
     
+    // Handle empty wallets case
+    if (walletIds.length === 0) {
+      return [];
+    }
+    
     const transactionStats = await db
       .select({
         walletId: walletTransactions.walletId,
@@ -2610,7 +2615,7 @@ export class DatabaseStorage implements IStorage {
         totalDebits: sql<number>`coalesce(sum(case when ${walletTransactions.type} = 'debit' then ${walletTransactions.amount} else 0 end), 0)::float`
       })
       .from(walletTransactions)
-      .where(sql`${walletTransactions.walletId} = ANY(${walletIds})`)
+      .where(inArray(walletTransactions.walletId, walletIds))
       .groupBy(walletTransactions.walletId);
       
     // Combine the data
@@ -3172,7 +3177,7 @@ export class DatabaseStorage implements IStorage {
       const usersData = await db
         .select()
         .from(users)
-        .where(sql`${users.id} = ANY(${userIds})`);
+        .where(inArray(users.id, userIds));
       userMap = new Map(usersData.map(u => [u.id, u]));
     }
     

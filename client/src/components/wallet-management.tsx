@@ -114,13 +114,10 @@ export default function WalletManagement() {
   // Wallet adjustment mutation
   const adjustWalletMutation = useMutation({
     mutationFn: async (data: { walletId: string } & AdjustmentFormData) => {
-      return await apiRequest(`/api/admin/wallets/${data.walletId}/adjust`, {
-        method: "POST",
-        body: JSON.stringify({
-          amount: data.amount,
-          type: data.type,
-          reason: data.reason,
-        }),
+      return await apiRequest('POST', `/api/admin/wallets/${data.walletId}/adjust`, {
+        amount: data.amount,
+        type: data.type,
+        reason: data.reason,
       });
     },
     onSuccess: () => {

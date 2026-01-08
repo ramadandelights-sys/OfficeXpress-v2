@@ -106,9 +106,10 @@ export default function AdminWalletManagement() {
   // Fetch transactions for selected wallet
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<WalletTransaction[]>({
     queryKey: ['/api/admin/wallets', selectedWallet?.id, 'transactions'],
-    queryFn: async () => {
+    queryFn: async (): Promise<WalletTransaction[]> => {
       if (!selectedWallet) return [];
-      return apiRequest(`/api/admin/wallets/${selectedWallet.id}/transactions`);
+      const response = await apiRequest('GET', `/api/admin/wallets/${selectedWallet.id}/transactions`);
+      return response.json();
     },
     enabled: !!selectedWallet && showTransactionDialog
   });
@@ -117,13 +118,10 @@ export default function AdminWalletManagement() {
   const adjustmentMutation = useMutation({
     mutationFn: async (data: z.infer<typeof adjustmentSchema>) => {
       if (!selectedWallet) throw new Error('No wallet selected');
-      return apiRequest(`/api/admin/wallets/${selectedWallet.id}/adjust`, {
-        method: 'POST',
-        body: JSON.stringify({
-          ...data,
-          amount: parseFloat(data.amount),
-          adminUserId: user?.id
-        })
+      return apiRequest('POST', `/api/admin/wallets/${selectedWallet.id}/adjust`, {
+        ...data,
+        amount: parseFloat(data.amount),
+        adminUserId: user?.id
       });
     },
     onSuccess: () => {

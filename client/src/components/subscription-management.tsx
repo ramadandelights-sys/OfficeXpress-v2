@@ -97,9 +97,7 @@ export default function SubscriptionManagement() {
   // Cancel subscription mutation
   const cancelSubscriptionMutation = useMutation({
     mutationFn: async (subscriptionId: string) => {
-      return await apiRequest(`/api/admin/subscriptions/${subscriptionId}/cancel`, {
-        method: "POST",
-      });
+      return await apiRequest('POST', `/api/admin/subscriptions/${subscriptionId}/cancel`);
     },
     onSuccess: () => {
       toast({ title: "Subscription cancelled successfully" });

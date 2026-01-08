@@ -4654,15 +4654,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const wallets = await storage.getAllWallets();
         const totalWallets = wallets.length;
-        const totalBalance = wallets.reduce((sum, w) => sum + Number(w.balance || 0), 0);
+        const totalSystemBalance = wallets.reduce((sum, w) => sum + Number(w.balance || 0), 0);
         const totalCredits = wallets.reduce((sum, w) => sum + Number(w.totalCredits || 0), 0);
         const totalDebits = wallets.reduce((sum, w) => sum + Number(w.totalDebits || 0), 0);
+        const walletsWithPositiveBalance = wallets.filter(w => Number(w.balance || 0) > 0).length;
+        const walletsWithZeroBalance = wallets.filter(w => Number(w.balance || 0) === 0).length;
+        
+        // Count recent transactions (last 7 days)
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const recentTransactions = wallets.reduce((sum, w) => {
+          const lastTxDate = w.lastTransactionDate ? new Date(w.lastTransactionDate) : null;
+          return sum + (lastTxDate && lastTxDate >= sevenDaysAgo ? 1 : 0);
+        }, 0);
+        
         res.json({
           totalWallets,
-          totalBalance,
+          totalSystemBalance,
           totalCredits,
           totalDebits,
-          averageBalance: totalWallets > 0 ? totalBalance / totalWallets : 0
+          averageBalance: totalWallets > 0 ? totalSystemBalance / totalWallets : 0,
+          walletsWithPositiveBalance,
+          walletsWithZeroBalance,
+          recentTransactions
         });
       } catch (error) {
         console.error("Error fetching wallet stats:", error);

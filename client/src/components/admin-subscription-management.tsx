@@ -84,10 +84,11 @@ export default function AdminSubscriptionManagement() {
   // Fetch subscriptions
   const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
     queryKey: ['/api/admin/subscriptions', statusFilter],
-    queryFn: async () => {
+    queryFn: async (): Promise<Subscription[]> => {
       const params = new URLSearchParams();
       if (statusFilter !== 'all') params.append('status', statusFilter);
-      return apiRequest(`/api/admin/subscriptions?${params.toString()}`);
+      const response = await apiRequest('GET', `/api/admin/subscriptions?${params.toString()}`);
+      return response.json();
     },
     enabled: hasPermission('subscriptionManagement', 'view')
   });
@@ -101,9 +102,10 @@ export default function AdminSubscriptionManagement() {
   // Fetch invoices for selected subscription
   const { data: invoices = [], isLoading: invoicesLoading } = useQuery<SubscriptionInvoice[]>({
     queryKey: ['/api/admin/subscriptions', selectedSubscription?.id, 'invoices'],
-    queryFn: async () => {
+    queryFn: async (): Promise<SubscriptionInvoice[]> => {
       if (!selectedSubscription) return [];
-      return apiRequest(`/api/admin/subscriptions/${selectedSubscription.id}/invoices`);
+      const response = await apiRequest('GET', `/api/admin/subscriptions/${selectedSubscription.id}/invoices`);
+      return response.json();
     },
     enabled: !!selectedSubscription && showInvoiceDialog
   });
@@ -125,13 +127,13 @@ export default function AdminSubscriptionManagement() {
         const routeKey = sub.routeId;
         if (!acc[routeKey]) {
           acc[routeKey] = {
-            route: sub.route,
+            routeName: sub.routeName,
             subscriptions: []
           };
         }
         acc[routeKey].subscriptions.push(sub);
         return acc;
-      }, {} as Record<string, { route: any; subscriptions: Subscription[] }>)
+      }, {} as Record<string, { routeName: string | undefined; subscriptions: Subscription[] }>)
     : null;
 
   // Export to CSV
@@ -316,10 +318,10 @@ export default function AdminSubscriptionManagement() {
                 <Card key={routeId}>
                   <CardHeader className="pb-3">
                     <CardTitle className="text-lg">
-                      {group.route?.name || 'Unknown Route'}
+                      {group.routeName || 'Unknown Route'}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      {group.route?.fromArea} → {group.route?.toArea} • {group.subscriptions.length} subscriptions
+                      {group.subscriptions[0]?.fromLocation} → {group.subscriptions[0]?.toLocation} • {group.subscriptions.length} subscriptions
                     </p>
                   </CardHeader>
                   <CardContent>
