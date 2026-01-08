@@ -4254,7 +4254,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: `Cancellation Request: ${subscription.id}`,
         description: `User requested cancellation for subscription ${subscription.id}.`,
         severity: "medium",
-        status: "open"
       });
       
       res.json({
