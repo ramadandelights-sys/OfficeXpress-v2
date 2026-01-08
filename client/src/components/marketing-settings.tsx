@@ -81,7 +81,7 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
           <TabsContent value="facebook" className="mt-6 space-y-4">
             <div className="bg-blue-50 dark:bg-blue-950 p-4 rounded-lg mb-4">
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                <strong>Note:</strong> Facebook Pixel is hardcoded for reliability. This section configures the Conversions API for server-side tracking only.
+                <strong>Note:</strong> This section configures the Facebook Pixel and Conversions API for tracking.
               </p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -107,15 +107,13 @@ export function MarketingSettingsForm({ settings, onSave, onCancel, isLoading }:
                 name="facebookPixelId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Facebook Pixel ID (Reference Only)</FormLabel>
+                    <FormLabel>Facebook Pixel ID</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value ?? ""}
-                        placeholder="Current: 1298214847902257 (Hardcoded)"
+                        placeholder="123456789012345"
                         data-testid="input-facebook-pixel-id"
-                        className="bg-gray-50 dark:bg-gray-900"
-                        readOnly
                       />
                     </FormControl>
                     <FormMessage />
@@ -439,10 +437,15 @@ export function MarketingSettingsDisplay({ settings }: MarketingSettingsDisplayP
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="bg-blue-50 dark:bg-blue-950 p-3 rounded-lg mb-3">
-              <p className="text-xs text-blue-800 dark:text-blue-200">
-                <strong>Pixel Status:</strong> Active (Hardcoded: 1298214847902257)
-              </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Pixel Status</span>
+              <span className={`px-2 py-1 rounded-full text-xs ${
+                settings.facebookPixelId
+                  ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' 
+                  : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+              }`}>
+                {settings.facebookPixelId ? 'Active' : 'Not Configured'}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Conversions API</span>
