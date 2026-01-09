@@ -36,8 +36,9 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL storage.
 - **Security Features**: bcrypt hashing, CSRF protection, environment-aware rate limiting, HttpOnly/Secure/SameSite cookies, Helmet security headers.
 - **Input Validation**: Zod schemas and server-side validation.
-- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections (e.g., blogPosts, rentalBookings, employeeManagement), enforced at UI, query, API, and database layers.
+- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections (e.g., blogPosts, rentalBookings, employeeManagement), enforced at UI, query, API, and database layers. Additional action permissions: subscriptionCancellation, walletRefunds, userBanManagement.
 - **Secure Onboarding**: One-time 24-hour email links for new employee accounts.
+- **User Ban System**: Admins can ban/unban users with reason tracking. Banned users cannot log in and see a suspension message.
 
 ### UI/UX Decisions
 - Dynamic form pre-selection based on URL query parameters.
@@ -67,6 +68,9 @@ Preferred communication style: Simple, everyday language.
 - **Flexible Payment Options**: Customers can choose between cash payment (pay driver directly per trip) or online payment (prepay from wallet balance) when booking subscriptions.
 - **Complaint Management**: Users can file complaints with categories and severity, managed by admin.
 - **Bangladesh Holidays Integration**: Static holiday data for 2024-2026, manageable by admin as blackout dates.
+- **Admin Subscription Cancellation**: Admins can cancel subscriptions with automatic prorated refund calculation based on remaining days.
+- **Manual Refunds**: Admins can issue manual refunds directly to user wallets with reason tracking.
+- **User Ban Management**: Admin can ban/unban customers and employees with reason and timestamp tracking.
 
 ## External Dependencies
 
