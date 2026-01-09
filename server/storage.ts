@@ -498,21 +498,85 @@ export interface IStorage {
 }
 
 export class DatabaseStorage implements IStorage {
+  // Helper to create fallback user query without ban columns
+  private async selectUserWithFallback(whereClause: any): Promise<User | undefined> {
+    try {
+      const [user] = await db.select().from(users).where(whereClause);
+      return user || undefined;
+    } catch (error: any) {
+      // Fallback for production where ban columns might not exist yet
+      if (error.message?.includes('is_banned') || error.message?.includes('banned_at') || 
+          error.message?.includes('ban_reason') || error.message?.includes('banned_by')) {
+        console.log('[Storage] Ban columns not found, using fallback query');
+        const [user] = await db.select({
+          id: users.id,
+          phone: users.phone,
+          email: users.email,
+          name: users.name,
+          password: users.password,
+          role: users.role,
+          permissions: users.permissions,
+          temporaryPassword: users.temporaryPassword,
+          officeLocation: users.officeLocation,
+          homeLocation: users.homeLocation,
+          createdAt: users.createdAt,
+          lastLogin: users.lastLogin,
+        }).from(users).where(whereClause);
+        if (user) {
+          return { ...user, isBanned: false, bannedAt: null, banReason: null, bannedBy: null } as User;
+        }
+        return undefined;
+      }
+      throw error;
+    }
+  }
+  
+  private async selectUsersWithFallback(whereClause: any): Promise<User[]> {
+    try {
+      return await db.select().from(users).where(whereClause);
+    } catch (error: any) {
+      // Fallback for production where ban columns might not exist yet
+      if (error.message?.includes('is_banned') || error.message?.includes('banned_at') || 
+          error.message?.includes('ban_reason') || error.message?.includes('banned_by')) {
+        console.log('[Storage] Ban columns not found, using fallback query for multiple users');
+        const userList = await db.select({
+          id: users.id,
+          phone: users.phone,
+          email: users.email,
+          name: users.name,
+          password: users.password,
+          role: users.role,
+          permissions: users.permissions,
+          temporaryPassword: users.temporaryPassword,
+          officeLocation: users.officeLocation,
+          homeLocation: users.homeLocation,
+          createdAt: users.createdAt,
+          lastLogin: users.lastLogin,
+        }).from(users).where(whereClause);
+        return userList.map(user => ({ 
+          ...user, 
+          isBanned: false, 
+          bannedAt: null, 
+          banReason: null, 
+          bannedBy: null 
+        } as User));
+      }
+      throw error;
+    }
+  }
+
   // User operations
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user || undefined;
+    return this.selectUserWithFallback(eq(users.id, id));
   }
 
   async getUserByPhone(phone: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.phone, phone));
-    return user || undefined;
+    return this.selectUserWithFallback(eq(users.phone, phone));
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
     if (!email) return undefined;
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user || undefined;
+    return this.selectUserWithFallback(eq(users.email, email));
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
@@ -542,15 +606,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUsersByRole(role: 'customer' | 'employee' | 'superadmin'): Promise<User[]> {
-    return await db.select().from(users).where(eq(users.role, role));
+    return this.selectUsersWithFallback(eq(users.role, role));
   }
 
   async getUsersWithDriverAssignmentPermission(): Promise<User[]> {
     // Get all superadmins (they have all permissions by default)
-    const superadmins = await db.select().from(users).where(eq(users.role, 'superadmin'));
+    const superadmins = await this.selectUsersWithFallback(eq(users.role, 'superadmin'));
     
     // Get employees with driverAssignment permission set to true
-    const employees = await db.select().from(users).where(eq(users.role, 'employee'));
+    const employees = await this.selectUsersWithFallback(eq(users.role, 'employee'));
     const employeesWithPermission = employees.filter(emp => 
       emp.permissions && (emp.permissions as any).driverAssignment === true
     );
