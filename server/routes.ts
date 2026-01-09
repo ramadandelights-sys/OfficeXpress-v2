@@ -307,11 +307,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log("Login success for user:", user.phone);
           res.json(responseData);
         });
-      }, (regenErr: any) => {
-        if (regenErr) {
-          console.error("Session regeneration callback error:", regenErr);
-          res.status(500).json({ message: "Login failed: Session regeneration callback error" });
-        }
       });
     } catch (error: any) {
       console.error("CRITICAL: Login error detail:", error);
