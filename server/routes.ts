@@ -248,11 +248,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Check if user is banned
-      if (user.isBanned) {
+      if ((user as any).isBanned === true) {
         return res.status(403).json({ 
           message: "Your account has been suspended. Please contact support for assistance.",
           isBanned: true,
-          banReason: user.banReason
+          banReason: (user as any).banReason
         });
       }
       
@@ -266,7 +266,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Store user info in new session
         req.session.userId = user.id;
         req.session.role = user.role;
-        req.session.permissions = user.permissions as UserPermissions | undefined;
+        req.session.permissions = (user.permissions || {}) as UserPermissions;
         
         // Save session before responding
         req.session.save(async (saveErr: any) => {
@@ -290,7 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
     } catch (error) {
-      console.error("Login error:", error);
+      console.error("Login error detail:", error);
       res.status(500).json({ message: "Login failed" });
     }
   });
