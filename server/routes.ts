@@ -260,23 +260,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.session.regenerate((err: any) => {
         if (err) {
           console.error("Session regeneration error:", err);
-          return res.status(500).json({ message: "Login failed" });
+          return res.status(500).json({ message: "Login failed: Session regeneration error" });
         }
         
         // Store user info in new session
         req.session.userId = user.id;
         req.session.role = user.role;
-        req.session.permissions = (user.permissions || {}) as UserPermissions;
+        
+        // Ensure permissions is an object
+        let perms = user.permissions || {};
+        if (typeof perms === 'string') {
+          try {
+            perms = JSON.parse(perms);
+          } catch (e) {
+            console.error("Failed to parse user permissions:", e);
+            perms = {};
+          }
+        }
+        req.session.permissions = perms;
         
         // Save session before responding
         req.session.save(async (saveErr: any) => {
           if (saveErr) {
             console.error("Session save error:", saveErr);
-            return res.status(500).json({ message: "Login failed" });
+            return res.status(500).json({ message: "Login failed: Session save error" });
           }
           
-          // Update last login
-          await storage.updateUser(user.id, { lastLogin: new Date() } as any);
+      // Update last login
+          try {
+            await storage.updateUser(user.id, { lastLogin: new Date() } as any);
+          } catch (updateErr) {
+            console.error("Failed to update last login:", updateErr);
+            // Don't fail login just because last login update failed
+          }
           
           res.json({ 
             id: user.id,
@@ -284,14 +300,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: user.email,
             name: user.name,
             role: user.role,
-            permissions: user.permissions,
+            permissions: (user.permissions || {}),
             temporaryPassword: user.temporaryPassword
           });
         });
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error detail:", error);
-      res.status(500).json({ message: "Login failed" });
+      res.status(500).json({ 
+        message: "Login failed", 
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+      });
     }
   });
 
