@@ -294,7 +294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             // Don't fail login just because last login update failed
           }
           
-          res.json({ 
+          const responseData = { 
             id: user.id,
             phone: user.phone,
             email: user.email,
@@ -302,14 +302,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: user.role,
             permissions: (user.permissions || {}),
             temporaryPassword: user.temporaryPassword
-          });
+          };
+          
+          console.log("Login success for user:", user.phone);
+          res.json(responseData);
         });
+      }, (regenErr: any) => {
+        if (regenErr) {
+          console.error("Session regeneration callback error:", regenErr);
+          res.status(500).json({ message: "Login failed: Session regeneration callback error" });
+        }
       });
     } catch (error: any) {
-      console.error("Login error detail:", error);
+      console.error("CRITICAL: Login error detail:", error);
       res.status(500).json({ 
         message: "Login failed", 
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+        error: error.message,
+        stack: error.stack
       });
     }
   });
