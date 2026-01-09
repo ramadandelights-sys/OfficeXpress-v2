@@ -28,7 +28,10 @@ import {
   Info,
   CalendarOff,
   CreditCard,
-  Wallet
+  Wallet,
+  XCircle,
+  RefreshCw,
+  Ban
 } from "lucide-react";
 
 export type PermissionLevel = {
@@ -53,6 +56,9 @@ export type UserPermissions = {
   employeeManagement?: PermissionLevel;
   subscriptionManagement?: PermissionLevel;
   walletManagement?: PermissionLevel;
+  subscriptionCancellation?: boolean;
+  walletRefunds?: boolean;
+  userBanManagement?: boolean;
 };
 
 interface PermissionMatrixProps {
@@ -175,6 +181,30 @@ const permissionSections: PermissionSection[] = [
     icon: <Wallet className="h-4 w-4" />,
     description: "Manage user wallets and perform adjustments",
     hasCsv: true,
+  },
+  {
+    key: "subscriptionCancellation",
+    label: "Cancel Subscriptions",
+    icon: <XCircle className="h-4 w-4" />,
+    description: "Cancel user subscriptions with prorated refunds",
+    hasCsv: false,
+    isSpecial: true,
+  },
+  {
+    key: "walletRefunds",
+    label: "Issue Refunds",
+    icon: <RefreshCw className="h-4 w-4" />,
+    description: "Manually issue refunds to user wallets",
+    hasCsv: false,
+    isSpecial: true,
+  },
+  {
+    key: "userBanManagement",
+    label: "Ban/Unban Users",
+    icon: <Ban className="h-4 w-4" />,
+    description: "Ban or unban users from the platform",
+    hasCsv: false,
+    isSpecial: true,
   },
 ];
 
