@@ -41,6 +41,9 @@ export type UserPermissions = {
   complaintManagement?: PermissionLevel;
   subscriptionManagement?: PermissionLevel; // Finance: subscription management
   walletManagement?: PermissionLevel; // Finance: wallet and refund management
+  subscriptionCancellation?: boolean; // Action: cancel subscriptions with prorated refund
+  walletRefunds?: boolean; // Action: issue manual refunds to user wallets
+  userBanManagement?: boolean; // Action: ban/unban users from the platform
 };
 
 export const users = pgTable("users", {
@@ -54,6 +57,10 @@ export const users = pgTable("users", {
   temporaryPassword: boolean("temporary_password").default(false),
   officeLocation: text("office_location"),
   homeLocation: text("home_location"),
+  isBanned: boolean("is_banned").default(false),
+  bannedAt: timestamp("banned_at"),
+  banReason: text("ban_reason"),
+  bannedBy: varchar("banned_by"), // Admin user ID who banned
   createdAt: timestamp("created_at").defaultNow().notNull(),
   lastLogin: timestamp("last_login"),
 });
@@ -498,6 +505,9 @@ export const subscriptions = pgTable("subscriptions", {
   status: text("status").notNull().default("active"), // 'active', 'cancelled', 'expired'
   paymentMethod: text("payment_method").notNull().default("online"), // 'online' (wallet) or 'cash' (pay to driver)
   cancellationDate: timestamp("cancellation_date"),
+  cancellationReason: text("cancellation_reason"),
+  cancelledBy: varchar("cancelled_by"), // Admin user ID who cancelled (for admin cancellations)
+  refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }), // Amount refunded upon cancellation
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
