@@ -247,6 +247,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid phone or password" });
       }
       
+      // Check if user is banned
+      if (user.isBanned) {
+        return res.status(403).json({ 
+          message: "Your account has been suspended. Please contact support for assistance.",
+          isBanned: true,
+          banReason: user.banReason
+        });
+      }
+      
       // Regenerate session to prevent session fixation attacks
       req.session.regenerate((err: any) => {
         if (err) {

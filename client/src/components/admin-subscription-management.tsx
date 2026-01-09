@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, Download, Search, Users, TrendingUp, Filter, CreditCard, Eye } from "lucide-react";
+import { Calendar, Download, Search, Users, TrendingUp, Filter, CreditCard, Eye, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { format, formatDistance } from "date-fns";
+import { format, formatDistance, differenceInDays } from "date-fns";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -79,6 +81,8 @@ export default function AdminSubscriptionManagement() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubscription, setSelectedSubscription] = useState<Subscription | null>(null);
   const [showInvoiceDialog, setShowInvoiceDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const [groupByRoute, setGroupByRoute] = useState(false);
 
   // Fetch subscriptions
@@ -109,6 +113,43 @@ export default function AdminSubscriptionManagement() {
     },
     enabled: !!selectedSubscription && showInvoiceDialog
   });
+
+  // Cancel subscription mutation
+  const cancelMutation = useMutation({
+    mutationFn: async ({ subscriptionId, reason }: { subscriptionId: string; reason: string }) => {
+      const response = await apiRequest('POST', `/api/admin/subscriptions/${subscriptionId}/cancel`, { reason });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Subscription cancelled successfully",
+        description: data.refundAmount ? `Refund of ৳${data.refundAmount.toFixed(2)} has been processed.` : undefined
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/wallets'] });
+      setShowCancelDialog(false);
+      setSelectedSubscription(null);
+      setCancelReason("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to cancel subscription",
+        description: error.message || 'An error occurred',
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Calculate estimated refund for a subscription
+  const calculateEstimatedRefund = (subscription: Subscription): number => {
+    const endDate = new Date(subscription.endDate);
+    const today = new Date();
+    const remainingDays = Math.max(0, differenceInDays(endDate, today));
+    const totalDays = differenceInDays(endDate, new Date(subscription.startDate));
+    if (totalDays <= 0) return 0;
+    const dailyRate = parseFloat(subscription.totalMonthlyPrice) / totalDays;
+    return dailyRate * remainingDays;
+  };
 
   // Filter subscriptions based on search
   const filteredSubscriptions = subscriptions.filter(sub => {
@@ -349,18 +390,35 @@ export default function AdminSubscriptionManagement() {
                             <TableCell>৳{sub.totalMonthlyPrice}</TableCell>
                             <TableCell>{getStatusBadge(sub.status)}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedSubscription(sub);
-                                  setShowInvoiceDialog(true);
-                                }}
-                                data-testid={`button-view-invoices-${sub.id}`}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                Invoices
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedSubscription(sub);
+                                    setShowInvoiceDialog(true);
+                                  }}
+                                  data-testid={`button-view-invoices-${sub.id}`}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Invoices
+                                </Button>
+                                {sub.status === 'active' && hasPermission('subscriptionCancellation') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      setSelectedSubscription(sub);
+                                      setShowCancelDialog(true);
+                                    }}
+                                    data-testid={`button-cancel-subscription-${sub.id}`}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -409,18 +467,35 @@ export default function AdminSubscriptionManagement() {
                             <TableCell>{format(new Date(sub.startDate), 'MMM dd, yyyy')}</TableCell>
                             <TableCell>{format(new Date(sub.endDate), 'MMM dd, yyyy')}</TableCell>
                             <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedSubscription(sub);
-                                  setShowInvoiceDialog(true);
-                                }}
-                                data-testid={`button-view-invoices-${sub.id}`}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                Invoices
-                              </Button>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedSubscription(sub);
+                                    setShowInvoiceDialog(true);
+                                  }}
+                                  data-testid={`button-view-invoices-${sub.id}`}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  Invoices
+                                </Button>
+                                {sub.status === 'active' && hasPermission('subscriptionCancellation') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-red-600 hover:text-red-700"
+                                    onClick={() => {
+                                      setSelectedSubscription(sub);
+                                      setShowCancelDialog(true);
+                                    }}
+                                    data-testid={`button-cancel-subscription-${sub.id}`}
+                                  >
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Cancel
+                                  </Button>
+                                )}
+                              </div>
                             </TableCell>
                           </TableRow>
                     ))
@@ -496,6 +571,78 @@ export default function AdminSubscriptionManagement() {
               </Table>
             )}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Subscription Dialog */}
+      <Dialog open={showCancelDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowCancelDialog(false);
+          setCancelReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel Subscription</DialogTitle>
+            <DialogDescription>
+              {selectedSubscription && (
+                <div className="mt-2 space-y-1">
+                  <p>User: {selectedSubscription.userName} ({formatPhoneNumber(selectedSubscription.userPhone || '')})</p>
+                  <p>Route: {selectedSubscription.routeName}</p>
+                  <p>Monthly Fee: ৳{selectedSubscription.totalMonthlyPrice}</p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            {selectedSubscription && (
+              <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                  Estimated Refund: ৳{calculateEstimatedRefund(selectedSubscription).toFixed(2)}
+                </p>
+                <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                  Based on {differenceInDays(new Date(selectedSubscription.endDate), new Date())} remaining days
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="cancelReason">Cancellation Reason *</Label>
+              <Textarea
+                id="cancelReason"
+                placeholder="Enter the reason for cancellation..."
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="min-h-[100px]"
+                data-testid="textarea-cancel-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCancelDialog(false);
+                setCancelReason("");
+              }}
+            >
+              Keep Subscription
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!cancelReason.trim() || cancelMutation.isPending}
+              onClick={() => {
+                if (selectedSubscription && cancelReason.trim()) {
+                  cancelMutation.mutate({
+                    subscriptionId: selectedSubscription.id,
+                    reason: cancelReason.trim()
+                  });
+                }
+              }}
+              data-testid="button-confirm-cancel-subscription"
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Cancel Subscription"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

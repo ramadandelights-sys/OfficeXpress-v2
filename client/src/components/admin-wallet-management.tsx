@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Wallet, Download, Search, CreditCard, TrendingUp, TrendingDown, DollarSign, Eye, Plus, Minus } from "lucide-react";
+import { Wallet, Download, Search, CreditCard, TrendingUp, TrendingDown, DollarSign, Eye, Plus, Minus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -79,6 +79,9 @@ export default function AdminWalletManagement() {
   const [selectedWallet, setSelectedWallet] = useState<UserWallet | null>(null);
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
+  const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundReason, setRefundReason] = useState("");
 
   // Form for manual adjustments
   const adjustmentForm = useForm({
@@ -134,6 +137,36 @@ export default function AdminWalletManagement() {
     onError: (error: any) => {
       toast({
         title: "Adjustment failed",
+        description: error.message || 'An error occurred',
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Issue refund mutation
+  const refundMutation = useMutation({
+    mutationFn: async (data: { userId: string; amount: number; reason: string }) => {
+      const response = await apiRequest('POST', '/api/admin/refunds', {
+        ...data,
+        adminUserId: user?.id
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Refund issued successfully",
+        description: `৳${parseFloat(refundAmount).toFixed(2)} has been credited to the wallet.`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/wallets', selectedWallet?.id, 'transactions'] });
+      setShowRefundDialog(false);
+      setRefundAmount("");
+      setRefundReason("");
+      setSelectedWallet(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to issue refund",
         description: error.message || 'An error occurred',
         variant: "destructive"
       });
@@ -417,6 +450,21 @@ export default function AdminWalletManagement() {
                               Adjust
                             </Button>
                           )}
+                          {hasPermission('walletRefunds') && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-600 hover:text-green-700"
+                              onClick={() => {
+                                setSelectedWallet(wallet);
+                                setShowRefundDialog(true);
+                              }}
+                              data-testid={`button-issue-refund-${wallet.id}`}
+                            >
+                              <RefreshCw className="mr-1 h-3 w-3" />
+                              Refund
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -620,6 +668,84 @@ export default function AdminWalletManagement() {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Issue Refund Dialog */}
+      <Dialog open={showRefundDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowRefundDialog(false);
+          setRefundAmount("");
+          setRefundReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Issue Refund</DialogTitle>
+            <DialogDescription>
+              {selectedWallet && (
+                <div className="mt-2 space-y-1">
+                  <p>User: {selectedWallet.user?.name} ({formatPhoneNumber(selectedWallet.user?.phone || '')})</p>
+                  <p className={`font-semibold ${getBalanceColor(selectedWallet.balance)}`}>
+                    Current Balance: ৳{parseFloat(selectedWallet.balance).toFixed(2)}
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label htmlFor="refundAmount" className="text-sm font-medium">Amount (৳) *</label>
+              <Input
+                id="refundAmount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="Enter refund amount"
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                data-testid="input-refund-amount"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="refundReason" className="text-sm font-medium">Reason *</label>
+              <Textarea
+                id="refundReason"
+                placeholder="Enter the reason for this refund..."
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                className="min-h-[100px]"
+                data-testid="textarea-refund-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowRefundDialog(false);
+                setRefundAmount("");
+                setRefundReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!refundAmount || parseFloat(refundAmount) <= 0 || !refundReason.trim() || refundMutation.isPending}
+              onClick={() => {
+                if (selectedWallet && refundAmount && refundReason.trim()) {
+                  refundMutation.mutate({
+                    userId: selectedWallet.userId,
+                    amount: parseFloat(refundAmount),
+                    reason: refundReason.trim()
+                  });
+                }
+              }}
+              data-testid="button-confirm-refund"
+            >
+              {refundMutation.isPending ? "Processing..." : "Issue Refund"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
