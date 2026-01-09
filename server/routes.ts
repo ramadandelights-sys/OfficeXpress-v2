@@ -4632,6 +4632,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
+  app.post("/api/admin/subscriptions/:id/cancel",
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionCancellation'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        
+        if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+          return res.status(400).json({ message: "Cancellation reason is required" });
+        }
+        
+        const adminId = req.session.userId;
+        const result = await storage.adminCancelSubscription(id, adminId, reason.trim());
+        
+        res.json({
+          success: true,
+          subscription: result.subscription,
+          refundAmount: result.refundAmount
+        });
+      } catch (error: any) {
+        console.error("Error cancelling subscription:", error);
+        res.status(500).json({ message: error.message || "Failed to cancel subscription" });
+      }
+    }
+  );
+  
   // Admin wallet management endpoints
   app.get("/api/admin/wallets", 
     isEmployeeOrAdmin,
@@ -4826,6 +4853,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error processing refunds:", error);
         res.status(500).json({ message: "Failed to process refunds" });
+      }
+    }
+  );
+  
+  app.post("/api/admin/refunds",
+    isEmployeeOrAdmin,
+    hasPermission('walletRefunds'),
+    async (req: any, res: any) => {
+      try {
+        const { userId, amount, reason } = req.body;
+        
+        if (!userId || typeof userId !== 'string') {
+          return res.status(400).json({ message: "User ID is required" });
+        }
+        
+        if (!amount || typeof amount !== 'number' || amount <= 0) {
+          return res.status(400).json({ message: "Amount must be a positive number" });
+        }
+        
+        if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+          return res.status(400).json({ message: "Refund reason is required" });
+        }
+        
+        const adminId = req.session.userId;
+        const transaction = await storage.issueManualRefund(userId, amount, reason.trim(), adminId);
+        
+        res.json({
+          success: true,
+          transaction
+        });
+      } catch (error: any) {
+        console.error("Error issuing manual refund:", error);
+        res.status(500).json({ message: error.message || "Failed to issue manual refund" });
+      }
+    }
+  );
+  
+  app.post("/api/admin/users/:id/ban",
+    isEmployeeOrAdmin,
+    hasPermission('userBanManagement'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const { reason } = req.body;
+        
+        if (!reason || typeof reason !== 'string' || reason.trim().length === 0) {
+          return res.status(400).json({ message: "Ban reason is required" });
+        }
+        
+        const adminId = req.session.userId;
+        const user = await storage.banUser(id, adminId, reason.trim());
+        
+        res.json({
+          success: true,
+          user
+        });
+      } catch (error: any) {
+        console.error("Error banning user:", error);
+        res.status(500).json({ message: error.message || "Failed to ban user" });
+      }
+    }
+  );
+  
+  app.post("/api/admin/users/:id/unban",
+    isEmployeeOrAdmin,
+    hasPermission('userBanManagement'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const user = await storage.unbanUser(id);
+        
+        res.json({
+          success: true,
+          user
+        });
+      } catch (error: any) {
+        console.error("Error unbanning user:", error);
+        res.status(500).json({ message: error.message || "Failed to unban user" });
       }
     }
   );

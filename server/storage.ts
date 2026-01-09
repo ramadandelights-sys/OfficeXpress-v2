@@ -98,6 +98,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, or, ilike, like, sql, lt, and, inArray } from "drizzle-orm";
+import { differenceInDays } from "date-fns";
 import { alias } from "drizzle-orm/pg-core";
 
 // Create aliases for pickup and drop-off points (same table, different uses)
@@ -484,6 +485,16 @@ export interface IStorage {
     }[];
   })[]>;
   mergeVehicleTrips(targetTripId: string, sourceTripId: string): Promise<VehicleTrip>;
+  
+  // Admin subscription cancellation with refund
+  adminCancelSubscription(subscriptionId: string, adminId: string, reason: string): Promise<{ subscription: Subscription; refundAmount: number }>;
+  
+  // Admin manual refund operations
+  issueManualRefund(userId: string, amount: number, reason: string, adminId: string): Promise<WalletTransaction>;
+  
+  // User ban/unban operations
+  banUser(userId: string, adminId: string, reason: string): Promise<User>;
+  unbanUser(userId: string): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3587,6 +3598,169 @@ export class DatabaseStorage implements IStorage {
       
       return updatedTrip;
     });
+  }
+  
+  async adminCancelSubscription(subscriptionId: string, adminId: string, reason: string): Promise<{ subscription: Subscription; refundAmount: number }> {
+    return await db.transaction(async (tx) => {
+      const [subscription] = await tx
+        .select()
+        .from(subscriptions)
+        .where(eq(subscriptions.id, subscriptionId));
+      
+      if (!subscription) {
+        throw new Error('Subscription not found');
+      }
+      
+      if (subscription.status === 'cancelled') {
+        throw new Error('Subscription is already cancelled');
+      }
+      
+      let refundAmount = 0;
+      
+      if (subscription.paymentMethod === 'online') {
+        const now = new Date();
+        const endDate = new Date(subscription.endDate);
+        const startDate = new Date(subscription.startDate);
+        
+        if (endDate > now) {
+          const totalDays = differenceInDays(endDate, startDate);
+          const remainingDays = differenceInDays(endDate, now);
+          const totalPrice = parseFloat(subscription.totalMonthlyPrice);
+          
+          if (totalDays > 0 && remainingDays > 0) {
+            refundAmount = Math.round((totalPrice * remainingDays / totalDays) * 100) / 100;
+          }
+        }
+        
+        if (refundAmount > 0) {
+          let wallet = await tx
+            .select()
+            .from(userWallets)
+            .where(eq(userWallets.userId, subscription.userId))
+            .then(rows => rows[0]);
+          
+          if (!wallet) {
+            const [newWallet] = await tx
+              .insert(userWallets)
+              .values({ userId: subscription.userId, balance: '0.00' })
+              .returning();
+            wallet = newWallet;
+          }
+          
+          const currentBalance = parseFloat(wallet.balance);
+          const newBalance = currentBalance + refundAmount;
+          
+          await tx
+            .update(userWallets)
+            .set({ balance: newBalance.toString(), updatedAt: new Date() })
+            .where(eq(userWallets.id, wallet.id));
+          
+          await tx
+            .insert(walletTransactions)
+            .values({
+              walletId: wallet.id,
+              amount: refundAmount.toString(),
+              type: 'credit',
+              reason: 'admin_subscription_cancellation',
+              description: `Prorated refund for subscription cancellation: ${reason}`,
+              metadata: { adminId, subscriptionId, refundAmount }
+            });
+        }
+      }
+      
+      const [updatedSubscription] = await tx
+        .update(subscriptions)
+        .set({
+          status: 'cancelled',
+          cancellationDate: new Date(),
+          cancellationReason: reason,
+          cancelledBy: adminId,
+          refundAmount: refundAmount.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(subscriptions.id, subscriptionId))
+        .returning();
+      
+      return { subscription: updatedSubscription, refundAmount };
+    });
+  }
+  
+  async issueManualRefund(userId: string, amount: number, reason: string, adminId: string): Promise<WalletTransaction> {
+    return await db.transaction(async (tx) => {
+      let wallet = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.userId, userId))
+        .then(rows => rows[0]);
+      
+      if (!wallet) {
+        const [newWallet] = await tx
+          .insert(userWallets)
+          .values({ userId, balance: '0.00' })
+          .returning();
+        wallet = newWallet;
+      }
+      
+      const currentBalance = parseFloat(wallet.balance);
+      const newBalance = currentBalance + amount;
+      
+      await tx
+        .update(userWallets)
+        .set({ balance: newBalance.toString(), updatedAt: new Date() })
+        .where(eq(userWallets.id, wallet.id));
+      
+      const [transaction] = await tx
+        .insert(walletTransactions)
+        .values({
+          walletId: wallet.id,
+          amount: amount.toString(),
+          type: 'credit',
+          reason: 'admin_manual_refund',
+          description: reason,
+          metadata: { adminId, balanceAfter: newBalance.toString() }
+        })
+        .returning();
+      
+      return transaction;
+    });
+  }
+  
+  async banUser(userId: string, adminId: string, reason: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        isBanned: true,
+        bannedAt: new Date(),
+        banReason: reason,
+        bannedBy: adminId
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) {
+      throw new Error('User not found');
+    }
+    
+    return updated;
+  }
+  
+  async unbanUser(userId: string): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        isBanned: false,
+        bannedAt: null,
+        banReason: null,
+        bannedBy: null
+      })
+      .where(eq(users.id, userId))
+      .returning();
+    
+    if (!updated) {
+      throw new Error('User not found');
+    }
+    
+    return updated;
   }
 }
 
