@@ -2879,9 +2879,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Driver Assignment API endpoints (for supply team)
+  // Get rental bookings pending driver assignment
+  app.get("/api/admin/driver-assignment/rental", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      // Check if user has PII view permission
+      const canViewPII = req.session.role === 'superadmin' || 
+        (req.session.permissions?.driverAssignmentViewPII === true);
+      
+      const bookings = await storage.getRentalBookings();
+      // Filter to only pending/confirmed bookings that need driver assignment
+      const pendingAssignments = bookings
+        .filter(b => !b.driverId && (b.status === 'pending' || b.status === 'confirmed'))
+        .map(b => ({
+          id: b.id,
+          referenceId: b.referenceId,
+          customerName: canViewPII ? b.customerName : null,
+          customerPhone: canViewPII ? b.phone : null,
+          pickupDate: b.startDate || b.pickupDate,
+          pickupTime: b.startTime,
+          dropoffDate: b.endDate,
+          dropoffTime: b.endTime,
+          pickupLocation: b.fromLocation,
+          dropoffLocation: b.toLocation,
+          vehicleType: b.vehicleType,
+          driverId: b.driverId,
+          driverName: null,
+          status: b.status,
+          createdAt: b.createdAt
+        }));
+      res.json(pendingAssignments);
+    } catch (error) {
+      console.error("Get rental driver assignments error:", error);
+      res.status(500).json({ message: "Failed to fetch rental assignments" });
+    }
+  });
+
+  // Get carpool trips pending driver assignment
+  app.get("/api/admin/driver-assignment/carpool", hasPermission('driverAssignment'), async (req, res) => {
+    try {
+      // Get trips from the last week to next week
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() - 7);
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + 14);
+      
+      // Get all trips in the date range
+      const allTrips = [];
+      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        const trips = await storage.getVehicleTripsWithDetails(dateStr);
+        allTrips.push(...trips);
+      }
+      
+      // Filter to pending assignment only
+      const pendingTrips = allTrips
+        .filter(t => t.status === 'pending_assignment')
+        .map(t => ({
+          id: t.id,
+          tripReferenceId: t.tripReferenceId,
+          routeName: t.routeName,
+          fromLocation: t.fromLocation,
+          toLocation: t.toLocation,
+          tripDate: t.tripDate,
+          departureTime: t.departureTimeSlot,
+          vehicleCapacity: t.vehicleCapacity,
+          recommendedVehicleType: t.recommendedVehicleType,
+          passengerCount: t.passengerCount,
+          driverId: t.driverId,
+          driverName: t.driverName,
+          status: t.status
+        }));
+      
+      res.json(pendingTrips);
+    } catch (error) {
+      console.error("Get carpool driver assignments error:", error);
+      res.status(500).json({ message: "Failed to fetch carpool assignments" });
+    }
+  });
+
   // AI Trip Management API endpoints
   // Admin: Get AI-generated trips for a specific date
-  app.get("/api/admin/carpool/ai-trips", hasPermission('driverAssignment'), async (req, res) => {
+  app.get("/api/admin/carpool/ai-trips", hasPermission('carpoolBookings', 'view'), async (req, res) => {
     try {
       const { date } = req.query;
       if (!date || typeof date !== 'string') {

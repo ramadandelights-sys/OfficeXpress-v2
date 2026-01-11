@@ -80,6 +80,9 @@ export default function AdminAITripsPage() {
 
   const dateString = format(selectedDate, "yyyy-MM-dd");
 
+  const canViewTrips = hasPermission('carpoolBookings');
+  const canAssignDrivers = hasPermission('driverAssignment');
+
   const { data: trips = [], isLoading, refetch } = useQuery<AITrip[]>({
     queryKey: ["/api/admin/carpool/ai-trips", dateString],
     queryFn: async () => {
@@ -89,12 +92,12 @@ export default function AdminAITripsPage() {
       if (!res.ok) throw new Error('Failed to fetch trips');
       return res.json();
     },
-    enabled: hasPermission('driverAssignment'),
+    enabled: canViewTrips,
   });
 
   const { data: drivers = [] } = useQuery<Driver[]>({
     queryKey: ["/api/drivers/active"],
-    enabled: hasPermission('driverAssignment'),
+    enabled: canAssignDrivers,
   });
 
   const generateTripsMutation = useMutation({
@@ -196,7 +199,7 @@ export default function AdminAITripsPage() {
   const confirmedTrips = trips.filter(t => t.status === 'confirmed');
   const otherTrips = trips.filter(t => !['low_capacity_warning', 'pending_assignment', 'confirmed', 'cancelled'].includes(t.status));
 
-  if (!hasPermission('driverAssignment')) {
+  if (!canViewTrips) {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">You do not have permission to view this page.</p>
@@ -229,23 +232,25 @@ export default function AdminAITripsPage() {
                 />
               </PopoverContent>
             </Popover>
-            <Button 
-              onClick={() => generateTripsMutation.mutate()} 
-              disabled={generateTripsMutation.isPending}
-              data-testid="button-generate-trips"
-            >
-              {generateTripsMutation.isPending ? (
-                <>
-                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Brain className="mr-2 h-4 w-4" />
-                  Generate Trips
-                </>
-              )}
-            </Button>
+            {canAssignDrivers && (
+              <Button 
+                onClick={() => generateTripsMutation.mutate()} 
+                disabled={generateTripsMutation.isPending}
+                data-testid="button-generate-trips"
+              >
+                {generateTripsMutation.isPending ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Brain className="mr-2 h-4 w-4" />
+                    Generate Trips
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -342,7 +347,11 @@ export default function AdminAITripsPage() {
             <div className="text-center py-12">
               <Brain className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">No trips for {format(selectedDate, "MMMM d, yyyy")}</h3>
-              <p className="text-muted-foreground mb-4">Click "Generate Trips" to create AI-optimized trips for this date.</p>
+              <p className="text-muted-foreground mb-4">
+                {canAssignDrivers 
+                  ? 'Click "Generate Trips" to create AI-optimized trips for this date.'
+                  : 'No trips have been generated for this date yet.'}
+              </p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -440,31 +449,9 @@ export default function AdminAITripsPage() {
                               </div>
                             )}
                             <div>
-                              <h4 className="font-medium mb-2">Assign Driver</h4>
-                              <Select
-                                value={trip.driverId || ""}
-                                onValueChange={(value) => {
-                                  updateTripMutation.mutate({ 
-                                    id: trip.id, 
-                                    data: { 
-                                      driverId: value,
-                                      status: value ? 'confirmed' : 'pending_assignment'
-                                    } 
-                                  });
-                                }}
-                                data-testid={`select-driver-${trip.id}`}
-                              >
-                                <SelectTrigger className="w-full" data-testid={`trigger-select-driver-${trip.id}`}>
-                                  <SelectValue placeholder="Select a driver" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {drivers.map((driver) => (
-                                    <SelectItem key={driver.id} value={driver.id} data-testid={`option-driver-${driver.id}`}>
-                                      {driver.name} ({driver.phone})
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
+                              <p className="text-sm text-muted-foreground">
+                                Driver assignment is handled in the Driver Assignment page.
+                              </p>
                             </div>
                             <div className="flex gap-2">
                               <Button

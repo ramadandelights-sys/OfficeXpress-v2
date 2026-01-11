@@ -403,7 +403,8 @@ export default function AdminRentalPage() {
     enabled: hasPermission('driverAssignment'),
   });
 
-  const showDriverAssignment = hasPermission('driverAssignment');
+  // Driver assignment is now handled in the dedicated Driver Assignment page
+  const showDriverAssignment = false;
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesSearch = searchQuery === "" || 

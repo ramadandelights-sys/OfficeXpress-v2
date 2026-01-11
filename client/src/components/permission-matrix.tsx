@@ -52,6 +52,7 @@ export type UserPermissions = {
   legalPages?: PermissionLevel;
   driverManagement?: PermissionLevel;
   driverAssignment?: boolean;
+  driverAssignmentViewPII?: boolean;
   carpoolBlackoutDates?: PermissionLevel;
   employeeManagement?: PermissionLevel;
   subscriptionManagement?: PermissionLevel;
@@ -150,7 +151,15 @@ const permissionSections: PermissionSection[] = [
     key: "driverAssignment",
     label: "Driver Assignment",
     icon: <Car className="h-4 w-4" />,
-    description: "Assign drivers to rental bookings",
+    description: "Access driver assignment page for rental and carpool bookings",
+    hasCsv: false,
+    isSpecial: true,
+  },
+  {
+    key: "driverAssignmentViewPII",
+    label: "View Customer Details",
+    icon: <Users className="h-4 w-4" />,
+    description: "View customer names and phone numbers in driver assignment page",
     hasCsv: false,
     isSpecial: true,
   },

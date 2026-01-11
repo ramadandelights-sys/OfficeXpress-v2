@@ -37,6 +37,7 @@ export type UserPermissions = {
   legalPages?: PermissionLevel;
   driverManagement?: PermissionLevel; // Renamed from "drivers"
   driverAssignment?: boolean; // Special: stays as boolean (it's an action, not CRUD)
+  driverAssignmentViewPII?: boolean; // Allow viewing customer PII (name, phone) in driver assignment page
   employeeManagement?: PermissionLevel;
   complaintManagement?: PermissionLevel;
   subscriptionManagement?: PermissionLevel; // Finance: subscription management

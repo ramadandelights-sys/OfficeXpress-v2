@@ -3,6 +3,7 @@ import session from "express-session";
 import connectPg from "connect-pg-simple";
 import bcrypt from "bcrypt";
 import { nanoid } from "nanoid";
+import type { UserPermissions } from "@shared/schema";
 
 // Setup express-session with PostgreSQL store
 export function getSession() {
@@ -79,7 +80,7 @@ export function hasPermission(permission: string, action: PermissionAction = 'vi
     
     // For employees, check granular permissions
     if (req.session.role === 'employee' && req.session.permissions) {
-      const perms = req.session.permissions;
+      const perms = req.session.permissions as Record<string, any>;
       const sectionPerm = perms[permission];
       
       // Special case: driverAssignment is a boolean (it's an action, not CRUD)

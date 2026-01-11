@@ -15,6 +15,7 @@ import AdminDriversPage from "./operations/drivers";
 import AdminBlackoutPage from "./operations/blackout";
 import AdminRentalPage from "./operations/rental";
 import AdminAITripsPage from "./operations/ai-trips";
+import AdminDriverAssignmentPage from "./operations/driver-assignment";
 import AdminWalletsPage from "./finance/wallets";
 import AdminRefundsPage from "./finance/refunds";
 import AdminSubscriptionsPage from "./finance/subscriptions";
@@ -67,6 +68,7 @@ export default function AdminRouter() {
       <Route path="/admin/operations/drivers" component={() => <AdminLayout title="Driver Management"><AdminDriversPage /></AdminLayout>} />
       <Route path="/admin/operations/blackout" component={() => <AdminLayout title="Blackout Dates"><AdminBlackoutPage /></AdminLayout>} />
       <Route path="/admin/operations/rental" component={() => <AdminLayout title="Rental Bookings"><AdminRentalPage /></AdminLayout>} />
+      <Route path="/admin/operations/driver-assignment" component={() => <AdminLayout title="Driver Assignment"><AdminDriverAssignmentPage /></AdminLayout>} />
       <Route path="/admin/operations/ai-trips" component={() => <AdminLayout title="AI Trip Planner"><AdminAITripsPage /></AdminLayout>} />
       <Route path="/admin/finance/wallets" component={() => <AdminLayout title="Wallet Management"><AdminWalletsPage /></AdminLayout>} />
       <Route path="/admin/finance/refunds" component={() => <AdminLayout title="Refund Management"><AdminRefundsPage /></AdminLayout>} />
