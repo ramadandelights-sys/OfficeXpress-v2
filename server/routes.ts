@@ -2610,13 +2610,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin: Get all carpool bookings
+  // Admin: Get all carpool bookings (legacy - individual bookings)
   app.get("/api/admin/carpool/bookings", isAuthenticated, isEmployeeOrAdmin, hasPermission('carpoolBookings', 'view'), async (req, res) => {
     try {
       const bookings = await storage.getCarpoolBookings();
       res.json(bookings);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin: Get all trip bookings with enriched data (from subscriptions + individual bookings)
+  app.get("/api/admin/trip-bookings", isAuthenticated, isEmployeeOrAdmin, hasPermission('carpoolBookings', 'view'), async (req, res) => {
+    try {
+      const tripBookings = await storage.getAllTripBookingsForAdmin();
+      res.json(tripBookings);
+    } catch (error) {
+      console.error("Get trip bookings error:", error);
+      res.status(500).json({ message: "Failed to fetch trip bookings" });
+    }
+  });
+
+  // Admin: Update trip booking status
+  app.put("/api/admin/trip-bookings/:id/status", isAuthenticated, isEmployeeOrAdmin, hasPermission('carpoolBookings', 'edit'), async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!status || !['expected', 'picked_up', 'completed', 'no_show', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+      
+      const updated = await storage.updateTripBooking(id, { status });
+      res.json(updated);
+    } catch (error) {
+      console.error("Update trip booking status error:", error);
+      res.status(500).json({ message: "Failed to update booking status" });
     }
   });
 

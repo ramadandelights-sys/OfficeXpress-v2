@@ -3,7 +3,7 @@ import * as cron from 'node-cron';
 import { storage } from './storage';
 import type { IStorage } from './storage';
 import { z } from 'zod';
-import type { Subscription, CarpoolRoute, CarpoolTimeSlot, CarpoolPickupPoint, User } from '@shared/schema';
+import type { Subscription, CarpoolRoute, CarpoolTimeSlot, CarpoolPickupPoint, User, CarpoolBooking } from '@shared/schema';
 import { sendAITripPlannerReportEmail, sendDriverAssignmentNeededEmail } from './lib/resend';
 
 const ADMIN_EMAIL = 'hesham@officexpress.org';
@@ -17,6 +17,32 @@ interface EnrichedSubscription extends Subscription {
   boardingPoint: CarpoolPickupPoint | undefined;
   dropOffPoint: CarpoolPickupPoint | undefined;
   user: User | undefined;
+}
+
+interface EnrichedCarpoolBooking extends CarpoolBooking {
+  route: CarpoolRoute | undefined;
+  timeSlot: CarpoolTimeSlot | undefined;
+  boardingPoint: CarpoolPickupPoint | undefined;
+  dropOffPoint: CarpoolPickupPoint | undefined;
+}
+
+interface UnifiedBooking {
+  id: string;
+  routeId: string;
+  timeSlotId: string;
+  boardingPointId: string;
+  dropOffPointId: string;
+  userId: string | null;
+  customerName: string;
+  phone: string;
+  bookingType: 'subscription' | 'individual';
+  priority: number;
+  route: CarpoolRoute | undefined;
+  timeSlot: CarpoolTimeSlot | undefined;
+  boardingPoint: CarpoolPickupPoint | undefined;
+  dropOffPoint: CarpoolPickupPoint | undefined;
+  subscriptionId?: string;
+  carpoolBookingId?: string;
 }
 
 const VEHICLE_TYPES = {
@@ -41,7 +67,7 @@ const AITripGroupingSchema = z.object({
     isLowCapacity: z.boolean(),
   })),
   unassignedPassengers: z.array(z.object({
-    subscriptionId: z.string(),
+    bookingId: z.string(),
     reason: z.string(),
   })).optional(),
 });
@@ -183,7 +209,11 @@ export class AITripGeneratorService {
       const activeSubscriptions = await this.storage.getActiveSubscriptionsByWeekday(dayOfWeek);
       console.log(`[AITripGenerator] Found ${activeSubscriptions.length} active subscriptions`);
 
-      if (activeSubscriptions.length === 0) {
+      const individualBookings = await this.storage.getIndividualBookingsForDate(tripDate);
+      console.log(`[AITripGenerator] Found ${individualBookings.length} individual bookings`);
+
+      const totalBookings = activeSubscriptions.length + individualBookings.length;
+      if (totalBookings === 0) {
         return {
           date: tripDate,
           dayOfWeek,
@@ -198,20 +228,23 @@ export class AITripGeneratorService {
       }
 
       const subscriptionsWithDetails = await this.enrichSubscriptionData(activeSubscriptions);
+      const individualWithDetails = await this.enrichIndividualBookingData(individualBookings);
+
+      const unifiedBookings = this.createUnifiedBookings(subscriptionsWithDetails, individualWithDetails);
+      console.log(`[AITripGenerator] Unified ${unifiedBookings.length} bookings (${subscriptionsWithDetails.length} subscriptions, ${individualWithDetails.length} individual)`);
 
       let tripGrouping: AITripGrouping;
       try {
-        tripGrouping = await this.generateAITripGrouping(subscriptionsWithDetails, tripDate);
+        tripGrouping = await this.generateAITripGroupingUnified(unifiedBookings, tripDate);
         console.log(`[AITripGenerator] AI generated ${tripGrouping.trips.length} trips`);
       } catch (aiError: any) {
         console.error('[AITripGenerator] AI grouping failed, falling back to rule-based:', aiError.message);
         errors.push(`AI grouping failed: ${aiError.message}`);
-        tripGrouping = this.generateFallbackTripGrouping(subscriptionsWithDetails);
+        tripGrouping = this.generateFallbackTripGroupingUnified(unifiedBookings);
         generatedBy = 'fallback';
       }
 
       for (const tripData of tripGrouping.trips) {
-        // Skip trips with fewer than minimum passengers
         if (tripData.passengerIds.length < MIN_PASSENGERS_FOR_TRIP) {
           console.log(`[AITripGenerator] Skipping trip - only ${tripData.passengerIds.length} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
           lowCapacityTrips++;
@@ -221,7 +254,7 @@ export class AITripGeneratorService {
         try {
           const tripReferenceId = generateTripReferenceId();
           const vehicleConfig = VEHICLE_TYPES[tripData.recommendedVehicleType as keyof typeof VEHICLE_TYPES];
-          const status = 'pending_assignment'; // No more low_capacity_warning status
+          const status = 'pending_assignment';
 
           const vehicleTrip = await this.storage.createAIGeneratedTrip({
             tripReferenceId,
@@ -239,17 +272,28 @@ export class AITripGeneratorService {
           tripsGenerated++;
 
           for (let i = 0; i < tripData.passengerIds.length; i++) {
-            const subscriptionId = tripData.passengerIds[i];
-            const subscription = subscriptionsWithDetails.find(s => s.id === subscriptionId);
-            if (subscription) {
-              await this.storage.createTripBookingFromSubscription({
-                vehicleTripId: vehicleTrip.id,
-                subscriptionId: subscription.id,
-                userId: subscription.userId,
-                boardingPointId: subscription.boardingPointId,
-                dropOffPointId: subscription.dropOffPointId,
-                pickupSequence: tripData.pickupSequence.indexOf(subscriptionId) + 1,
-              });
+            const bookingId = tripData.passengerIds[i];
+            const booking = unifiedBookings.find(b => b.id === bookingId);
+            if (booking) {
+              if (booking.bookingType === 'subscription' && booking.subscriptionId) {
+                await this.storage.createTripBookingFromSubscription({
+                  vehicleTripId: vehicleTrip.id,
+                  subscriptionId: booking.subscriptionId,
+                  userId: booking.userId || '',
+                  boardingPointId: booking.boardingPointId,
+                  dropOffPointId: booking.dropOffPointId,
+                  pickupSequence: tripData.pickupSequence.indexOf(bookingId) + 1,
+                });
+              } else if (booking.bookingType === 'individual' && booking.carpoolBookingId) {
+                await this.storage.createTripBookingFromIndividual({
+                  vehicleTripId: vehicleTrip.id,
+                  carpoolBookingId: booking.carpoolBookingId,
+                  userId: booking.userId,
+                  boardingPointId: booking.boardingPointId,
+                  dropOffPointId: booking.dropOffPointId,
+                  pickupSequence: tripData.pickupSequence.indexOf(bookingId) + 1,
+                });
+              }
               passengersAssigned++;
             }
           }
@@ -267,7 +311,7 @@ export class AITripGeneratorService {
       // Send email report to admin
       await this.sendExecutionReportEmail({
         tripDate,
-        bookingsReceived: activeSubscriptions.length,
+        bookingsReceived: totalBookings,
         tripsCreated: tripsGenerated,
         passengersAssigned,
         lowCapacityTrips,
@@ -275,11 +319,13 @@ export class AITripGeneratorService {
         errors,
         isWeekend: false,
         isBlackout: false,
+        subscriptionCount: activeSubscriptions.length,
+        individualCount: individualBookings.length,
       });
 
       // Send driver assignment needed notifications if trips were created
       if (tripsGenerated > 0) {
-        await this.notifyAdminsForDriverAssignment(tripDate, tripGrouping.trips, subscriptionsWithDetails);
+        await this.notifyAdminsForDriverAssignmentUnified(tripDate, tripGrouping.trips, unifiedBookings);
       }
 
       return {
@@ -337,6 +383,8 @@ export class AITripGeneratorService {
     errors: string[];
     isWeekend: boolean;
     isBlackout: boolean;
+    subscriptionCount?: number;
+    individualCount?: number;
   }) {
     try {
       await sendAITripPlannerReportEmail({
@@ -351,6 +399,8 @@ export class AITripGeneratorService {
         errors: data.errors,
         isWeekend: data.isWeekend,
         isBlackout: data.isBlackout,
+        subscriptionCount: data.subscriptionCount,
+        individualCount: data.individualCount,
       });
       console.log('[AITripGenerator] Execution report email sent successfully');
     } catch (emailError) {
@@ -440,6 +490,283 @@ export class AITripGeneratorService {
       });
     }
     return enrichedData;
+  }
+
+  private async enrichIndividualBookingData(bookings: CarpoolBooking[]): Promise<EnrichedCarpoolBooking[]> {
+    const enrichedData: EnrichedCarpoolBooking[] = [];
+    for (const booking of bookings) {
+      const route = await this.storage.getCarpoolRouteById(booking.routeId);
+      const timeSlot = await this.storage.getCarpoolTimeSlotById(booking.timeSlotId);
+      const boardingPoint = await this.storage.getCarpoolPickupPointById(booking.boardingPointId);
+      const dropOffPoint = await this.storage.getCarpoolPickupPointById(booking.dropOffPointId);
+
+      enrichedData.push({
+        ...booking,
+        route,
+        timeSlot,
+        boardingPoint,
+        dropOffPoint,
+      });
+    }
+    return enrichedData;
+  }
+
+  private createUnifiedBookings(
+    subscriptions: EnrichedSubscription[],
+    individualBookings: EnrichedCarpoolBooking[]
+  ): UnifiedBooking[] {
+    const unifiedBookings: UnifiedBooking[] = [];
+
+    for (const sub of subscriptions) {
+      unifiedBookings.push({
+        id: `sub_${sub.id}`,
+        routeId: sub.routeId,
+        timeSlotId: sub.timeSlotId,
+        boardingPointId: sub.boardingPointId,
+        dropOffPointId: sub.dropOffPointId,
+        userId: sub.userId,
+        customerName: sub.user?.name || 'Unknown',
+        phone: sub.user?.phone || '',
+        bookingType: 'subscription',
+        priority: 1,
+        route: sub.route,
+        timeSlot: sub.timeSlot,
+        boardingPoint: sub.boardingPoint,
+        dropOffPoint: sub.dropOffPoint,
+        subscriptionId: sub.id,
+      });
+    }
+
+    for (const booking of individualBookings) {
+      unifiedBookings.push({
+        id: `ind_${booking.id}`,
+        routeId: booking.routeId,
+        timeSlotId: booking.timeSlotId,
+        boardingPointId: booking.boardingPointId,
+        dropOffPointId: booking.dropOffPointId,
+        userId: booking.userId || null,
+        customerName: booking.customerName,
+        phone: booking.phone,
+        bookingType: 'individual',
+        priority: 2,
+        route: booking.route,
+        timeSlot: booking.timeSlot,
+        boardingPoint: booking.boardingPoint,
+        dropOffPoint: booking.dropOffPoint,
+        carpoolBookingId: booking.id,
+      });
+    }
+
+    return unifiedBookings;
+  }
+
+  private async notifyAdminsForDriverAssignmentUnified(
+    tripDate: string,
+    trips: AITripGrouping['trips'],
+    unifiedBookings: UnifiedBooking[]
+  ) {
+    try {
+      const usersWithPermission = await this.storage.getUsersWithDriverAssignmentPermission();
+      
+      for (const tripData of trips) {
+        const firstBooking = unifiedBookings.find(b => b.id === tripData.passengerIds[0]);
+        const routeName = firstBooking?.route?.name || 'Unknown Route';
+        const departureTime = firstBooking?.timeSlot?.departureTime || 'Unknown Time';
+        const tripRef = generateTripReferenceId();
+        
+        for (const user of usersWithPermission) {
+          await this.storage.createNotification({
+            userId: user.id,
+            type: 'driver_assignment_needed',
+            title: 'Driver Assignment Required',
+            message: `A new carpool trip needs driver assignment: ${routeName} on ${tripDate} at ${departureTime} (${tripData.passengerIds.length} passengers)`,
+            metadata: {
+              tripDate,
+              routeId: tripData.routeId,
+              timeSlotId: tripData.timeSlotId,
+              passengerCount: tripData.passengerIds.length,
+              recommendedVehicle: tripData.recommendedVehicleType,
+            } as Record<string, any>,
+          });
+          
+          if (user.email) {
+            await sendDriverAssignmentNeededEmail({
+              email: user.email,
+              recipientName: user.name,
+              tripReferenceId: tripRef,
+              tripDate,
+              routeName,
+              departureTime,
+              passengerCount: tripData.passengerIds.length,
+              recommendedVehicle: VEHICLE_TYPES[tripData.recommendedVehicleType as keyof typeof VEHICLE_TYPES]?.label || tripData.recommendedVehicleType,
+              tripType: 'carpool',
+            });
+          }
+        }
+      }
+      
+      console.log(`[AITripGenerator] Sent driver assignment notifications to ${usersWithPermission.length} users for ${trips.length} trips`);
+    } catch (notifyError) {
+      console.error('[AITripGenerator] Failed to send driver assignment notifications:', notifyError);
+    }
+  }
+
+  private async generateAITripGroupingUnified(bookings: UnifiedBooking[], tripDate: string): Promise<AITripGrouping> {
+    const bookingSummary = bookings.map((b: UnifiedBooking) => ({
+      id: b.id,
+      routeId: b.routeId,
+      routeName: b.route?.name || 'Unknown',
+      timeSlotId: b.timeSlotId,
+      officeEntryTime: b.timeSlot?.departureTime || 'Unknown',
+      boardingPointId: b.boardingPointId,
+      boardingPointName: b.boardingPoint?.name || 'Unknown',
+      boardingPointSequence: b.boardingPoint?.sequenceOrder || 0,
+      dropOffPointId: b.dropOffPointId,
+      dropOffPointName: b.dropOffPoint?.name || 'Unknown',
+      dropOffPointSequence: b.dropOffPoint?.sequenceOrder || 0,
+      passengerName: b.customerName,
+      bookingType: b.bookingType,
+      priority: b.priority,
+    }));
+
+    const routeGroups = new Map<string, typeof bookingSummary>();
+    for (const booking of bookingSummary) {
+      const key = `${booking.routeId}-${booking.timeSlotId}`;
+      if (!routeGroups.has(key)) {
+        routeGroups.set(key, []);
+      }
+      routeGroups.get(key)!.push(booking);
+    }
+
+    const prompt = `You are a carpool trip optimizer for an office transportation service. Analyze the following passenger bookings and group them into optimal trips.
+
+DATE: ${tripDate}
+
+BOOKINGS BY ROUTE AND TIME SLOT:
+${Array.from(routeGroups.entries()).map(([key, subs]) => {
+  const first = subs[0];
+  const monthlyCount = subs.filter(s => s.bookingType === 'subscription').length;
+  const individualCount = subs.filter(s => s.bookingType === 'individual').length;
+  return `
+Route: ${first.routeName} (ID: ${first.routeId})
+Office Entry Time: ${first.officeEntryTime} (Time Slot ID: ${first.timeSlotId})
+Monthly Subscribers: ${monthlyCount}, Individual Bookings: ${individualCount}
+Passengers (${subs.length}):
+${subs.map(s => `  - ID: ${s.id}, Name: ${s.passengerName}, Type: ${s.bookingType.toUpperCase()} (Priority: ${s.priority}), Pickup: ${s.boardingPointName} (seq: ${s.boardingPointSequence}), Drop: ${s.dropOffPointName} (seq: ${s.dropOffPointSequence})`).join('\n')}
+`;
+}).join('\n---\n')}
+
+VEHICLE OPTIONS:
+- sedan: 4 passengers max
+- 7_seater: 7 passengers max  
+- 10_seater: 10 passengers max
+- 14_seater: 14 passengers max
+- 32_seater: 32 passengers max
+
+PRIORITY RULES:
+1. MONTHLY SUBSCRIBERS (bookingType: subscription, priority: 1) MUST be assigned first - they have prepaid and guaranteed service
+2. INDIVIDUAL BOOKINGS (bookingType: individual, priority: 2) fill remaining capacity only after subscribers are assigned
+3. If a trip has limited capacity, ALWAYS prefer subscribers over individuals
+
+GROUPING RULES:
+1. Group passengers by same route AND same time slot
+2. Order pickup sequence by boarding point sequence number (lower = earlier pickup)
+3. Recommend smallest vehicle that fits all passengers
+4. SKIP trips with fewer than 3 passengers - set "isLowCapacity: false" for trips you create
+5. Each passenger should be assigned to exactly one trip
+6. Provide confidence score (0-1) based on optimization quality
+7. Provide brief rationale for each trip grouping
+
+Respond with valid JSON in this exact format:
+{
+  "trips": [
+    {
+      "routeId": "route-uuid",
+      "timeSlotId": "timeslot-uuid", 
+      "passengerIds": ["sub_subscription-id-1", "ind_booking-id-2"],
+      "recommendedVehicleType": "sedan",
+      "pickupSequence": ["sub_subscription-id-1", "ind_booking-id-2"],
+      "rationale": "Brief explanation including subscriber priority",
+      "confidenceScore": 0.95,
+      "isLowCapacity": false
+    }
+  ],
+  "unassignedPassengers": []
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        { role: 'system', content: 'You are a trip optimization expert. Always respond with valid JSON matching the requested schema. Prioritize monthly subscribers over individual bookings.' },
+        { role: 'user', content: prompt }
+      ],
+      response_format: { type: 'json_object' },
+      max_completion_tokens: 8192,
+    });
+
+    const content = response.choices[0].message.content;
+    if (!content) {
+      throw new Error('Empty response from AI');
+    }
+
+    const parsed = JSON.parse(content);
+    const validated = AITripGroupingSchema.parse(parsed);
+
+    return validated;
+  }
+
+  private generateFallbackTripGroupingUnified(bookings: UnifiedBooking[]): AITripGrouping {
+    const routeGroups: Record<string, UnifiedBooking[]> = {};
+    for (const booking of bookings) {
+      const key = `${booking.routeId}-${booking.timeSlotId}`;
+      if (!routeGroups[key]) {
+        routeGroups[key] = [];
+      }
+      routeGroups[key].push(booking);
+    }
+
+    const trips: AITripGrouping['trips'] = [];
+
+    for (const key of Object.keys(routeGroups)) {
+      const groupBookings = routeGroups[key];
+      
+      const sorted = groupBookings.sort((a: UnifiedBooking, b: UnifiedBooking) => {
+        if (a.priority !== b.priority) {
+          return a.priority - b.priority;
+        }
+        return (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0);
+      });
+
+      const passengerCount = sorted.length;
+      
+      if (passengerCount < MIN_PASSENGERS_FOR_TRIP) {
+        console.log(`[AITripGenerator] Skipping route ${sorted[0].routeId} - only ${passengerCount} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+        continue;
+      }
+      
+      let vehicleType: 'sedan' | '7_seater' | '10_seater' | '14_seater' | '32_seater' = 'sedan';
+      
+      if (passengerCount > 14) vehicleType = '32_seater';
+      else if (passengerCount > 10) vehicleType = '14_seater';
+      else if (passengerCount > 7) vehicleType = '10_seater';
+      else if (passengerCount > 4) vehicleType = '7_seater';
+
+      const subscriberCount = sorted.filter(b => b.bookingType === 'subscription').length;
+      const individualCount = sorted.filter(b => b.bookingType === 'individual').length;
+
+      trips.push({
+        routeId: sorted[0].routeId,
+        timeSlotId: sorted[0].timeSlotId,
+        passengerIds: sorted.map(b => b.id),
+        recommendedVehicleType: vehicleType,
+        pickupSequence: sorted.map(b => b.id),
+        rationale: `Grouped ${passengerCount} passengers (${subscriberCount} subscribers, ${individualCount} individual) by route and time. Subscribers prioritized first.`,
+        confidenceScore: 0.8,
+        isLowCapacity: false,
+      });
+    }
+
+    return { trips, unassignedPassengers: [] };
   }
 
   private async generateAITripGrouping(subscriptions: EnrichedSubscription[], tripDate: string): Promise<AITripGrouping> {

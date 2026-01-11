@@ -345,6 +345,31 @@ export interface IStorage {
   getTripBookingsByUser(userId: string): Promise<TripBooking[]>;
   getTripBookingsByVehicleTrip(vehicleTripId: string): Promise<TripBooking[]>;
   updateTripBooking(id: string, data: Partial<Omit<TripBooking, 'id' | 'createdAt'>>): Promise<TripBooking>;
+  getAllTripBookingsForAdmin(): Promise<{
+    id: string;
+    vehicleTripId: string | null;
+    subscriptionId: string | null;
+    userId: string | null;
+    status: string;
+    pickupSequence: number | null;
+    createdAt: Date;
+    bookingType: 'subscription' | 'individual';
+    tripReferenceId: string | null;
+    tripDate: string | null;
+    tripStatus: string | null;
+    customerName: string | null;
+    customerPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    departureTime: string | null;
+    boardingPointName: string | null;
+    dropOffPointName: string | null;
+    driverName: string | null;
+    driverPhone: string | null;
+    vehicleType: string | null;
+    referenceId: string | null;
+  }[]>;
   
   // Complaint operations
   createComplaint(complaint: InsertComplaint): Promise<Complaint>;
@@ -2236,6 +2261,175 @@ export class DatabaseStorage implements IStorage {
       .returning();
     if (!updated) throw new Error('Trip booking not found');
     return updated;
+  }
+  
+  async getAllTripBookingsForAdmin(): Promise<{
+    id: string;
+    vehicleTripId: string | null;
+    subscriptionId: string | null;
+    userId: string | null;
+    status: string;
+    pickupSequence: number | null;
+    createdAt: Date;
+    bookingType: 'subscription' | 'individual';
+    tripReferenceId: string | null;
+    tripDate: string | null;
+    tripStatus: string | null;
+    customerName: string | null;
+    customerPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    departureTime: string | null;
+    boardingPointName: string | null;
+    dropOffPointName: string | null;
+    driverName: string | null;
+    driverPhone: string | null;
+    vehicleType: string | null;
+    referenceId: string | null;
+  }[]> {
+    const result: {
+      id: string;
+      vehicleTripId: string | null;
+      subscriptionId: string | null;
+      userId: string | null;
+      status: string;
+      pickupSequence: number | null;
+      createdAt: Date;
+      bookingType: 'subscription' | 'individual';
+      tripReferenceId: string | null;
+      tripDate: string | null;
+      tripStatus: string | null;
+      customerName: string | null;
+      customerPhone: string | null;
+      routeName: string | null;
+      fromLocation: string | null;
+      toLocation: string | null;
+      departureTime: string | null;
+      boardingPointName: string | null;
+      dropOffPointName: string | null;
+      driverName: string | null;
+      driverPhone: string | null;
+      vehicleType: string | null;
+      referenceId: string | null;
+    }[] = [];
+    
+    // 1. Get trip bookings (from monthly subscriptions assigned to trips)
+    const subscriptionBookings = await db
+      .select({
+        booking: tripBookings,
+        trip: vehicleTrips,
+        user: users,
+        route: carpoolRoutes,
+        timeSlot: carpoolTimeSlots,
+        boardingPoint: carpoolPickupPoints,
+        driver: drivers,
+      })
+      .from(tripBookings)
+      .leftJoin(vehicleTrips, eq(tripBookings.vehicleTripId, vehicleTrips.id))
+      .leftJoin(users, eq(tripBookings.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(vehicleTrips.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(vehicleTrips.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(carpoolPickupPoints, eq(tripBookings.boardingPointId, carpoolPickupPoints.id))
+      .leftJoin(drivers, eq(vehicleTrips.driverId, drivers.id))
+      .orderBy(desc(tripBookings.createdAt));
+    
+    const dropOffPoints = await db
+      .select({
+        bookingId: tripBookings.id,
+        dropOff: carpoolPickupPoints,
+      })
+      .from(tripBookings)
+      .leftJoin(carpoolPickupPoints, eq(tripBookings.dropOffPointId, carpoolPickupPoints.id));
+    
+    const dropOffMap = new Map(dropOffPoints.map(d => [d.bookingId, d.dropOff]));
+    
+    for (const row of subscriptionBookings) {
+      result.push({
+        id: row.booking.id,
+        vehicleTripId: row.booking.vehicleTripId,
+        subscriptionId: row.booking.subscriptionId,
+        userId: row.booking.userId,
+        status: row.booking.status,
+        pickupSequence: row.booking.pickupSequence,
+        createdAt: row.booking.createdAt,
+        bookingType: 'subscription',
+        tripReferenceId: row.trip?.tripReferenceId || null,
+        tripDate: row.trip?.tripDate || null,
+        tripStatus: row.trip?.status || null,
+        customerName: row.user?.name || null,
+        customerPhone: row.user?.phone || null,
+        routeName: row.route?.name || null,
+        fromLocation: row.route?.fromLocation || null,
+        toLocation: row.route?.toLocation || null,
+        departureTime: row.timeSlot?.departureTime || null,
+        boardingPointName: row.boardingPoint?.name || null,
+        dropOffPointName: dropOffMap.get(row.booking.id)?.name || null,
+        driverName: row.driver?.name || null,
+        driverPhone: row.driver?.phone || null,
+        vehicleType: row.trip?.recommendedVehicleType || null,
+        referenceId: null,
+      });
+    }
+    
+    // 2. Get individual carpool bookings (ad-hoc one-time bookings)
+    const individualBookings = await db
+      .select({
+        booking: carpoolBookings,
+        route: carpoolRoutes,
+        timeSlot: carpoolTimeSlots,
+        boardingPoint: carpoolPickupPoints,
+        driver: drivers,
+      })
+      .from(carpoolBookings)
+      .leftJoin(carpoolRoutes, eq(carpoolBookings.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(carpoolBookings.timeSlotId, carpoolTimeSlots.id))
+      .leftJoin(carpoolPickupPoints, eq(carpoolBookings.boardingPointId, carpoolPickupPoints.id))
+      .leftJoin(drivers, eq(carpoolBookings.driverId, drivers.id))
+      .orderBy(desc(carpoolBookings.createdAt));
+    
+    const individualDropOffPoints = await db
+      .select({
+        bookingId: carpoolBookings.id,
+        dropOff: carpoolPickupPoints,
+      })
+      .from(carpoolBookings)
+      .leftJoin(carpoolPickupPoints, eq(carpoolBookings.dropOffPointId, carpoolPickupPoints.id));
+    
+    const individualDropOffMap = new Map(individualDropOffPoints.map(d => [d.bookingId, d.dropOff]));
+    
+    for (const row of individualBookings) {
+      result.push({
+        id: row.booking.id,
+        vehicleTripId: null,
+        subscriptionId: null,
+        userId: row.booking.userId,
+        status: row.booking.status || 'pending',
+        pickupSequence: null,
+        createdAt: row.booking.createdAt,
+        bookingType: 'individual',
+        tripReferenceId: null,
+        tripDate: row.booking.travelDate,
+        tripStatus: null,
+        customerName: row.booking.customerName,
+        customerPhone: row.booking.phone,
+        routeName: row.route?.name || null,
+        fromLocation: row.route?.fromLocation || null,
+        toLocation: row.route?.toLocation || null,
+        departureTime: row.timeSlot?.departureTime || null,
+        boardingPointName: row.boardingPoint?.name || null,
+        dropOffPointName: individualDropOffMap.get(row.booking.id)?.name || null,
+        driverName: row.driver?.name || null,
+        driverPhone: row.driver?.phone || null,
+        vehicleType: null,
+        referenceId: row.booking.referenceId,
+      });
+    }
+    
+    // Sort all results by createdAt descending
+    result.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    
+    return result;
   }
   
   // Complaint operations

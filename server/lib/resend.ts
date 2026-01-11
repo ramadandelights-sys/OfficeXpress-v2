@@ -1087,6 +1087,8 @@ export async function sendAITripPlannerReportEmail(data: {
   errors: string[];
   isWeekend?: boolean;
   isBlackout?: boolean;
+  subscriptionCount?: number;
+  individualCount?: number;
 }) {
   try {
     const { client, fromEmail } = await getUncachableResendClient();

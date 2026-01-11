@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Users, Calendar, MapPin, Clock, User, Phone, Mail, AlertCircle, Trash2 } from "lucide-react";
+import { Users, Calendar, MapPin, Clock, Car, User, AlertCircle, Trash2, Bus, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,144 +12,189 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { useAuth } from "@/hooks/useAuth";
-import type { CarpoolBooking, Driver, CarpoolRoute, CarpoolTimeSlot } from "@shared/schema";
+
+interface TripBookingForAdmin {
+  id: string;
+  vehicleTripId: string | null;
+  subscriptionId: string | null;
+  userId: string | null;
+  status: string;
+  pickupSequence: number | null;
+  createdAt: string;
+  bookingType: 'subscription' | 'individual';
+  tripReferenceId: string | null;
+  tripDate: string | null;
+  tripStatus: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  routeName: string | null;
+  fromLocation: string | null;
+  toLocation: string | null;
+  departureTime: string | null;
+  boardingPointName: string | null;
+  dropOffPointName: string | null;
+  driverName: string | null;
+  driverPhone: string | null;
+  vehicleType: string | null;
+  referenceId: string | null;
+}
 
 export default function CarpoolBookingManagement({ showDriverAssignment }: { showDriverAssignment: boolean }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState<string>("all");
+  const [selectedTripStatus, setSelectedTripStatus] = useState<string>("all");
+  const [selectedBookingType, setSelectedBookingType] = useState<string>("all");
   const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
 
   const isSuperadmin = user?.role === 'superadmin';
 
-  // Fetch all bookings
-  const { data: bookings = [], isLoading: loadingBookings, refetch } = useQuery<CarpoolBooking[]>({
-    queryKey: ['/api/admin/carpool/bookings'],
+  // Fetch all trip bookings with enriched data
+  const { data: bookings = [], isLoading: loadingBookings } = useQuery<TripBookingForAdmin[]>({
+    queryKey: ['/api/admin/trip-bookings'],
   });
 
-  // Fetch all routes
-  const { data: routes = [] } = useQuery<CarpoolRoute[]>({
-    queryKey: ['/api/admin/carpool/routes'],
-  });
-
-  // Fetch active drivers
-  const { data: activeDrivers = [] } = useQuery<Driver[]>({
-    queryKey: ['/api/drivers/active'],
-    enabled: showDriverAssignment,
-  });
-
-  // Assign driver mutation
-  const assignDriverMutation = useMutation({
-    mutationFn: async ({ bookingId, driverId }: { bookingId: string; driverId: string }) => {
-      return await apiRequest('PUT', `/api/admin/carpool/bookings/${bookingId}/assign-driver`, { driverId });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/bookings'] });
-      toast({ title: "Success", description: "Driver assigned successfully" });
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to assign driver", variant: "destructive" });
-    },
-  });
-
-  // Update status mutation
+  // Update booking status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async ({ bookingId, status }: { bookingId: string; status: string }) => {
-      return await apiRequest('PUT', `/api/admin/carpool/bookings/${bookingId}/status`, { status });
+      return await apiRequest('PUT', `/api/admin/trip-bookings/${bookingId}/status`, { status });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/bookings'] });
-      toast({ title: "Success", description: "Status updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/trip-bookings'] });
+      toast({ title: "Success", description: "Booking status updated successfully" });
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to update status", variant: "destructive" });
     },
   });
 
-  // Delete booking mutation (superadmin only)
-  const deleteBookingMutation = useMutation({
-    mutationFn: async (bookingId: string) => {
-      return await apiRequest('DELETE', `/api/admin/carpool/bookings/${bookingId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/admin/carpool/bookings'] });
-      toast({ title: "Success", description: "Booking deleted successfully" });
-      setDeleteBookingId(null);
-    },
-    onError: () => {
-      toast({ title: "Error", description: "Failed to delete booking", variant: "destructive" });
-    },
+  // Filter bookings by status, trip status, and booking type
+  const filteredBookings = bookings.filter(b => {
+    const matchesStatus = selectedStatus === "all" || b.status === selectedStatus;
+    const matchesTripStatus = selectedTripStatus === "all" || b.tripStatus === selectedTripStatus || (selectedTripStatus === "not_assigned" && !b.tripStatus);
+    const matchesBookingType = selectedBookingType === "all" || b.bookingType === selectedBookingType;
+    return matchesStatus && matchesTripStatus && matchesBookingType;
   });
 
-  // Group bookings by route, date, and time slot to identify routes with 3+ bookings
-  const groupedBookings = bookings.reduce((acc, booking) => {
-    const key = `${booking.routeId}-${booking.timeSlotId}-${booking.travelDate}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(booking);
-    return acc;
-  }, {} as Record<string, CarpoolBooking[]>);
-
-  // Find routes with 3+ pending bookings
-  const routesNeedingDrivers = Object.entries(groupedBookings)
-    .filter(([_, bookings]) => {
-      const pendingBookings = bookings.filter(b => b.status === 'pending');
-      return pendingBookings.length >= 3;
-    })
-    .map(([key, bookings]) => ({
-      key,
-      bookings,
-      count: bookings.filter(b => b.status === 'pending').length,
-    }));
-
-  // Filter bookings by status
-  const filteredBookings = selectedStatus === "all" 
-    ? bookings 
-    : bookings.filter(b => b.status === selectedStatus);
-
-  // Get route name helper
-  const getRouteName = (routeId: string) => {
-    const route = routes.find(r => r.id === routeId);
-    return route ? route.name : 'Unknown Route';
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
+  // Get status color for booking status
+  const getBookingStatusColor = (status: string) => {
     switch (status) {
+      case 'expected':
+        return 'bg-blue-100 text-blue-800';
+      case 'picked_up':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'completed':
+        return 'bg-green-100 text-green-800';
+      case 'no_show':
+        return 'bg-red-100 text-red-800';
+      case 'cancelled':
+        return 'bg-gray-100 text-gray-800';
       case 'pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'confirmed':
         return 'bg-green-100 text-green-800';
-      case 'completed':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      case 'insufficient_bookings':
-        return 'bg-gray-100 text-gray-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
   };
 
+  // Get status color for trip status
+  const getTripStatusColor = (status: string | null) => {
+    switch (status) {
+      case 'pending_assignment':
+        return 'bg-orange-100 text-orange-800';
+      case 'confirmed':
+        return 'bg-green-100 text-green-800';
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800';
+      case 'completed':
+        return 'bg-purple-100 text-purple-800';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // Get vehicle type icon and display
+  const getVehicleInfo = (vehicleType: string | null) => {
+    switch (vehicleType) {
+      case 'sedan':
+        return { icon: <Car className="h-4 w-4" />, label: 'Sedan (4)' };
+      case '7_seater':
+        return { icon: <Car className="h-4 w-4" />, label: '7-Seater' };
+      case '10_seater':
+        return { icon: <Bus className="h-4 w-4" />, label: '10-Seater' };
+      case '14_seater':
+        return { icon: <Bus className="h-4 w-4" />, label: '14-Seater' };
+      case '32_seater':
+        return { icon: <Bus className="h-4 w-4" />, label: 'Bus (32)' };
+      default:
+        return { icon: <Car className="h-4 w-4" />, label: 'Unknown' };
+    }
+  };
+
+  // Stats
+  const stats = {
+    total: bookings.length,
+    monthly: bookings.filter(b => b.bookingType === 'subscription').length,
+    individual: bookings.filter(b => b.bookingType === 'individual').length,
+    completed: bookings.filter(b => b.status === 'completed').length,
+    pendingAssignment: bookings.filter(b => b.tripStatus === 'pending_assignment').length,
+    notInTrip: bookings.filter(b => !b.tripStatus && b.bookingType === 'individual').length,
+  };
+
   return (
     <div className="space-y-6">
-      {/* Alert for routes needing drivers */}
-      {routesNeedingDrivers.length > 0 && showDriverAssignment && (
-        <Alert className="border-yellow-500 bg-yellow-50">
-          <AlertCircle className="h-4 w-4 text-yellow-600" />
-          <AlertDescription className="text-yellow-800">
-            <strong>{routesNeedingDrivers.length}</strong> route(s) have 3+ pending bookings and need driver assignment:
-            <ul className="mt-2 space-y-1">
-              {routesNeedingDrivers.map(({ key, bookings, count }) => {
-                const booking = bookings[0];
-                return (
-                  <li key={key} className="text-sm">
-                    • <strong>{getRouteName(booking.routeId)}</strong> on {booking.travelDate} - {count} bookings
-                  </li>
-                );
-              })}
-            </ul>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-gray-900">{stats.total}</div>
+            <div className="text-sm text-gray-500">Total Bookings</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-blue-600">{stats.monthly}</div>
+            <div className="text-sm text-gray-500">Monthly Subs</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-purple-600">{stats.individual}</div>
+            <div className="text-sm text-gray-500">Individual</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-sm text-gray-500">Completed</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-orange-600">{stats.pendingAssignment}</div>
+            <div className="text-sm text-gray-500">Pending Driver</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-2xl font-bold text-gray-500">{stats.notInTrip}</div>
+            <div className="text-sm text-gray-500">Not in Trip</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Alert for trips pending driver assignment */}
+      {stats.pendingAssignment > 0 && (
+        <Alert className="border-orange-500 bg-orange-50">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800">
+            <strong>{stats.pendingAssignment}</strong> booking(s) are in trips pending driver assignment. 
+            <a href="/admin/operations/driver-assignment" className="ml-2 underline font-medium">
+              Go to Driver Assignment →
+            </a>
           </AlertDescription>
         </Alert>
       )}
@@ -157,24 +202,52 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
       {/* Bookings List */}
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <CardTitle className="flex items-center gap-2" data-testid="heading-carpool-bookings">
               <Users className="h-5 w-5" />
-              Carpool Bookings ({filteredBookings.length})
+              Bookings ({filteredBookings.length})
             </CardTitle>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-[180px]" data-testid="select-booking-status">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Bookings</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="confirmed">Confirmed</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-                <SelectItem value="insufficient_bookings">Insufficient Bookings</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2">
+              <Select value={selectedBookingType} onValueChange={setSelectedBookingType}>
+                <SelectTrigger className="w-[140px]" data-testid="select-booking-type">
+                  <SelectValue placeholder="Booking Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="subscription">Monthly</SelectItem>
+                  <SelectItem value="individual">Individual</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger className="w-[150px]" data-testid="select-booking-status">
+                  <SelectValue placeholder="Booking Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="expected">Expected</SelectItem>
+                  <SelectItem value="picked_up">Picked Up</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="no_show">No Show</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedTripStatus} onValueChange={setSelectedTripStatus}>
+                <SelectTrigger className="w-[180px]" data-testid="select-trip-status">
+                  <SelectValue placeholder="Trip Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Trip Statuses</SelectItem>
+                  <SelectItem value="not_assigned">Not in Trip</SelectItem>
+                  <SelectItem value="pending_assignment">Pending Assignment</SelectItem>
+                  <SelectItem value="confirmed">Confirmed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -182,122 +255,154 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
             <div className="text-center py-8">Loading bookings...</div>
           ) : filteredBookings.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No bookings found.
+              No bookings found. Bookings are created when the AI Trip Generator groups subscribers into trips.
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Reference</TableHead>
+                    <TableHead>Trip</TableHead>
                     <TableHead>Customer</TableHead>
                     <TableHead>Route</TableHead>
-                    <TableHead>Travel Date</TableHead>
-                    <TableHead>Boarding → Drop-off</TableHead>
+                    <TableHead>Date / Time</TableHead>
+                    <TableHead>Pickup → Drop</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead>Driver</TableHead>
                     <TableHead>Status</TableHead>
-                    {showDriverAssignment && <TableHead>Driver</TableHead>}
                     <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredBookings.map((booking) => {
-                    const isHighPriority = groupedBookings[`${booking.routeId}-${booking.timeSlotId}-${booking.travelDate}`]?.filter(b => b.status === 'pending').length >= 3;
+                    const vehicleInfo = getVehicleInfo(booking.vehicleType);
                     
                     return (
                       <TableRow 
-                        key={booking.id} 
-                        className={isHighPriority && booking.status === 'pending' ? 'bg-yellow-50' : ''}
+                        key={booking.id}
+                        className={booking.tripStatus === 'pending_assignment' ? 'bg-orange-50' : ''}
                         data-testid={`row-booking-${booking.id}`}
                       >
-                        <TableCell className="font-mono text-sm">{booking.referenceId}</TableCell>
                         <TableCell>
                           <div>
-                            <div className="font-medium">{booking.customerName}</div>
-                            <div className="text-sm text-gray-500">{formatPhoneNumber(booking.phone)}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{getRouteName(booking.routeId)}</div>
-                            {isHighPriority && booking.status === 'pending' && (
-                              <Badge variant="outline" className="mt-1 text-xs">
-                                3+ bookings
-                              </Badge>
+                            {booking.bookingType === 'subscription' ? (
+                              <>
+                                <div className="font-mono text-sm font-medium">{booking.tripReferenceId || '-'}</div>
+                                <Badge className={`mt-1 ${getTripStatusColor(booking.tripStatus)}`} variant="outline">
+                                  {booking.tripStatus?.replace('_', ' ') || 'Unknown'}
+                                </Badge>
+                              </>
+                            ) : (
+                              <>
+                                <div className="font-mono text-sm font-medium">{booking.referenceId || '-'}</div>
+                                {booking.tripReferenceId ? (
+                                  <Badge className={`mt-1 ${getTripStatusColor(booking.tripStatus)}`} variant="outline">
+                                    Trip: {booking.tripReferenceId}
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="mt-1 text-gray-500 border-gray-300">
+                                    Not in trip
+                                  </Badge>
+                                )}
+                              </>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{booking.travelDate}</TableCell>
-                        <TableCell className="text-sm">
-                          <div>Board: Point {booking.boardingPointId}</div>
-                          <div>Drop: Point {booking.dropOffPointId}</div>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {booking.customerName || 'Unknown'}
+                            </div>
+                            <div className="text-sm text-gray-500">
+                              {booking.customerPhone ? formatPhoneNumber(booking.customerPhone) : '-'}
+                            </div>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {booking.bookingType === 'subscription' ? 'Monthly' : 'Individual'}
+                            </Badge>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(booking.status || 'pending')}>
-                            {booking.status || 'pending'}
+                          <div>
+                            <div className="font-medium">{booking.routeName || 'Unknown'}</div>
+                            <div className="text-xs text-gray-500">
+                              {booking.fromLocation} → {booking.toLocation}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-start gap-1">
+                            <Calendar className="h-3 w-3 mt-1" />
+                            <div>
+                              <div className="text-sm font-medium">{booking.tripDate || '-'}</div>
+                              <div className="flex items-center gap-1 text-xs text-gray-500">
+                                <Clock className="h-3 w-3" />
+                                {booking.departureTime || '-'}
+                              </div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-green-600" />
+                              <span>{booking.boardingPointName || 'Unknown'}</span>
+                            </div>
+                            <div className="flex items-center gap-1 mt-1">
+                              <MapPin className="h-3 w-3 text-red-600" />
+                              <span>{booking.dropOffPointName || 'Unknown'}</span>
+                            </div>
+                            {booking.pickupSequence && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                Pickup #{booking.pickupSequence}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {vehicleInfo.icon}
+                            <span className="text-sm">{vehicleInfo.label}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {booking.driverName ? (
+                            <div className="text-sm">
+                              <div className="font-medium">{booking.driverName}</div>
+                              <div className="text-gray-500">
+                                {booking.driverPhone ? formatPhoneNumber(booking.driverPhone) : '-'}
+                              </div>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-orange-600 border-orange-300">
+                              Not Assigned
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getBookingStatusColor(booking.status)}>
+                            {booking.status}
                           </Badge>
                         </TableCell>
-                        {showDriverAssignment && (
-                          <TableCell>
-                            {booking.driverId ? (
-                              <div className="text-sm">
-                                <div className="font-medium">Assigned</div>
-                                <div className="text-gray-500">{booking.driverId}</div>
-                              </div>
-                            ) : booking.status === 'pending' ? (
-                              <Select
-                                onValueChange={(driverId) => {
-                                  assignDriverMutation.mutate({ bookingId: booking.id, driverId });
-                                }}
-                                disabled={assignDriverMutation.isPending}
-                              >
-                                <SelectTrigger className="w-[150px]" data-testid={`select-driver-${booking.id}`}>
-                                  <SelectValue placeholder="Assign driver" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {activeDrivers.map((driver) => (
-                                    <SelectItem key={driver.id} value={driver.id}>
-                                      {driver.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <span className="text-sm text-gray-500">-</span>
-                            )}
-                          </TableCell>
-                        )}
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Select
-                              value={booking.status || 'pending'}
-                              onValueChange={(status) => {
-                                updateStatusMutation.mutate({ bookingId: booking.id, status });
-                              }}
-                              disabled={updateStatusMutation.isPending}
-                            >
-                              <SelectTrigger className="w-[120px]" data-testid={`select-status-${booking.id}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="confirmed">Confirmed</SelectItem>
-                                <SelectItem value="completed">Completed</SelectItem>
-                                <SelectItem value="cancelled">Cancelled</SelectItem>
-                                <SelectItem value="insufficient_bookings">Insufficient</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            {isSuperadmin && (
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => setDeleteBookingId(booking.id)}
-                                disabled={deleteBookingMutation.isPending}
-                                data-testid={`button-delete-booking-${booking.id}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
+                          <Select
+                            value={booking.status}
+                            onValueChange={(status) => {
+                              updateStatusMutation.mutate({ bookingId: booking.id, status });
+                            }}
+                            disabled={updateStatusMutation.isPending}
+                          >
+                            <SelectTrigger className="w-[120px]" data-testid={`select-status-${booking.id}`}>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="expected">Expected</SelectItem>
+                              <SelectItem value="picked_up">Picked Up</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                              <SelectItem value="no_show">No Show</SelectItem>
+                              <SelectItem value="cancelled">Cancelled</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                       </TableRow>
                     );
@@ -308,28 +413,6 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
           )}
         </CardContent>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteBookingId} onOpenChange={(open) => !open && setDeleteBookingId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Booking</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete this booking? This action cannot be undone and will remove all related data including notifications.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteBookingId && deleteBookingMutation.mutate(deleteBookingId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              data-testid="button-confirm-delete-booking"
-            >
-              {deleteBookingMutation.isPending ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
