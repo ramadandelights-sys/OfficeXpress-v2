@@ -263,6 +263,37 @@ export default function CarpoolPage() {
   const [subscribedWeekdays, setSubscribedWeekdays] = useState<Record<string, string[]>>({});
   const [subscriptionSchedule, setSubscriptionSchedule] = useState<Record<string, Array<{routeId: string, routeName: string, departureTime: string, timeSlotId: string}>>>({});
   const [paymentMethod, setPaymentMethod] = useState<"online" | "cash">("online");
+  const [targetMonth, setTargetMonth] = useState<string>("");
+
+  // Calculate month options based on current date
+  const today = new Date();
+  const currentDay = today.getDate();
+  const currentMonthStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+  const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+  
+  // Format month for display (e.g., "January 2026")
+  const formatMonthDisplay = (monthStr: string) => {
+    const [year, month] = monthStr.split('-').map(Number);
+    const date = new Date(year, month - 1, 1);
+    return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  };
+  
+  // Determine if we need month selection dropdown (date > 27) or just notification (date <= 27)
+  const requiresMonthSelection = currentDay > 27;
+  
+  // Set default target month based on date logic
+  useEffect(() => {
+    if (!targetMonth) {
+      if (requiresMonthSelection) {
+        // After 27th, don't set a default - user must select
+        setTargetMonth("");
+      } else {
+        // Before or on 27th, default to current month
+        setTargetMonth(currentMonthStr);
+      }
+    }
+  }, [requiresMonthSelection, currentMonthStr, targetMonth]);
 
   // Fetch already-subscribed weekdays and schedule when user is authenticated
   const fetchSubscriptionData = () => {
@@ -343,10 +374,13 @@ export default function CarpoolPage() {
     enabled: !!selectedRoute,
   });
 
-  // Calculate cost when route and weekdays are selected
+  // Calculate cost when route, weekdays, and target month are selected
+  // Only calculate if we have a valid target month (required when date > 27)
+  const effectiveTargetMonth = requiresMonthSelection && !targetMonth ? "" : (targetMonth || currentMonthStr);
   const { monthlyTotal, serviceableDays, blackoutDaysExcluded, isLoading: calculatingCost } = useCalculateCost(
     selectedRoute,
-    selectedWeekdays
+    selectedWeekdays,
+    effectiveTargetMonth
   );
 
   // Get selected route details
@@ -437,6 +471,15 @@ export default function CarpoolPage() {
       return;
     }
     
+    // Validate month selection when required (after 27th)
+    if (currentStep === 2 && requiresMonthSelection && !targetMonth) {
+      toast({
+        title: "Please select a month for your subscription",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (currentStep === 3 && !currentValues.timeSlotId) {
       toast({
         title: "Please select a time slot",
@@ -468,6 +511,15 @@ export default function CarpoolPage() {
   const handlePurchase = async () => {
     const formData = form.getValues();
     
+    // Validate month selection when required (after 27th)
+    if (requiresMonthSelection && !targetMonth) {
+      toast({
+        title: "Please select a month for your subscription",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     // For online payment, check wallet balance
     if (paymentMethod === 'online' && balance < monthlyTotal) {
       setShowTopUpDialog(true);
@@ -475,9 +527,21 @@ export default function CarpoolPage() {
     }
     
     try {
-      // Add startDate (start of next month or today if it's the 1st)
-      const today = new Date();
-      const startDate = new Date(today.getFullYear(), today.getMonth() + 1, 1).toISOString().split('T')[0];
+      // Calculate start date based on selected target month
+      let startDate: string;
+      const nowDate = new Date();
+      
+      // Use the effective target month (required validation above ensures we have a value)
+      const selectedMonth = targetMonth || currentMonthStr;
+      const [year, month] = selectedMonth.split('-').map(Number);
+      
+      // If target month is current month, start from today
+      if (year === nowDate.getFullYear() && month - 1 === nowDate.getMonth()) {
+        startDate = nowDate.toISOString().split('T')[0];
+      } else {
+        // For future months, start from the 1st
+        startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+      }
       
       await purchaseSubscription.mutateAsync({
         ...formData,
@@ -718,6 +782,42 @@ export default function CarpoolPage() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Select the days you want to use the carpool service
                   </p>
+                  
+                  {/* Month Selection - Show notification or dropdown based on date */}
+                  {requiresMonthSelection ? (
+                    <div className="mb-4">
+                      <Label htmlFor="targetMonth" className="text-sm font-medium mb-2 block">
+                        Select Subscription Month <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={targetMonth}
+                        onValueChange={setTargetMonth}
+                      >
+                        <SelectTrigger id="targetMonth" className="w-full" data-testid="select-target-month">
+                          <SelectValue placeholder="Choose a month for your subscription" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={currentMonthStr} data-testid="option-current-month">
+                            {formatMonthDisplay(currentMonthStr)} (This month)
+                          </SelectItem>
+                          <SelectItem value={nextMonthStr} data-testid="option-next-month">
+                            {formatMonthDisplay(nextMonthStr)} (Next month)
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Since today is after the 27th, please select which month you want to subscribe for.
+                      </p>
+                    </div>
+                  ) : (
+                    <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+                      <Calendar className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <AlertDescription className="text-blue-800 dark:text-blue-200">
+                        This subscription is for <strong>{formatMonthDisplay(currentMonthStr)}</strong>. 
+                        Your subscription will start immediately and run until the end of the month.
+                      </AlertDescription>
+                    </Alert>
+                  )}
                   
                   <div className="space-y-3">
                     {weekdayOptions

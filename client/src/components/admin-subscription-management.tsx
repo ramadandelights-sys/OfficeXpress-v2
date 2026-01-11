@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, Download, Search, Users, TrendingUp, Filter, CreditCard, Eye, XCircle } from "lucide-react";
+import { Calendar, Download, Search, Users, TrendingUp, Filter, CreditCard, Eye, XCircle, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -84,6 +84,9 @@ export default function AdminSubscriptionManagement() {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [groupByRoute, setGroupByRoute] = useState(false);
+  const [showEditDatesDialog, setShowEditDatesDialog] = useState(false);
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
 
   // Fetch subscriptions
   const { data: subscriptions = [], isLoading } = useQuery<Subscription[]>({
@@ -139,6 +142,37 @@ export default function AdminSubscriptionManagement() {
       });
     }
   });
+
+  // Update subscription dates mutation (superadmin only)
+  const updateDatesMutation = useMutation({
+    mutationFn: async ({ subscriptionId, startDate, endDate }: { subscriptionId: string; startDate: string; endDate: string }) => {
+      const response = await apiRequest('PATCH', `/api/admin/subscriptions/${subscriptionId}/dates`, { startDate, endDate });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Subscription dates updated successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/subscriptions'] });
+      setShowEditDatesDialog(false);
+      setSelectedSubscription(null);
+      setEditStartDate("");
+      setEditEndDate("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to update dates",
+        description: error.message || 'An error occurred',
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Open edit dates dialog
+  const openEditDatesDialog = (sub: Subscription) => {
+    setSelectedSubscription(sub);
+    setEditStartDate(format(new Date(sub.startDate), 'yyyy-MM-dd'));
+    setEditEndDate(format(new Date(sub.endDate), 'yyyy-MM-dd'));
+    setShowEditDatesDialog(true);
+  };
 
   // Calculate estimated refund for a subscription
   const calculateEstimatedRefund = (subscription: Subscription): number => {
@@ -226,14 +260,14 @@ export default function AdminSubscriptionManagement() {
   };
 
   const getStatusBadge = (status: string) => {
-    const variants = {
-      active: "success",
+    const variants: Record<string, "default" | "destructive" | "outline" | "secondary"> = {
+      active: "default",
       cancelled: "destructive",
       expired: "secondary",
-      pending_cancellation: "warning"
-    } as const;
+      pending_cancellation: "outline"
+    };
     return (
-      <Badge variant={variants[status as keyof typeof variants] || "default"}>
+      <Badge variant={variants[status] || "default"} className={status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : ''}>
         {status.replace('_', ' ')}
       </Badge>
     );
@@ -480,6 +514,17 @@ export default function AdminSubscriptionManagement() {
                                   <Eye className="mr-2 h-4 w-4" />
                                   Invoices
                                 </Button>
+                                {hasPermission('subscriptionManagement', 'edit') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => openEditDatesDialog(sub)}
+                                    data-testid={`button-edit-dates-${sub.id}`}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit Dates
+                                  </Button>
+                                )}
                                 {sub.status === 'active' && hasPermission('subscriptionCancellation') && (
                                   <Button
                                     variant="outline"
@@ -552,12 +597,14 @@ export default function AdminSubscriptionManagement() {
                       <TableCell>৳{invoice.amountDue}</TableCell>
                       <TableCell>৳{invoice.amountPaid}</TableCell>
                       <TableCell>
-                        <Badge variant={
-                          invoice.status === 'paid' ? 'success' :
-                          invoice.status === 'failed' ? 'destructive' :
-                          invoice.status === 'refunded' ? 'secondary' :
-                          'default'
-                        }>
+                        <Badge 
+                          variant={
+                            invoice.status === 'failed' ? 'destructive' :
+                            invoice.status === 'refunded' ? 'secondary' :
+                            'default'
+                          }
+                          className={invoice.status === 'paid' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : ''}
+                        >
                           {invoice.status}
                         </Badge>
                       </TableCell>
@@ -641,6 +688,85 @@ export default function AdminSubscriptionManagement() {
               data-testid="button-confirm-cancel-subscription"
             >
               {cancelMutation.isPending ? "Cancelling..." : "Cancel Subscription"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dates Dialog */}
+      <Dialog open={showEditDatesDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowEditDatesDialog(false);
+          setEditStartDate("");
+          setEditEndDate("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Subscription Dates</DialogTitle>
+            <DialogDescription>
+              {selectedSubscription && (
+                <div className="mt-2 space-y-1">
+                  <p>User: {selectedSubscription.userName} ({formatPhoneNumber(selectedSubscription.userPhone || '')})</p>
+                  <p>Route: {selectedSubscription.routeName}</p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-200 mt-2">
+            <p className="font-medium">Important:</p>
+            <p>Changing subscription dates will not automatically recalculate existing invoices or billing. Use this for correcting data entry errors only.</p>
+          </div>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <Label htmlFor="editStartDate">Start Date</Label>
+              <Input
+                id="editStartDate"
+                type="date"
+                value={editStartDate}
+                onChange={(e) => setEditStartDate(e.target.value)}
+                data-testid="input-edit-start-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editEndDate">End Date</Label>
+              <Input
+                id="editEndDate"
+                type="date"
+                value={editEndDate}
+                onChange={(e) => setEditEndDate(e.target.value)}
+                data-testid="input-edit-end-date"
+              />
+            </div>
+          </div>
+          {editStartDate && editEndDate && new Date(editStartDate) >= new Date(editEndDate) && (
+            <p className="text-sm text-red-500 mt-2">Start date must be before end date</p>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditDatesDialog(false);
+                setEditStartDate("");
+                setEditEndDate("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={!editStartDate || !editEndDate || new Date(editStartDate) >= new Date(editEndDate) || updateDatesMutation.isPending}
+              onClick={() => {
+                if (selectedSubscription && editStartDate && editEndDate && new Date(editStartDate) < new Date(editEndDate)) {
+                  updateDatesMutation.mutate({
+                    subscriptionId: selectedSubscription.id,
+                    startDate: editStartDate,
+                    endDate: editEndDate
+                  });
+                }
+              }}
+              data-testid="button-confirm-edit-dates"
+            >
+              {updateDatesMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

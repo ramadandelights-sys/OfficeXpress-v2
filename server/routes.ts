@@ -4691,6 +4691,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
+  // Admin update subscription dates (superadmin only)
+  app.patch("/api/admin/subscriptions/:id/dates",
+    isEmployeeOrAdmin,
+    hasPermission('subscriptionManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const { startDate, endDate } = req.body;
+        
+        if (!startDate || !endDate) {
+          return res.status(400).json({ message: "Start date and end date are required" });
+        }
+        
+        // Validate dates
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+          return res.status(400).json({ message: "Invalid date format" });
+        }
+        
+        if (start >= end) {
+          return res.status(400).json({ message: "Start date must be before end date" });
+        }
+        
+        // Update subscription
+        const updatedSubscription = await storage.updateSubscription(id, {
+          startDate: start,
+          endDate: end
+        });
+        
+        if (!updatedSubscription) {
+          return res.status(404).json({ message: "Subscription not found" });
+        }
+        
+        res.json({
+          success: true,
+          subscription: updatedSubscription
+        });
+      } catch (error: any) {
+        console.error("Error updating subscription dates:", error);
+        res.status(500).json({ message: error.message || "Failed to update subscription dates" });
+      }
+    }
+  );
+  
   // Admin wallet management endpoints
   app.get("/api/admin/wallets", 
     isEmployeeOrAdmin,

@@ -163,18 +163,41 @@ export function useActiveSubscriptions() {
 }
 
 // Hook to calculate subscription cost
-export function useCalculateCost(routeId?: string, weekdays?: string[]) {
+// targetMonth format: 'YYYY-MM' (e.g., '2026-01' for January 2026)
+// Pass empty string for targetMonth to disable the query (e.g., when month selection is required but not yet made)
+export function useCalculateCost(routeId?: string, weekdays?: string[], targetMonth?: string) {
+  // Query is disabled if targetMonth is explicitly empty string (meaning month selection is required but not made)
+  const hasValidTargetMonth = targetMonth !== "";
+  
   const { data, isLoading, error } = useQuery<CostCalculation>({
-    queryKey: ['/api/subscriptions/calculate-cost', routeId, weekdays],
+    queryKey: ['/api/subscriptions/calculate-cost', routeId, weekdays, targetMonth],
     queryFn: async () => {
       if (!routeId || !weekdays || weekdays.length === 0) {
         throw new Error("Route and weekdays are required");
       }
       
+      // Calculate start date based on target month
+      let startDate: string;
+      if (targetMonth) {
+        const [year, month] = targetMonth.split('-').map(Number);
+        const today = new Date();
+        const targetDate = new Date(year, month - 1, 1);
+        
+        // If target month is current month and we're past the 1st, start from today
+        if (year === today.getFullYear() && month - 1 === today.getMonth()) {
+          startDate = today.toISOString();
+        } else {
+          startDate = targetDate.toISOString();
+        }
+      } else {
+        startDate = new Date().toISOString();
+      }
+      
       const response = await apiRequest('POST', '/api/subscriptions/calculate-cost', {
         routeId,
         weekdays,
-        startDate: new Date().toISOString(),
+        startDate,
+        targetMonth,
       });
       
       if (!response.ok) {
@@ -184,7 +207,8 @@ export function useCalculateCost(routeId?: string, weekdays?: string[]) {
       
       return response.json();
     },
-    enabled: !!routeId && !!weekdays && weekdays.length > 0,
+    // Disable query if routeId/weekdays missing OR if targetMonth is explicitly empty string
+    enabled: !!routeId && !!weekdays && weekdays.length > 0 && hasValidTargetMonth,
   });
 
   return {
