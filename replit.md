@@ -36,7 +36,7 @@ Preferred communication style: Simple, everyday language.
 - **Session Management**: Express sessions with PostgreSQL storage.
 - **Security Features**: bcrypt hashing, CSRF protection, environment-aware rate limiting, HttpOnly/Secure/SameSite cookies, Helmet security headers.
 - **Input Validation**: Zod schemas and server-side validation.
-- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections (e.g., blogPosts, rentalBookings, employeeManagement), enforced at UI, query, API, and database layers. Additional action permissions: subscriptionCancellation, walletRefunds, userBanManagement.
+- **Granular Permissions System**: Three-level permission control (View/Edit/Download CSV) across 12 admin sections (e.g., blogPosts, rentalBookings, employeeManagement), enforced at UI, query, API, and database layers. Additional action permissions: subscriptionCancellation, walletRefunds, userBanManagement, driverAssignment, driverAssignmentViewPII.
 - **Secure Onboarding**: One-time 24-hour email links for new employee accounts.
 - **User Ban System**: Admins can ban/unban users with reason tracking. Banned users cannot log in and see a suspension message.
 
@@ -55,7 +55,7 @@ Preferred communication style: Simple, everyday language.
   - **Dashboard**: Overview and quick stats
   - **Content**: Blog Posts, Portfolio Clients, Legal Pages
   - **Bookings**: Corporate, Rental, Vendor, Contact Messages
-  - **Operations**: Carpool Routes, Carpool Bookings, Drivers, Blackout Dates
+  - **Operations**: Carpool Routes, Carpool Bookings, Drivers, Blackout Dates, AI Trip Planner, Driver Assignment
   - **Finance**: Wallet Management, Refunds, Subscriptions
   - **Settings**: Website, Marketing, Employees, Complaints
   - Mobile-friendly design with collapsible sidebar (hamburger menu on mobile)
@@ -71,6 +71,7 @@ Preferred communication style: Simple, everyday language.
 - **Admin Subscription Cancellation**: Admins can cancel subscriptions with automatic prorated refund calculation based on remaining days.
 - **Manual Refunds**: Admins can issue manual refunds directly to user wallets with reason tracking.
 - **User Ban Management**: Admin can ban/unban customers and employees with reason and timestamp tracking.
+- **Driver Assignment Workflow**: Dedicated Driver Assignment page (/admin/operations/driver-assignment) consolidates pending assignments from Rental and Carpool systems. PII protection enforced at API level - customer names and phones are masked unless the user has `driverAssignmentViewPII` permission. Toggle switch allows authorized users to reveal customer details when needed. This separation ensures supply operations team can assign drivers without accessing customer PII unless explicitly granted.
 
 ## External Dependencies
 
