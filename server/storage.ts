@@ -3691,6 +3691,7 @@ export class DatabaseStorage implements IStorage {
       
       return {
         bookingId: trip.id,
+        tripId: trip.vehicleTripId,
         userId: trip.userId,
         userName: user?.name || 'Unknown',
         tripDate: trip.vehicleTrip.tripDate,

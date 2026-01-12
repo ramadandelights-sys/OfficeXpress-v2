@@ -41,13 +41,16 @@ import {
   Download,
   Calendar,
   DollarSign,
-  CreditCard
+  CreditCard,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { format } from "date-fns";
 
 interface PendingRefunds {
   tripRefunds: Array<{
     bookingId: string;
+    tripId: string;
     userId: string;
     userName: string;
     tripDate: string;
@@ -63,6 +66,15 @@ interface PendingRefunds {
     remainingDays: number;
     amount: number;
   }>;
+}
+
+interface GroupedTripRefund {
+  tripId: string;
+  tripDate: string;
+  route: string;
+  reason: string;
+  totalAmount: number;
+  refunds: Array<PendingRefunds['tripRefunds'][0]>;
 }
 
 interface RefundHistory {
@@ -87,11 +99,41 @@ export default function AdminRefundManagement() {
   const [selectedTab, setSelectedTab] = useState("pending");
   const [confirmProcessDialog, setConfirmProcessDialog] = useState(false);
   const [selectedRefundType, setSelectedRefundType] = useState<"all" | "trips" | "subscriptions">("all");
+  const [expandedTrips, setExpandedTrips] = useState<Set<string>>(new Set());
   const [historyFilters, setHistoryFilters] = useState({
     startDate: "",
     endDate: "",
     userId: ""
   });
+
+  const toggleTrip = (tripId: string) => {
+    const newExpanded = new Set(expandedTrips);
+    if (newExpanded.has(tripId)) {
+      newExpanded.delete(tripId);
+    } else {
+      newExpanded.add(tripId);
+    }
+    setExpandedTrips(newExpanded);
+  };
+
+  // Group trip refunds by tripId
+  const groupedTripRefunds = pendingRefunds?.tripRefunds.reduce((acc, refund) => {
+    if (!acc[refund.tripId]) {
+      acc[refund.tripId] = {
+        tripId: refund.tripId,
+        tripDate: refund.tripDate,
+        route: refund.route,
+        reason: refund.reason,
+        totalAmount: 0,
+        refunds: []
+      };
+    }
+    acc[refund.tripId].refunds.push(refund);
+    acc[refund.tripId].totalAmount += refund.amount;
+    return acc;
+  }, {} as Record<string, GroupedTripRefund>) || {};
+
+  const groupedTripsArray = Object.values(groupedTripRefunds);
 
   // Fetch pending refunds
   const { data: pendingRefunds, isLoading: loadingPending } = useQuery<PendingRefunds>({
@@ -307,35 +349,62 @@ export default function AdminRefundManagement() {
               </div>
 
               {/* Trip Refunds Table */}
-              {(selectedRefundType === "all" || selectedRefundType === "trips") && pendingRefunds.tripRefunds.length > 0 && (
+              {(selectedRefundType === "all" || selectedRefundType === "trips") && groupedTripsArray.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Trip Refunds</CardTitle>
+                    <CardTitle>Trip Refunds (Grouped by Trip)</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>User</TableHead>
+                          <TableHead className="w-[50px]"></TableHead>
+                          <TableHead>Trip ID</TableHead>
                           <TableHead>Trip Date</TableHead>
                           <TableHead>Route</TableHead>
                           <TableHead>Reason</TableHead>
-                          <TableHead className="text-right">Amount</TableHead>
+                          <TableHead>Users</TableHead>
+                          <TableHead className="text-right">Total Amount</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {pendingRefunds.tripRefunds.map((refund) => (
-                          <TableRow key={refund.bookingId}>
-                            <TableCell>{refund.userName}</TableCell>
-                            <TableCell>{refund.tripDate}</TableCell>
-                            <TableCell>{refund.route}</TableCell>
-                            <TableCell>
-                              <Badge variant={refund.reason.includes("no-show") ? "destructive" : "secondary"}>
-                                {refund.reason}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right font-medium">৳{refund.amount.toFixed(2)}</TableCell>
-                          </TableRow>
+                        {groupedTripsArray.map((group) => (
+                          <React.Fragment key={group.tripId}>
+                            <TableRow 
+                              className="cursor-pointer hover:bg-muted/50"
+                              onClick={() => toggleTrip(group.tripId)}
+                            >
+                              <TableCell>
+                                {expandedTrips.has(group.tripId) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </TableCell>
+                              <TableCell className="font-medium">{group.tripId}</TableCell>
+                              <TableCell>{group.tripDate}</TableCell>
+                              <TableCell>{group.route}</TableCell>
+                              <TableCell>
+                                <Badge variant={group.reason.includes("no-show") ? "destructive" : "secondary"}>
+                                  {group.reason}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{group.refunds.length} users</TableCell>
+                              <TableCell className="text-right font-bold text-primary">৳{group.totalAmount.toFixed(2)}</TableCell>
+                            </TableRow>
+                            {expandedTrips.has(group.tripId) && group.refunds.map((refund) => (
+                              <TableRow key={refund.bookingId} className="bg-muted/30">
+                                <TableCell></TableCell>
+                                <TableCell colSpan={2} className="pl-8 text-sm text-muted-foreground">
+                                  {refund.userName}
+                                </TableCell>
+                                <TableCell colSpan={3} className="text-sm text-muted-foreground">
+                                  User ID: {refund.userId}
+                                </TableCell>
+                                <TableCell className="text-right text-sm font-medium">৳{refund.amount.toFixed(2)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </React.Fragment>
                         ))}
                       </TableBody>
                     </Table>
