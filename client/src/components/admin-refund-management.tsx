@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -116,6 +116,12 @@ export default function AdminRefundManagement() {
     setExpandedTrips(newExpanded);
   };
 
+  // Fetch pending refunds
+  const { data: pendingRefunds, isLoading: loadingPending } = useQuery<PendingRefunds>({
+    queryKey: ["/api/admin/refunds/pending"],
+    enabled: selectedTab === "pending"
+  });
+
   // Group trip refunds by tripId
   const groupedTripRefunds = pendingRefunds?.tripRefunds.reduce((acc, refund) => {
     if (!acc[refund.tripId]) {
@@ -134,12 +140,6 @@ export default function AdminRefundManagement() {
   }, {} as Record<string, GroupedTripRefund>) || {};
 
   const groupedTripsArray = Object.values(groupedTripRefunds);
-
-  // Fetch pending refunds
-  const { data: pendingRefunds, isLoading: loadingPending } = useQuery<PendingRefunds>({
-    queryKey: ["/api/admin/refunds/pending"],
-    enabled: selectedTab === "pending"
-  });
 
   // Fetch refund history
   const { data: refundHistory, isLoading: loadingHistory } = useQuery<RefundHistory[]>({
