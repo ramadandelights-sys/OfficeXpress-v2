@@ -4284,6 +4284,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const endDateObj = new Date(startDateObj);
       endDateObj.setMonth(endDateObj.getMonth() + 1);
       
+      // Calculate billing cycle days (actual days between start and end)
+      const billingCycleDays = Math.ceil(
+        (endDateObj.getTime() - startDateObj.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      
+      // For now, no discounts are applied - baseAmount equals monthlyCost
+      // In the future, coupon code logic can be added here
+      const baseAmount = monthlyCost;
+      const discountAmount = 0;
+      const netAmountPaid = monthlyCost - discountAmount;
+      const couponCode = null;
+      
       let subscription;
       
       // For online payment, use atomic subscription+wallet transaction
@@ -4299,10 +4311,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Check wallet balance
         const currentBalance = parseFloat(wallet.balance);
-        if (currentBalance < monthlyCost) {
+        if (currentBalance < netAmountPaid) {
           return res.status(400).json({ 
             message: "Insufficient wallet balance",
-            required: monthlyCost,
+            required: netAmountPaid,
             current: currentBalance
           });
         }
@@ -4320,13 +4332,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endDate: endDateObj,
           pricePerTrip: pricePerSeat.toString(),
           totalMonthlyPrice: monthlyCost.toString(),
+          baseAmount: baseAmount.toString(),
+          discountAmount: discountAmount.toString(),
+          netAmountPaid: netAmountPaid.toString(),
+          billingCycleDays,
+          couponCode,
           status: 'active',
           paymentMethod
-        }, monthlyCost);
+        }, netAmountPaid);
         
         subscription = result.subscription;
       } else {
         // For cash payments, just create subscription (no wallet transaction)
+        // Cash payments don't have netAmountPaid since they pay driver directly
         subscription = await storage.createSubscription({
           userId: req.session.userId!,
           routeId,
@@ -4338,6 +4356,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           endDate: endDateObj,
           pricePerTrip: pricePerSeat.toString(),
           totalMonthlyPrice: monthlyCost.toString(),
+          baseAmount: baseAmount.toString(),
+          discountAmount: discountAmount.toString(),
+          billingCycleDays,
           status: 'active',
           paymentMethod
         });
@@ -4349,15 +4370,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         subscriptionId: subscription.id,
         userId: req.session.userId!,
         billingMonth,
-        amountDue: monthlyCost.toString(),
+        amountDue: baseAmount.toString(),
         dueDate: startDateObj
       });
       
-      // For online payments, mark the invoice as paid
+      // For online payments, mark the invoice as paid with the net amount
       if (paymentMethod === 'online') {
         invoice = await storage.updateInvoice(invoice.id, {
           status: 'paid',
-          amountPaid: monthlyCost.toString(),
+          amountPaid: netAmountPaid.toString(),
           paidAt: new Date()
         });
       }

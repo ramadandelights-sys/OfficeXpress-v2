@@ -234,7 +234,21 @@ class RefundProcessorService {
       
       for (const serviceDay of missedServiceDays) {
         try {
-          const refundAmount = serviceDay.pricePerTrip;
+          // NEW: Calculate refund using subscription's daily rate if available
+          let refundAmount: number;
+          const subscription = serviceDay.subscription as any;
+          
+          if (subscription?.netAmountPaid && subscription?.billingCycleDays && subscription.billingCycleDays > 0) {
+            // Use accurate daily rate from subscription data
+            const dailyRate = parseFloat(subscription.netAmountPaid) / subscription.billingCycleDays;
+            refundAmount = Math.round(dailyRate * 100) / 100;
+            log(`[RefundProcessor] Using subscription daily rate: netAmountPaid=${subscription.netAmountPaid}, billingCycleDays=${subscription.billingCycleDays}, dailyRate=${refundAmount}`);
+          } else {
+            // Fallback to pricePerTrip for legacy subscriptions
+            refundAmount = serviceDay.pricePerTrip;
+            log(`[RefundProcessor] Using legacy pricePerTrip for refund: ${refundAmount} (netAmountPaid or billingCycleDays not available)`);
+          }
+          
           const formattedDate = serviceDay.serviceDate.toISOString().split('T')[0];
           
           const wallet = await this.storage.getUserWallet(serviceDay.userId);

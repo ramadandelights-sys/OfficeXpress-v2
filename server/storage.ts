@@ -3564,16 +3564,23 @@ export class DatabaseStorage implements IStorage {
       (1000 * 60 * 60 * 24)
     );
     
-    // Calculate total subscription days
-    const totalDays = Math.ceil(
-      (new Date(subscription.endDate).getTime() - new Date(subscription.startDate).getTime()) / 
-      (1000 * 60 * 60 * 24)
-    );
+    let refundAmount: number;
     
-    // Calculate refund
-    const monthlyFee = Number(subscription.totalMonthlyPrice);
-    const dailyRate = monthlyFee / 30;
-    const refundAmount = dailyRate * remainingDays;
+    // NEW: Use netAmountPaid and billingCycleDays if available (new subscriptions)
+    if (subscription.netAmountPaid && subscription.billingCycleDays && subscription.billingCycleDays > 0) {
+      const netPaid = parseFloat(subscription.netAmountPaid as string);
+      const dailyRate = netPaid / subscription.billingCycleDays;
+      refundAmount = Math.round(dailyRate * remainingDays * 100) / 100;
+      // Refund cannot exceed netAmountPaid
+      refundAmount = Math.min(refundAmount, netPaid);
+      console.log(`[calculateProRatedRefund] Using new daily rate: netAmountPaid=${netPaid}, billingCycleDays=${subscription.billingCycleDays}, remainingDays=${remainingDays}, refundAmount=${refundAmount}`);
+    } else {
+      // LEGACY FALLBACK: Calculate using totalMonthlyPrice / 30 days
+      console.log(`[calculateProRatedRefund] Using legacy calculation - netAmountPaid or billingCycleDays not available`);
+      const monthlyFee = Number(subscription.totalMonthlyPrice);
+      const dailyRate = monthlyFee / 30;
+      refundAmount = dailyRate * remainingDays;
+    }
     
     return Math.max(0, refundAmount);
   }
@@ -4215,90 +4222,101 @@ export class DatabaseStorage implements IStorage {
         // FIX: Do not refund if cancellation is before subscription start date
         if (now < startDate) {
           refundSkipReason = 'Cancellation before subscription start date - no refund applicable';
-        } else {
-          // MULTI-LAYER PAYMENT VERIFICATION
-          // Check multiple sources to verify payment was actually made
-          let paymentVerified = false;
-          let originalPaymentAmount = 0;
+        } else if (endDate > now) {
+          // Calculate remaining days for refund
+          const remainingDays = Math.min(differenceInDays(endDate, now), differenceInDays(endDate, startDate));
           
-          // Method 1: Check for paid invoice (most reliable for new subscriptions)
-          const invoices = await tx
-            .select()
-            .from(subscriptionInvoices)
-            .where(eq(subscriptionInvoices.subscriptionId, subscriptionId));
-          
-          const paidInvoice = invoices.find(inv => inv.status === 'paid');
-          if (paidInvoice) {
-            paymentVerified = true;
-            originalPaymentAmount = parseFloat(paidInvoice.amountPaid || paidInvoice.amountDue);
-          }
-          
-          // Method 2: Check for wallet transaction with subscriptionId in metadata (new flow)
-          if (!paymentVerified) {
-            const wallet = await tx
-              .select()
-              .from(userWallets)
-              .where(eq(userWallets.userId, subscription.userId))
-              .then(rows => rows[0]);
+          // NEW: Use netAmountPaid and billingCycleDays if available (new subscriptions)
+          if (subscription.netAmountPaid && subscription.billingCycleDays && subscription.billingCycleDays > 0) {
+            const netPaid = parseFloat(subscription.netAmountPaid as string);
+            const dailyRate = netPaid / subscription.billingCycleDays;
+            refundAmount = Math.round(dailyRate * remainingDays * 100) / 100;
+            // Refund cannot exceed netAmountPaid
+            refundAmount = Math.min(refundAmount, netPaid);
+            console.log(`[AdminCancelSubscription] Using new daily rate calculation: netAmountPaid=${netPaid}, billingCycleDays=${subscription.billingCycleDays}, remainingDays=${remainingDays}, refundAmount=${refundAmount}`);
+          } else {
+            // LEGACY FALLBACK: Multi-layer payment verification for old subscriptions
+            console.log(`[AdminCancelSubscription] Using legacy payment verification for subscription ${subscriptionId} - netAmountPaid or billingCycleDays not available`);
             
-            if (wallet) {
-              const subscriptionDebits = await tx
+            let paymentVerified = false;
+            let originalPaymentAmount = 0;
+            
+            // Method 1: Check for paid invoice (most reliable for new subscriptions)
+            const invoices = await tx
+              .select()
+              .from(subscriptionInvoices)
+              .where(eq(subscriptionInvoices.subscriptionId, subscriptionId));
+            
+            const paidInvoice = invoices.find(inv => inv.status === 'paid');
+            if (paidInvoice) {
+              paymentVerified = true;
+              originalPaymentAmount = parseFloat(paidInvoice.amountPaid || paidInvoice.amountDue);
+            }
+            
+            // Method 2: Check for wallet transaction with subscriptionId in metadata (new flow)
+            if (!paymentVerified) {
+              const wallet = await tx
                 .select()
-                .from(walletTransactions)
-                .where(
-                  and(
-                    eq(walletTransactions.walletId, wallet.id),
-                    eq(walletTransactions.type, 'debit'),
-                    eq(walletTransactions.reason, 'subscription_purchase')
-                  )
-                );
+                .from(userWallets)
+                .where(eq(userWallets.userId, subscription.userId))
+                .then(rows => rows[0]);
               
-              // Check for transaction with explicit subscriptionId
-              const taggedTransaction = subscriptionDebits.find(t => {
-                const metadata = t.metadata as any;
-                return metadata?.subscriptionId === subscriptionId;
-              });
-              
-              if (taggedTransaction) {
-                paymentVerified = true;
-                originalPaymentAmount = parseFloat(taggedTransaction.amount);
-              } else if (subscription.createdAt) {
-                // Method 3: Legacy fallback - match by amount and time
-                const subscriptionCreatedAt = new Date(subscription.createdAt);
-                const subscriptionPrice = parseFloat(subscription.totalMonthlyPrice);
+              if (wallet) {
+                const subscriptionDebits = await tx
+                  .select()
+                  .from(walletTransactions)
+                  .where(
+                    and(
+                      eq(walletTransactions.walletId, wallet.id),
+                      eq(walletTransactions.type, 'debit'),
+                      eq(walletTransactions.reason, 'subscription_purchase')
+                    )
+                  );
                 
-                const matchingTransaction = subscriptionDebits.find(t => {
-                  const transactionTime = new Date(t.createdAt);
-                  const timeDiff = Math.abs(transactionTime.getTime() - subscriptionCreatedAt.getTime());
-                  const transactionAmount = parseFloat(t.amount);
-                  // Match within ±10% of price and within 24 hours of creation (for legacy data)
-                  const amountMatch = Math.abs(transactionAmount - subscriptionPrice) <= (subscriptionPrice * 0.10);
-                  const timeMatch = timeDiff <= 86400000; // 24 hours
-                  const notAlreadyTagged = !(t.metadata as any)?.subscriptionId;
-                  return amountMatch && timeMatch && notAlreadyTagged;
+                // Check for transaction with explicit subscriptionId
+                const taggedTransaction = subscriptionDebits.find(t => {
+                  const metadata = t.metadata as any;
+                  return metadata?.subscriptionId === subscriptionId;
                 });
                 
-                if (matchingTransaction) {
+                if (taggedTransaction) {
                   paymentVerified = true;
-                  originalPaymentAmount = parseFloat(matchingTransaction.amount);
+                  originalPaymentAmount = parseFloat(taggedTransaction.amount);
+                } else if (subscription.createdAt) {
+                  // Method 3: Legacy fallback - match by amount and time
+                  const subscriptionCreatedAt = new Date(subscription.createdAt);
+                  const subscriptionPrice = parseFloat(subscription.totalMonthlyPrice);
+                  
+                  const matchingTransaction = subscriptionDebits.find(t => {
+                    const transactionTime = new Date(t.createdAt);
+                    const timeDiff = Math.abs(transactionTime.getTime() - subscriptionCreatedAt.getTime());
+                    const transactionAmount = parseFloat(t.amount);
+                    // Match within ±10% of price and within 24 hours of creation (for legacy data)
+                    const amountMatch = Math.abs(transactionAmount - subscriptionPrice) <= (subscriptionPrice * 0.10);
+                    const timeMatch = timeDiff <= 86400000; // 24 hours
+                    const notAlreadyTagged = !(t.metadata as any)?.subscriptionId;
+                    return amountMatch && timeMatch && notAlreadyTagged;
+                  });
+                  
+                  if (matchingTransaction) {
+                    paymentVerified = true;
+                    originalPaymentAmount = parseFloat(matchingTransaction.amount);
+                  }
                 }
-                // Note: For legacy subscriptions without deterministic payment linkage,
-                // admin can use the manual refund tool after verifying payment externally
               }
             }
-          }
-          
-          if (!paymentVerified) {
-            refundSkipReason = 'No payment record found for this subscription - no refund applicable';
-          } else if (endDate > now) {
-            // Calculate prorated refund based on verified payment amount
-            const totalDays = differenceInDays(endDate, startDate);
-            const remainingDays = Math.min(differenceInDays(endDate, now), totalDays);
             
-            if (totalDays > 0 && remainingDays > 0) {
-              refundAmount = Math.round((originalPaymentAmount * remainingDays / totalDays) * 100) / 100;
-              // Refund cannot exceed original payment amount
-              refundAmount = Math.min(refundAmount, originalPaymentAmount);
+            if (!paymentVerified) {
+              refundSkipReason = 'No payment record found for this subscription - no refund applicable';
+            } else {
+              // Calculate prorated refund based on verified payment amount
+              const totalDays = differenceInDays(endDate, startDate);
+              
+              if (totalDays > 0 && remainingDays > 0) {
+                refundAmount = Math.round((originalPaymentAmount * remainingDays / totalDays) * 100) / 100;
+                // Refund cannot exceed original payment amount
+                refundAmount = Math.min(refundAmount, originalPaymentAmount);
+              }
             }
           }
         }
