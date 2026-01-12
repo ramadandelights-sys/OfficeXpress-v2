@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Users, Calendar, MapPin, Clock, Car, User, AlertCircle, Trash2, Bus, Package } from "lucide-react";
+import { Users, Calendar, MapPin, Clock, Car, User, AlertCircle, Trash2, Bus, Package, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface TripBookingForAdmin {
   id: string;
@@ -68,6 +69,12 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
     },
   });
 
+  const [expandedTrips, setExpandedTrips] = useState<Record<string, boolean>>({});
+
+  const toggleTrip = (tripId: string) => {
+    setExpandedTrips(prev => ({ ...prev, [tripId]: !prev[tripId] }));
+  };
+
   // Filter bookings by status, trip status, and booking type
   const filteredBookings = bookings.filter(b => {
     const matchesStatus = selectedStatus === "all" || b.status === selectedStatus;
@@ -75,6 +82,24 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
     const matchesBookingType = selectedBookingType === "all" || b.bookingType === selectedBookingType;
     return matchesStatus && matchesTripStatus && matchesBookingType;
   });
+
+  // Group bookings by trip
+  const groupedTrips = useMemo(() => {
+    const groups: Record<string, TripBookingForAdmin[]> = {};
+    const noTrip: TripBookingForAdmin[] = [];
+
+    filteredBookings.forEach(booking => {
+      const tripId = booking.tripReferenceId || booking.referenceId;
+      if (tripId) {
+        if (!groups[tripId]) groups[tripId] = [];
+        groups[tripId].push(booking);
+      } else {
+        noTrip.push(booking);
+      }
+    });
+
+    return { groups, noTrip };
+  }, [filteredBookings]);
 
   // Get status color for booking status
   const getBookingStatusColor = (status: string) => {
@@ -262,65 +287,187 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[30px]"></TableHead>
                     <TableHead>Trip</TableHead>
-                    <TableHead>Customer</TableHead>
                     <TableHead>Route</TableHead>
                     <TableHead>Date / Time</TableHead>
-                    <TableHead>Pickup → Drop</TableHead>
                     <TableHead>Vehicle</TableHead>
                     <TableHead>Driver</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    <TableHead>Passengers</TableHead>
+                    <TableHead>Trip Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBookings.map((booking) => {
-                    const vehicleInfo = getVehicleInfo(booking.vehicleType);
-                    
+                  {Object.entries(groupedTrips.groups).map(([tripId, tripBookings]) => {
+                    const firstBooking = tripBookings[0];
+                    const vehicleInfo = getVehicleInfo(firstBooking.vehicleType);
+                    const isExpanded = expandedTrips[tripId];
+
                     return (
-                      <TableRow 
-                        key={booking.id}
-                        className={booking.tripStatus === 'pending_assignment' ? 'bg-orange-50' : ''}
-                        data-testid={`row-booking-${booking.id}`}
+                      <Collapsible
+                        key={tripId}
+                        open={isExpanded}
+                        onOpenChange={() => toggleTrip(tripId)}
+                        asChild
                       >
-                        <TableCell>
-                          <div>
-                            {booking.bookingType === 'subscription' ? (
-                              <>
-                                <div className="font-mono text-sm font-medium">{booking.tripReferenceId || '-'}</div>
-                                <Badge className={`mt-1 ${getTripStatusColor(booking.tripStatus)}`} variant="outline">
-                                  {booking.tripStatus?.replace('_', ' ') || 'Unknown'}
+                        <>
+                          <TableRow 
+                            className={`cursor-pointer hover:bg-gray-50 ${firstBooking.tripStatus === 'pending_assignment' ? 'bg-orange-50' : ''}`}
+                            onClick={(e) => {
+                              // Don't toggle if clicking on a button or select
+                              if ((e.target as HTMLElement).closest('button, [role="combobox"]')) return;
+                              toggleTrip(tripId);
+                            }}
+                          >
+                            <TableCell>
+                              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            </TableCell>
+                            <TableCell>
+                              <div className="font-mono text-sm font-medium">{tripId}</div>
+                              <Badge variant="outline" className="mt-1 text-xs">
+                                {firstBooking.bookingType === 'subscription' ? 'Monthly' : 'Individual'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <div className="font-medium">{firstBooking.routeName || 'Unknown'}</div>
+                                <div className="text-xs text-gray-500">
+                                  {firstBooking.fromLocation} → {firstBooking.toLocation}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-start gap-1">
+                                <Calendar className="h-3 w-3 mt-1" />
+                                <div>
+                                  <div className="text-sm font-medium">{firstBooking.tripDate || '-'}</div>
+                                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                                    <Clock className="h-3 w-3" />
+                                    {firstBooking.departureTime || '-'}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {vehicleInfo.icon}
+                                <span className="text-sm">{vehicleInfo.label}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {firstBooking.driverName ? (
+                                <div className="text-sm">
+                                  <div className="font-medium">{firstBooking.driverName}</div>
+                                  <div className="text-gray-500 text-xs">
+                                    {firstBooking.driverPhone ? formatPhoneNumber(firstBooking.driverPhone) : '-'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-orange-600 border-orange-300">
+                                  Not Assigned
                                 </Badge>
-                              </>
-                            ) : (
-                              <>
-                                <div className="font-mono text-sm font-medium">{booking.referenceId || '-'}</div>
-                                {booking.tripReferenceId ? (
-                                  <Badge className={`mt-1 ${getTripStatusColor(booking.tripStatus)}`} variant="outline">
-                                    Trip: {booking.tripReferenceId}
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="outline" className="mt-1 text-gray-500 border-gray-300">
-                                    Not in trip
-                                  </Badge>
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </TableCell>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{tripBookings.length} Users</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge className={getTripStatusColor(firstBooking.tripStatus)} variant="outline">
+                                {firstBooking.tripStatus?.replace('_', ' ') || 'Unknown'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                          <CollapsibleContent asChild>
+                            <TableRow className="bg-gray-50/50">
+                              <TableCell colSpan={8} className="p-0">
+                                <div className="p-4 space-y-4">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow className="hover:bg-transparent">
+                                        <TableHead className="h-8 text-xs uppercase">Customer</TableHead>
+                                        <TableHead className="h-8 text-xs uppercase">Pickup → Drop</TableHead>
+                                        <TableHead className="h-8 text-xs uppercase">Booking Status</TableHead>
+                                        <TableHead className="h-8 text-xs uppercase">Actions</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {tripBookings.map((booking) => (
+                                        <TableRow key={booking.id} className="hover:bg-transparent">
+                                          <TableCell>
+                                            <div>
+                                              <div className="font-medium flex items-center gap-1 text-sm">
+                                                <User className="h-3 w-3" />
+                                                {booking.customerName || 'Unknown'}
+                                              </div>
+                                              <div className="text-xs text-gray-500">
+                                                {booking.customerPhone ? formatPhoneNumber(booking.customerPhone) : '-'}
+                                              </div>
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <div className="text-xs">
+                                              <div className="flex items-center gap-1">
+                                                <MapPin className="h-3 w-3 text-green-600" />
+                                                <span>{booking.boardingPointName || 'Unknown'}</span>
+                                              </div>
+                                              <div className="flex items-center gap-1 mt-1">
+                                                <MapPin className="h-3 w-3 text-red-600" />
+                                                <span>{booking.dropOffPointName || 'Unknown'}</span>
+                                              </div>
+                                              {booking.pickupSequence && (
+                                                <div className="text-[10px] text-gray-400 mt-0.5">
+                                                  Pickup #{booking.pickupSequence}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge className={`text-[10px] h-5 ${getBookingStatusColor(booking.status)}`}>
+                                              {booking.status}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Select
+                                              value={booking.status}
+                                              onValueChange={(status) => {
+                                                updateStatusMutation.mutate({ bookingId: booking.id, status });
+                                              }}
+                                              disabled={updateStatusMutation.isPending}
+                                            >
+                                              <SelectTrigger className="h-8 w-[110px] text-xs">
+                                                <SelectValue />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="expected">Expected</SelectItem>
+                                                <SelectItem value="picked_up">Picked Up</SelectItem>
+                                                <SelectItem value="completed">Completed</SelectItem>
+                                                <SelectItem value="no_show">No Show</SelectItem>
+                                                <SelectItem value="cancelled">Cancelled</SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          </CollapsibleContent>
+                        </>
+                      </Collapsible>
+                    );
+                  })}
+                  {groupedTrips.noTrip.map((booking) => {
+                    const vehicleInfo = getVehicleInfo(booking.vehicleType);
+                    return (
+                      <TableRow key={booking.id} className="bg-gray-50/20">
+                        <TableCell></TableCell>
                         <TableCell>
-                          <div>
-                            <div className="font-medium flex items-center gap-1">
-                              <User className="h-3 w-3" />
-                              {booking.customerName || 'Unknown'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {booking.customerPhone ? formatPhoneNumber(booking.customerPhone) : '-'}
-                            </div>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {booking.bookingType === 'subscription' ? 'Monthly' : 'Individual'}
-                            </Badge>
-                          </div>
+                          <div className="font-mono text-sm font-medium">{booking.referenceId || '-'}</div>
+                          <Badge variant="outline" className="mt-1 text-xs text-gray-500 border-gray-300">
+                            Not in trip
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           <div>
@@ -343,66 +490,26 @@ export default function CarpoolBookingManagement({ showDriverAssignment }: { sho
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-green-600" />
-                              <span>{booking.boardingPointName || 'Unknown'}</span>
-                            </div>
-                            <div className="flex items-center gap-1 mt-1">
-                              <MapPin className="h-3 w-3 text-red-600" />
-                              <span>{booking.dropOffPointName || 'Unknown'}</span>
-                            </div>
-                            {booking.pickupSequence && (
-                              <div className="text-xs text-gray-400 mt-1">
-                                Pickup #{booking.pickupSequence}
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
                           <div className="flex items-center gap-1">
                             {vehicleInfo.icon}
                             <span className="text-sm">{vehicleInfo.label}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          {booking.driverName ? (
-                            <div className="text-sm">
-                              <div className="font-medium">{booking.driverName}</div>
-                              <div className="text-gray-500">
-                                {booking.driverPhone ? formatPhoneNumber(booking.driverPhone) : '-'}
-                              </div>
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="text-orange-600 border-orange-300">
-                              Not Assigned
+                           <Badge variant="outline" className="text-gray-400 border-gray-200">
+                              N/A
                             </Badge>
-                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium flex items-center gap-1 text-sm">
+                            <User className="h-3 w-3" />
+                            {booking.customerName || 'Unknown'}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge className={getBookingStatusColor(booking.status)}>
                             {booking.status}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Select
-                            value={booking.status}
-                            onValueChange={(status) => {
-                              updateStatusMutation.mutate({ bookingId: booking.id, status });
-                            }}
-                            disabled={updateStatusMutation.isPending}
-                          >
-                            <SelectTrigger className="w-[120px]" data-testid={`select-status-${booking.id}`}>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="expected">Expected</SelectItem>
-                              <SelectItem value="picked_up">Picked Up</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                              <SelectItem value="no_show">No Show</SelectItem>
-                              <SelectItem value="cancelled">Cancelled</SelectItem>
-                            </SelectContent>
-                          </Select>
                         </TableCell>
                       </TableRow>
                     );
