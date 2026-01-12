@@ -4279,7 +4279,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const pricePerSeat = parseFloat(route.pricePerSeat);
       const monthlyCost = totalDays * pricePerSeat;
       
-      // For online payment, check wallet balance
+      // Calculate end date (1 month from start)
+      const startDateObj = new Date(startDate);
+      const endDateObj = new Date(startDateObj);
+      endDateObj.setMonth(endDateObj.getMonth() + 1);
+      
+      let subscription;
+      
+      // For online payment, use atomic subscription+wallet transaction
       if (paymentMethod === 'online') {
         // Get or create wallet
         let wallet = await storage.getUserWallet(req.session.userId!);
@@ -4300,40 +4307,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Deduct from wallet for online payments
-        await storage.updateWalletBalance(wallet.id, -monthlyCost);
+        // Use atomic method that creates subscription AND debits wallet together
+        // This ensures the subscriptionId is included in the wallet transaction metadata
+        const result = await storage.purchaseSubscriptionWithWallet(wallet.id, {
+          userId: req.session.userId!,
+          routeId,
+          timeSlotId,
+          boardingPointId: pickupPointId,
+          dropOffPointId,
+          weekdays,
+          startDate: startDateObj,
+          endDate: endDateObj,
+          pricePerTrip: pricePerSeat.toString(),
+          totalMonthlyPrice: monthlyCost.toString(),
+          status: 'active',
+          paymentMethod
+        }, monthlyCost);
+        
+        subscription = result.subscription;
+      } else {
+        // For cash payments, just create subscription (no wallet transaction)
+        subscription = await storage.createSubscription({
+          userId: req.session.userId!,
+          routeId,
+          timeSlotId,
+          boardingPointId: pickupPointId,
+          dropOffPointId,
+          weekdays,
+          startDate: startDateObj,
+          endDate: endDateObj,
+          pricePerTrip: pricePerSeat.toString(),
+          totalMonthlyPrice: monthlyCost.toString(),
+          status: 'active',
+          paymentMethod
+        });
       }
       
-      // Calculate end date (1 month from start)
-      const startDateObj = new Date(startDate);
-      const endDateObj = new Date(startDateObj);
-      endDateObj.setMonth(endDateObj.getMonth() + 1);
-      
-      // Create subscription with payment method and weekdays
-      const subscription = await storage.createSubscription({
-        userId: req.session.userId!,
-        routeId,
-        timeSlotId,
-        boardingPointId: pickupPointId,
-        dropOffPointId,
-        weekdays, // Store the selected weekdays
-        startDate: startDateObj,
-        endDate: endDateObj,
-        pricePerTrip: pricePerSeat.toString(),
-        totalMonthlyPrice: monthlyCost.toString(),
-        status: 'active',
-        paymentMethod
-      });
-      
-      // Create invoice
+      // Create invoice - mark as paid for online payments
       const billingMonth = `${startDateObj.getFullYear()}-${String(startDateObj.getMonth() + 1).padStart(2, '0')}`;
-      const invoice = await storage.createSubscriptionInvoice({
+      let invoice = await storage.createSubscriptionInvoice({
         subscriptionId: subscription.id,
         userId: req.session.userId!,
         billingMonth,
         amountDue: monthlyCost.toString(),
         dueDate: startDateObj
       });
+      
+      // For online payments, mark the invoice as paid
+      if (paymentMethod === 'online') {
+        invoice = await storage.updateInvoice(invoice.id, {
+          status: 'paid',
+          amountPaid: monthlyCost.toString(),
+          paidAt: new Date()
+        });
+      }
       
       res.json({
         subscription,
@@ -4960,6 +4987,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
+  // Wallet reset endpoint - zero out balance
+  app.post("/api/admin/wallets/:walletId/reset", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { walletId } = req.params;
+        const { reason } = req.body;
+        
+        if (!reason || reason.trim().length === 0) {
+          return res.status(400).json({ message: "Reason is required for wallet reset" });
+        }
+        
+        const adminId = req.session.userId;
+        const result = await storage.resetWalletBalance(walletId, adminId, reason);
+        
+        res.json({ 
+          message: `Wallet reset successfully. Previous balance: ৳${result.previousBalance.toFixed(2)}`,
+          previousBalance: result.previousBalance,
+          wallet: result.wallet
+        });
+      } catch (error: any) {
+        console.error("Error resetting wallet:", error);
+        if (error.message?.includes('not found')) {
+          res.status(404).json({ message: error.message });
+        } else {
+          res.status(500).json({ message: "Failed to reset wallet" });
+        }
+      }
+    }
+  );
+  
+  // Wallet audit endpoint - check for discrepancies
+  app.get("/api/admin/wallets/:walletId/audit", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const { walletId } = req.params;
+        const audit = await storage.auditWallet(walletId);
+        
+        res.json({
+          walletId: audit.wallet.id,
+          userId: audit.wallet.userId,
+          storedBalance: audit.storedBalance,
+          calculatedBalance: audit.calculatedBalance,
+          discrepancy: audit.discrepancy,
+          hasDiscrepancy: Math.abs(audit.discrepancy) > 0.01,
+          transactionCount: audit.transactions.length,
+          transactions: audit.transactions
+        });
+      } catch (error: any) {
+        console.error("Error auditing wallet:", error);
+        if (error.message?.includes('not found')) {
+          res.status(404).json({ message: error.message });
+        } else {
+          res.status(500).json({ message: "Failed to audit wallet" });
+        }
+      }
+    }
+  );
+  
+  // Audit all wallets for discrepancies
+  app.get("/api/admin/wallets/audit-all", 
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const wallets = await storage.getAllWallets();
+        const auditResults = [];
+        
+        for (const wallet of wallets) {
+          const audit = await storage.auditWallet(wallet.id);
+          if (Math.abs(audit.discrepancy) > 0.01) {
+            auditResults.push({
+              walletId: wallet.id,
+              userId: wallet.userId,
+              userName: wallet.user?.name || 'Unknown',
+              storedBalance: audit.storedBalance,
+              calculatedBalance: audit.calculatedBalance,
+              discrepancy: audit.discrepancy
+            });
+          }
+        }
+        
+        res.json({
+          totalWallets: wallets.length,
+          walletsWithDiscrepancies: auditResults.length,
+          discrepancies: auditResults
+        });
+      } catch (error: any) {
+        console.error("Error auditing all wallets:", error);
+        res.status(500).json({ message: "Failed to audit wallets" });
+      }
+    }
+  );
+  
   // Admin Refund Management Endpoints
   
   // Get pending refunds
@@ -5077,6 +5201,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
+  app.post("/api/admin/payment-linkage-backfill",
+    isEmployeeOrAdmin,
+    hasPermission('walletRefunds', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { dryRun = true } = req.body;
+        
+        if (typeof dryRun !== 'boolean') {
+          return res.status(400).json({ message: "dryRun must be a boolean" });
+        }
+        
+        console.log(`Starting payment linkage backfill (dryRun: ${dryRun})...`);
+        const results = await storage.backfillPaymentLinkage(dryRun);
+        
+        console.log(`Backfill complete: processed=${results.processed}, linked=${results.linked}, skipped=${results.skipped}`);
+        
+        res.json({
+          success: true,
+          dryRun,
+          results
+        });
+      } catch (error: any) {
+        console.error("Error running payment linkage backfill:", error);
+        res.status(500).json({ message: error.message || "Failed to run payment linkage backfill" });
+      }
+    }
+  );
+
   app.post("/api/admin/users/:id/ban",
     isEmployeeOrAdmin,
     hasPermission('userBanManagement'),

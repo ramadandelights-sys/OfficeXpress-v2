@@ -289,7 +289,17 @@ export interface IStorage {
   // Wallet operations
   getUserWallet(userId: string): Promise<UserWallet | undefined>;
   createUserWallet(wallet: InsertUserWallet): Promise<UserWallet>;
-  updateWalletBalance(walletId: string, amount: number): Promise<UserWallet>;
+  updateWalletBalance(walletId: string, amount: number, metadata?: Record<string, any>): Promise<UserWallet>;
+  purchaseSubscriptionWithWallet(walletId: string, subscriptionData: InsertSubscription, amount: number): Promise<{ subscription: Subscription; wallet: UserWallet }>;
+  resetWalletBalance(walletId: string, adminId: string, reason: string): Promise<{ wallet: UserWallet; previousBalance: number }>;
+  auditWallet(walletId: string): Promise<{ 
+    wallet: UserWallet; 
+    storedBalance: number; 
+    calculatedBalance: number; 
+    discrepancy: number; 
+    transactions: WalletTransaction[];
+  }>;
+  getAllWallets(): Promise<(UserWallet & { user?: { name: string; phone: string; email: string } })[]>;
   
   // Wallet transaction operations
   createWalletTransaction(transaction: InsertWalletTransaction): Promise<WalletTransaction>;
@@ -1849,7 +1859,7 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
   
-  async updateWalletBalance(walletId: string, amount: number): Promise<UserWallet> {
+  async updateWalletBalance(walletId: string, amount: number, metadata?: Record<string, any>): Promise<UserWallet> {
     // Start a transaction for atomic operations
     return await db.transaction(async (tx) => {
       // Fetch current wallet to get current balance
@@ -1896,11 +1906,171 @@ export class DatabaseStorage implements IStorage {
           type: transactionType,
           reason: reason,
           description: description,
-          metadata: { balanceAfter: newBalance.toString() }
+          metadata: { balanceAfter: newBalance.toString(), ...metadata }
         });
       
       return updatedWallet;
     });
+  }
+  
+  async purchaseSubscriptionWithWallet(walletId: string, subscriptionData: InsertSubscription, amount: number): Promise<{ subscription: Subscription; wallet: UserWallet }> {
+    return await db.transaction(async (tx) => {
+      // 1. Get current wallet balance
+      const [currentWallet] = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.id, walletId));
+      
+      if (!currentWallet) {
+        throw new Error('Wallet not found');
+      }
+      
+      const currentBalance = parseFloat(currentWallet.balance);
+      if (currentBalance < amount) {
+        throw new Error(`Insufficient funds. Current balance: ${currentBalance}, Required: ${amount}`);
+      }
+      
+      // 2. Create subscription first
+      const [subscription] = await tx
+        .insert(subscriptions)
+        .values(subscriptionData)
+        .returning();
+      
+      // 3. Debit wallet with subscriptionId in metadata
+      const newBalance = currentBalance - amount;
+      const [updatedWallet] = await tx
+        .update(userWallets)
+        .set({
+          balance: newBalance.toString(),
+          updatedAt: new Date()
+        })
+        .where(eq(userWallets.id, walletId))
+        .returning();
+      
+      // 4. Create transaction record with subscriptionId
+      await tx
+        .insert(walletTransactions)
+        .values({
+          walletId: walletId,
+          amount: amount.toString(),
+          type: 'debit',
+          reason: 'subscription_purchase',
+          description: `Subscription purchase: ৳${amount}`,
+          metadata: { 
+            balanceAfter: newBalance.toString(),
+            subscriptionId: subscription.id 
+          }
+        });
+      
+      return { subscription, wallet: updatedWallet };
+    });
+  }
+  
+  async resetWalletBalance(walletId: string, adminId: string, reason: string): Promise<{ wallet: UserWallet; previousBalance: number }> {
+    return await db.transaction(async (tx) => {
+      const [wallet] = await tx
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.id, walletId));
+      
+      if (!wallet) {
+        throw new Error('Wallet not found');
+      }
+      
+      const previousBalance = parseFloat(wallet.balance);
+      
+      if (previousBalance === 0) {
+        return { wallet, previousBalance: 0 };
+      }
+      
+      const [updatedWallet] = await tx
+        .update(userWallets)
+        .set({
+          balance: '0.00',
+          updatedAt: new Date()
+        })
+        .where(eq(userWallets.id, walletId))
+        .returning();
+      
+      await tx
+        .insert(walletTransactions)
+        .values({
+          walletId: walletId,
+          amount: previousBalance.toString(),
+          type: 'debit',
+          reason: 'admin_wallet_reset',
+          description: `Wallet reset by admin: ${reason}`,
+          metadata: { adminId, previousBalance, resetReason: reason }
+        });
+      
+      return { wallet: updatedWallet, previousBalance };
+    });
+  }
+  
+  async auditWallet(walletId: string): Promise<{ 
+    wallet: UserWallet; 
+    storedBalance: number; 
+    calculatedBalance: number; 
+    discrepancy: number; 
+    transactions: WalletTransaction[];
+  }> {
+    const [wallet] = await db
+      .select()
+      .from(userWallets)
+      .where(eq(userWallets.id, walletId));
+    
+    if (!wallet) {
+      throw new Error('Wallet not found');
+    }
+    
+    const transactions = await db
+      .select()
+      .from(walletTransactions)
+      .where(eq(walletTransactions.walletId, walletId))
+      .orderBy(walletTransactions.createdAt);
+    
+    let calculatedBalance = 0;
+    for (const tx of transactions) {
+      const amount = parseFloat(tx.amount);
+      if (tx.type === 'credit') {
+        calculatedBalance += amount;
+      } else {
+        calculatedBalance -= amount;
+      }
+    }
+    
+    const storedBalance = parseFloat(wallet.balance);
+    const discrepancy = Math.round((storedBalance - calculatedBalance) * 100) / 100;
+    
+    return {
+      wallet,
+      storedBalance,
+      calculatedBalance: Math.round(calculatedBalance * 100) / 100,
+      discrepancy,
+      transactions
+    };
+  }
+  
+  async getAllWallets(): Promise<(UserWallet & { user?: { name: string; phone: string; email: string } })[]> {
+    const result = await db
+      .select({
+        wallet: userWallets,
+        userName: users.name,
+        userPhone: users.phone,
+        userEmail: users.email,
+      })
+      .from(userWallets)
+      .leftJoin(users, eq(userWallets.userId, users.id))
+      .orderBy(desc(userWallets.updatedAt));
+    
+    return result.map(r => ({
+      ...r.wallet,
+      user: r.userName ? {
+        name: r.userName,
+        phone: r.userPhone || '',
+        email: r.userEmail || ''
+      } : undefined
+    }));
   }
   
   // Wallet transaction operations
@@ -3926,10 +4096,11 @@ export class DatabaseStorage implements IStorage {
   
   async adminCancelSubscription(subscriptionId: string, adminId: string, reason: string): Promise<{ subscription: Subscription; refundAmount: number }> {
     return await db.transaction(async (tx) => {
-      const [subscription] = await tx
-        .select()
-        .from(subscriptions)
-        .where(eq(subscriptions.id, subscriptionId));
+      // Use FOR UPDATE to lock the row and prevent concurrent cancellation requests
+      const result = await tx.execute(
+        sql`SELECT * FROM subscriptions WHERE id = ${subscriptionId} FOR UPDATE`
+      );
+      const subscription = result.rows[0] as Subscription | undefined;
       
       if (!subscription) {
         throw new Error('Subscription not found');
@@ -3939,20 +4110,108 @@ export class DatabaseStorage implements IStorage {
         throw new Error('Subscription is already cancelled');
       }
       
+      // Check if refund was already processed (prevent duplicate refunds)
+      // This check is now protected by FOR UPDATE lock - concurrent requests will serialize
+      if (subscription.refundAmount && parseFloat(subscription.refundAmount as string) > 0) {
+        throw new Error('Refund was already processed for this subscription');
+      }
+      
       let refundAmount = 0;
+      let refundSkipReason = '';
       
       if (subscription.paymentMethod === 'online') {
         const now = new Date();
         const endDate = new Date(subscription.endDate);
         const startDate = new Date(subscription.startDate);
         
-        if (endDate > now) {
-          const totalDays = differenceInDays(endDate, startDate);
-          const remainingDays = differenceInDays(endDate, now);
-          const totalPrice = parseFloat(subscription.totalMonthlyPrice);
+        // FIX: Do not refund if cancellation is before subscription start date
+        if (now < startDate) {
+          refundSkipReason = 'Cancellation before subscription start date - no refund applicable';
+        } else {
+          // MULTI-LAYER PAYMENT VERIFICATION
+          // Check multiple sources to verify payment was actually made
+          let paymentVerified = false;
+          let originalPaymentAmount = 0;
           
-          if (totalDays > 0 && remainingDays > 0) {
-            refundAmount = Math.round((totalPrice * remainingDays / totalDays) * 100) / 100;
+          // Method 1: Check for paid invoice (most reliable for new subscriptions)
+          const invoices = await tx
+            .select()
+            .from(subscriptionInvoices)
+            .where(eq(subscriptionInvoices.subscriptionId, subscriptionId));
+          
+          const paidInvoice = invoices.find(inv => inv.status === 'paid');
+          if (paidInvoice) {
+            paymentVerified = true;
+            originalPaymentAmount = parseFloat(paidInvoice.amountPaid || paidInvoice.amountDue);
+          }
+          
+          // Method 2: Check for wallet transaction with subscriptionId in metadata (new flow)
+          if (!paymentVerified) {
+            const wallet = await tx
+              .select()
+              .from(userWallets)
+              .where(eq(userWallets.userId, subscription.userId))
+              .then(rows => rows[0]);
+            
+            if (wallet) {
+              const subscriptionDebits = await tx
+                .select()
+                .from(walletTransactions)
+                .where(
+                  and(
+                    eq(walletTransactions.walletId, wallet.id),
+                    eq(walletTransactions.type, 'debit'),
+                    eq(walletTransactions.reason, 'subscription_purchase')
+                  )
+                );
+              
+              // Check for transaction with explicit subscriptionId
+              const taggedTransaction = subscriptionDebits.find(t => {
+                const metadata = t.metadata as any;
+                return metadata?.subscriptionId === subscriptionId;
+              });
+              
+              if (taggedTransaction) {
+                paymentVerified = true;
+                originalPaymentAmount = parseFloat(taggedTransaction.amount);
+              } else if (subscription.createdAt) {
+                // Method 3: Legacy fallback - match by amount and time
+                const subscriptionCreatedAt = new Date(subscription.createdAt);
+                const subscriptionPrice = parseFloat(subscription.totalMonthlyPrice);
+                
+                const matchingTransaction = subscriptionDebits.find(t => {
+                  const transactionTime = new Date(t.createdAt);
+                  const timeDiff = Math.abs(transactionTime.getTime() - subscriptionCreatedAt.getTime());
+                  const transactionAmount = parseFloat(t.amount);
+                  // Match within ±10% of price and within 24 hours of creation (for legacy data)
+                  const amountMatch = Math.abs(transactionAmount - subscriptionPrice) <= (subscriptionPrice * 0.10);
+                  const timeMatch = timeDiff <= 86400000; // 24 hours
+                  const notAlreadyTagged = !(t.metadata as any)?.subscriptionId;
+                  return amountMatch && timeMatch && notAlreadyTagged;
+                });
+                
+                if (matchingTransaction) {
+                  paymentVerified = true;
+                  originalPaymentAmount = parseFloat(matchingTransaction.amount);
+                }
+                // Note: For legacy subscriptions without deterministic payment linkage,
+                // admin can use the manual refund tool after verifying payment externally
+              }
+            }
+          }
+          
+          if (!paymentVerified) {
+            refundSkipReason = 'No payment record found for this subscription - no refund applicable';
+          } else if (endDate > now) {
+            // Calculate prorated refund based on verified payment amount
+            const totalDays = differenceInDays(endDate, startDate);
+            const remainingDays = Math.min(differenceInDays(endDate, now), totalDays);
+            
+            if (totalDays > 0 && remainingDays > 0) {
+              refundAmount = Math.round((originalPaymentAmount * remainingDays / totalDays) * 100) / 100;
+              // Refund cannot exceed original payment amount
+              refundAmount = Math.min(refundAmount, originalPaymentAmount);
+            }
           }
         }
         
@@ -3997,7 +4256,7 @@ export class DatabaseStorage implements IStorage {
         .set({
           status: 'cancelled',
           cancellationDate: new Date(),
-          cancellationReason: reason,
+          cancellationReason: reason + (refundSkipReason ? ` (${refundSkipReason})` : ''),
           cancelledBy: adminId,
           refundAmount: refundAmount.toString(),
           updatedAt: new Date()
@@ -4085,6 +4344,177 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updated;
+  }
+
+  async backfillPaymentLinkage(dryRun: boolean = true): Promise<{
+    processed: number;
+    linked: number;
+    skipped: number;
+    conflicts: Array<{ subscriptionId: string; reason: string }>;
+    details: Array<{ subscriptionId: string; action: string; walletTransactionId?: string }>;
+  }> {
+    const results = {
+      processed: 0,
+      linked: 0,
+      skipped: 0,
+      conflicts: [] as Array<{ subscriptionId: string; reason: string }>,
+      details: [] as Array<{ subscriptionId: string; action: string; walletTransactionId?: string }>
+    };
+
+    // Get all subscriptions that need payment linkage verification
+    const eligibleSubscriptions = await db
+      .select()
+      .from(subscriptions)
+      .where(
+        and(
+          or(eq(subscriptions.status, 'active'), eq(subscriptions.status, 'cancelled')),
+          eq(subscriptions.paymentMethod, 'online')
+        )
+      )
+      .orderBy(subscriptions.createdAt);
+
+    for (const subscription of eligibleSubscriptions) {
+      results.processed++;
+
+      // Check if already has payment linkage
+      const existingInvoice = await db
+        .select()
+        .from(subscriptionInvoices)
+        .where(
+          and(
+            eq(subscriptionInvoices.subscriptionId, subscription.id),
+            eq(subscriptionInvoices.status, 'paid')
+          )
+        )
+        .then(rows => rows[0]);
+
+      if (existingInvoice) {
+        results.details.push({ subscriptionId: subscription.id, action: 'already_linked_invoice' });
+        continue;
+      }
+
+      // Check if already has tagged wallet transaction
+      const wallet = await db
+        .select()
+        .from(userWallets)
+        .where(eq(userWallets.userId, subscription.userId))
+        .then(rows => rows[0]);
+
+      if (!wallet) {
+        results.skipped++;
+        results.conflicts.push({ subscriptionId: subscription.id, reason: 'no_wallet_found' });
+        continue;
+      }
+
+      const existingTaggedTransaction = await db
+        .select()
+        .from(walletTransactions)
+        .where(
+          and(
+            eq(walletTransactions.walletId, wallet.id),
+            eq(walletTransactions.type, 'debit'),
+            eq(walletTransactions.reason, 'subscription_purchase')
+          )
+        )
+        .then(rows => rows.find(t => (t.metadata as any)?.subscriptionId === subscription.id));
+
+      if (existingTaggedTransaction) {
+        results.details.push({ subscriptionId: subscription.id, action: 'already_linked_transaction' });
+        continue;
+      }
+
+      // Find candidate wallet transactions
+      const subscriptionCreatedAt = new Date(subscription.createdAt!);
+      const subscriptionPrice = parseFloat(subscription.totalMonthlyPrice);
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+      const candidateTransactions = await db
+        .select()
+        .from(walletTransactions)
+        .where(
+          and(
+            eq(walletTransactions.walletId, wallet.id),
+            eq(walletTransactions.type, 'debit'),
+            eq(walletTransactions.reason, 'subscription_purchase')
+          )
+        )
+        .then(rows => rows.filter(t => {
+          const transactionTime = new Date(t.createdAt);
+          const timeDiff = Math.abs(transactionTime.getTime() - subscriptionCreatedAt.getTime());
+          const transactionAmount = parseFloat(t.amount);
+          const amountMatch = Math.abs(transactionAmount - subscriptionPrice) <= (subscriptionPrice * 0.10);
+          const timeMatch = timeDiff <= sevenDaysMs;
+          const notAlreadyTagged = !(t.metadata as any)?.subscriptionId;
+          return amountMatch && timeMatch && notAlreadyTagged;
+        }));
+
+      if (candidateTransactions.length === 0) {
+        results.skipped++;
+        results.conflicts.push({ subscriptionId: subscription.id, reason: 'no_matching_debit_found' });
+        continue;
+      }
+
+      if (candidateTransactions.length > 1) {
+        // Prefer exact amount match, then earliest transaction
+        candidateTransactions.sort((a, b) => {
+          const aDiff = Math.abs(parseFloat(a.amount) - subscriptionPrice);
+          const bDiff = Math.abs(parseFloat(b.amount) - subscriptionPrice);
+          if (aDiff !== bDiff) return aDiff - bDiff;
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        });
+      }
+
+      const bestMatch = candidateTransactions[0];
+
+      if (dryRun) {
+        results.linked++;
+        results.details.push({
+          subscriptionId: subscription.id,
+          action: 'would_link',
+          walletTransactionId: bestMatch.id
+        });
+      } else {
+        // Atomically update transaction metadata and invoice status
+        await db.transaction(async (tx) => {
+          // Tag the wallet transaction with subscriptionId
+          const existingMetadata = bestMatch.metadata as Record<string, any> || {};
+          await tx
+            .update(walletTransactions)
+            .set({
+              metadata: { ...existingMetadata, subscriptionId: subscription.id, backfilled: true }
+            })
+            .where(eq(walletTransactions.id, bestMatch.id));
+
+          // Update any pending invoice to paid
+          const pendingInvoice = await tx
+            .select()
+            .from(subscriptionInvoices)
+            .where(eq(subscriptionInvoices.subscriptionId, subscription.id))
+            .then(rows => rows.find(inv => inv.status === 'pending'));
+
+          if (pendingInvoice) {
+            await tx
+              .update(subscriptionInvoices)
+              .set({
+                status: 'paid',
+                amountPaid: pendingInvoice.amountDue,
+                paidAt: new Date(),
+                metadata: { backfilled: true, walletTransactionId: bestMatch.id }
+              })
+              .where(eq(subscriptionInvoices.id, pendingInvoice.id));
+          }
+        });
+
+        results.linked++;
+        results.details.push({
+          subscriptionId: subscription.id,
+          action: 'linked',
+          walletTransactionId: bestMatch.id
+        });
+      }
+    }
+
+    return results;
   }
 }
 

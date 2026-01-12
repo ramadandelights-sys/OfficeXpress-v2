@@ -68,8 +68,13 @@ Preferred communication style: Simple, everyday language.
 - **Flexible Payment Options**: Customers can choose between cash payment (pay driver directly per trip) or online payment (prepay from wallet balance) when booking subscriptions.
 - **Complaint Management**: Users can file complaints with categories and severity, managed by admin.
 - **Bangladesh Holidays Integration**: Static holiday data for 2024-2026, manageable by admin as blackout dates.
-- **Admin Subscription Cancellation**: Admins can cancel subscriptions with automatic prorated refund calculation based on remaining days.
+- **Admin Subscription Cancellation**: Admins can cancel subscriptions with automatic prorated refund calculation based on remaining days. Refunds use a multi-layer payment verification system that requires proof of payment (paid invoice OR tagged wallet transaction OR amount/time matched legacy transaction).
 - **Manual Refunds**: Admins can issue manual refunds directly to user wallets with reason tracking.
+- **Payment Verification System**: 3-layer verification prevents refunds for unpaid subscriptions:
+  1. Paid invoice check (new subscriptions)
+  2. Wallet transaction with subscriptionId metadata (new atomic purchase flow)
+  3. Legacy fallback: amount/time matching (±10%, 24h window)
+- **Payment Linkage Backfill**: Admin endpoint to retroactively link historical wallet transactions to their subscriptions. Run in dry-run mode first (`POST /api/admin/payment-linkage-backfill` with `{dryRun: true}`), review the results, then execute with `{dryRun: false}`.
 - **User Ban Management**: Admin can ban/unban customers and employees with reason and timestamp tracking.
 - **Driver Assignment Workflow**: Dedicated Driver Assignment page (/admin/operations/driver-assignment) consolidates pending assignments from Rental and Carpool systems. PII protection enforced at API level - customer names and phones are masked unless the user has `driverAssignmentViewPII` permission. Toggle switch allows authorized users to reveal customer details when needed. This separation ensures supply operations team can assign drivers without accessing customer PII unless explicitly granted.
 

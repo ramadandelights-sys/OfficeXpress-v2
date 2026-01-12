@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Wallet, Download, Search, CreditCard, TrendingUp, TrendingDown, DollarSign, Eye, Plus, Minus, RefreshCw } from "lucide-react";
+import { Wallet, Download, Search, CreditCard, TrendingUp, TrendingDown, DollarSign, Eye, Plus, Minus, RefreshCw, RotateCcw, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -80,8 +80,10 @@ export default function AdminWalletManagement() {
   const [showTransactionDialog, setShowTransactionDialog] = useState(false);
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
   const [showRefundDialog, setShowRefundDialog] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
   const [refundAmount, setRefundAmount] = useState("");
   const [refundReason, setRefundReason] = useState("");
+  const [resetReason, setResetReason] = useState("");
 
   // Form for manual adjustments
   const adjustmentForm = useForm({
@@ -167,6 +169,34 @@ export default function AdminWalletManagement() {
     onError: (error: any) => {
       toast({
         title: "Failed to issue refund",
+        description: error.message || 'An error occurred',
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Reset wallet mutation
+  const resetMutation = useMutation({
+    mutationFn: async (data: { walletId: string; reason: string }) => {
+      const response = await apiRequest('POST', `/api/admin/wallets/${data.walletId}/reset`, {
+        reason: data.reason
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Wallet reset successfully",
+        description: `Previous balance of ৳${data.previousBalance?.toFixed(2) || '0.00'} has been zeroed out.`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/admin/wallets/stats'] });
+      setShowResetDialog(false);
+      setResetReason("");
+      setSelectedWallet(null);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to reset wallet",
         description: error.message || 'An error occurred',
         variant: "destructive"
       });
@@ -465,6 +495,21 @@ export default function AdminWalletManagement() {
                               Refund
                             </Button>
                           )}
+                          {hasPermission('walletManagement', 'edit') && parseFloat(wallet.balance) > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => {
+                                setSelectedWallet(wallet);
+                                setShowResetDialog(true);
+                              }}
+                              data-testid={`button-reset-wallet-${wallet.id}`}
+                            >
+                              <RotateCcw className="mr-1 h-3 w-3" />
+                              Reset
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -744,6 +789,75 @@ export default function AdminWalletManagement() {
               data-testid="button-confirm-refund"
             >
               {refundMutation.isPending ? "Processing..." : "Issue Refund"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Wallet Dialog */}
+      <Dialog open={showResetDialog} onOpenChange={(open) => {
+        if (!open) {
+          setShowResetDialog(false);
+          setResetReason("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="h-5 w-5" />
+              Reset Wallet Balance
+            </DialogTitle>
+            <DialogDescription>
+              {selectedWallet && (
+                <div className="mt-2 space-y-1">
+                  <p>User: {selectedWallet.user?.name} ({formatPhoneNumber(selectedWallet.user?.phone || '')})</p>
+                  <p className="font-semibold text-red-600">
+                    Current Balance: ৳{parseFloat(selectedWallet.balance).toFixed(2)}
+                  </p>
+                  <p className="text-red-500 mt-2">
+                    This will set the wallet balance to ৳0.00. This action cannot be undone.
+                  </p>
+                </div>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label htmlFor="resetReason" className="text-sm font-medium">Reason for reset *</label>
+              <Textarea
+                id="resetReason"
+                placeholder="E.g., Test account cleanup, Fixing incorrect balance from bug..."
+                value={resetReason}
+                onChange={(e) => setResetReason(e.target.value)}
+                className="min-h-[100px]"
+                data-testid="textarea-reset-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowResetDialog(false);
+                setResetReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={!resetReason.trim() || resetMutation.isPending}
+              onClick={() => {
+                if (selectedWallet && resetReason.trim()) {
+                  resetMutation.mutate({
+                    walletId: selectedWallet.id,
+                    reason: resetReason.trim()
+                  });
+                }
+              }}
+              data-testid="button-confirm-reset"
+            >
+              {resetMutation.isPending ? "Resetting..." : "Reset to ৳0.00"}
             </Button>
           </DialogFooter>
         </DialogContent>
