@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, integer, boolean, json, jsonb, numeric, serial, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, integer, boolean, json, jsonb, numeric, serial, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -531,7 +531,7 @@ export const subscriptionServiceDays = pgTable("subscription_service_days", {
   refundProcessedAt: timestamp("refund_processed_at"), // When refund was processed
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
-  index("idx_service_day_subscription").on(table.subscriptionId, table.serviceDate),
+  uniqueIndex("idx_service_day_subscription_unique").on(table.subscriptionId, table.serviceDate),
   index("idx_service_day_status").on(table.status, table.serviceDate),
 ]);
 

@@ -592,6 +592,17 @@ export interface IStorage {
     monthlyTrends: Array<{ month: string; count: number; amount: number }>;
   }>;
   calculateProRatedRefund(subscription: Subscription): Promise<number>;
+  
+  // Missed service day refund operations
+  getMissedServiceDaysForRefund(): Promise<{
+    id: string;
+    subscriptionId: string;
+    serviceDate: Date;
+    subscription: Subscription;
+    userId: string;
+    pricePerTrip: number;
+  }[]>;
+  markServiceDayRefunded(id: string, refundAmount: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -4011,6 +4022,13 @@ export class DatabaseStorage implements IStorage {
         status: data.status,
         vehicleTripId: data.vehicleTripId,
       })
+      .onConflictDoUpdate({
+        target: [subscriptionServiceDays.subscriptionId, subscriptionServiceDays.serviceDate],
+        set: {
+          status: data.status,
+          vehicleTripId: data.vehicleTripId,
+        },
+      })
       .returning();
     
     if (!serviceDay) throw new Error('Failed to create subscription service day');
@@ -4585,6 +4603,51 @@ export class DatabaseStorage implements IStorage {
     }
 
     return results;
+  }
+
+  async getMissedServiceDaysForRefund(): Promise<{
+    id: string;
+    subscriptionId: string;
+    serviceDate: Date;
+    subscription: Subscription;
+    userId: string;
+    pricePerTrip: number;
+  }[]> {
+    const results = await db
+      .select({
+        id: subscriptionServiceDays.id,
+        subscriptionId: subscriptionServiceDays.subscriptionId,
+        serviceDate: subscriptionServiceDays.serviceDate,
+        subscription: subscriptions,
+      })
+      .from(subscriptionServiceDays)
+      .innerJoin(subscriptions, eq(subscriptionServiceDays.subscriptionId, subscriptions.id))
+      .where(
+        and(
+          eq(subscriptionServiceDays.status, 'trip_not_generated'),
+          sql`${subscriptionServiceDays.refundAmount} IS NULL`,
+          eq(subscriptions.paymentMethod, 'online')
+        )
+      );
+
+    return results.map(row => ({
+      id: row.id,
+      subscriptionId: row.subscriptionId,
+      serviceDate: row.serviceDate,
+      subscription: row.subscription,
+      userId: row.subscription.userId,
+      pricePerTrip: Number(row.subscription.pricePerTrip)
+    }));
+  }
+
+  async markServiceDayRefunded(id: string, refundAmount: number): Promise<void> {
+    await db
+      .update(subscriptionServiceDays)
+      .set({
+        refundAmount: String(refundAmount),
+        refundProcessedAt: new Date()
+      })
+      .where(eq(subscriptionServiceDays.id, id));
   }
 }
 

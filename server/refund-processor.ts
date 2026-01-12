@@ -109,6 +109,12 @@ class RefundProcessorService {
       failed += blackoutRefunds.failed;
       totalAmount += blackoutRefunds.totalAmount;
       
+      // Process missed service day refunds (for online subscribers when trip_not_generated)
+      const missedServiceRefunds = await this.processMissedServiceRefunds();
+      processed += missedServiceRefunds.processed;
+      failed += missedServiceRefunds.failed;
+      totalAmount += missedServiceRefunds.totalAmount;
+      
       const duration = Date.now() - startTime;
       log(`[RefundProcessor] Completed: ${processed} refunds processed, ${failed} failed, total amount: ৳${totalAmount.toFixed(2)} in ${duration}ms`);
       
@@ -197,6 +203,83 @@ class RefundProcessorService {
       return { processed: 0, failed: 0, totalAmount: 0 };
     } catch (error) {
       log(`[RefundProcessor] Error processing blackout refunds: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      return { processed: 0, failed: 0, totalAmount: 0 };
+    }
+  }
+
+  /**
+   * Process refunds for missed service days (trip_not_generated) for online subscribers
+   * Cash subscribers are not refunded as they pay per trip to the driver
+   */
+  private async processMissedServiceRefunds(): Promise<{
+    processed: number;
+    failed: number;
+    totalAmount: number;
+  }> {
+    try {
+      log("[RefundProcessor] Processing missed service refunds...");
+      
+      const missedServiceDays = await this.storage.getMissedServiceDaysForRefund();
+      
+      if (missedServiceDays.length === 0) {
+        log("[RefundProcessor] No missed service refunds to process");
+        return { processed: 0, failed: 0, totalAmount: 0 };
+      }
+      
+      log(`[RefundProcessor] Found ${missedServiceDays.length} missed service days needing refunds`);
+      
+      let processed = 0;
+      let failed = 0;
+      let totalAmount = 0;
+      
+      for (const serviceDay of missedServiceDays) {
+        try {
+          const refundAmount = serviceDay.pricePerTrip;
+          const formattedDate = serviceDay.serviceDate.toISOString().split('T')[0];
+          
+          const wallet = await this.storage.getUserWallet(serviceDay.userId);
+          if (!wallet) {
+            log(`[RefundProcessor] No wallet found for user ${serviceDay.userId}, skipping refund`);
+            failed++;
+            continue;
+          }
+          
+          await this.storage.createWalletTransaction({
+            walletId: wallet.id,
+            amount: String(refundAmount),
+            type: 'refund',
+            reason: 'missed_service_refund',
+            description: `Automatic refund for missed service on ${formattedDate} - trip not generated due to low bookings`,
+            metadata: {
+              serviceDay: serviceDay.id,
+              subscriptionId: serviceDay.subscriptionId
+            }
+          });
+          
+          await this.storage.updateWalletBalance(wallet.id, refundAmount);
+          
+          await this.storage.markServiceDayRefunded(serviceDay.id, refundAmount);
+          
+          await this.logRefundNotification(
+            serviceDay.userId,
+            refundAmount,
+            `Automatic refund for missed service on ${formattedDate} - trip not generated due to low bookings`,
+            serviceDay.id
+          );
+          
+          processed++;
+          totalAmount += refundAmount;
+        } catch (error) {
+          log(`[RefundProcessor] Error processing missed service refund for ${serviceDay.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          failed++;
+        }
+      }
+      
+      log(`[RefundProcessor] Missed service refunds: ${processed} processed, ${failed} failed, total: ৳${totalAmount.toFixed(2)}`);
+      
+      return { processed, failed, totalAmount };
+    } catch (error) {
+      log(`[RefundProcessor] Error processing missed service refunds: ${error instanceof Error ? error.message : 'Unknown error'}`);
       return { processed: 0, failed: 0, totalAmount: 0 };
     }
   }

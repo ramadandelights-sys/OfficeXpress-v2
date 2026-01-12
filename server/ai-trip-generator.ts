@@ -341,6 +341,54 @@ export class AITripGeneratorService {
         }
       }
 
+      // Handle unassigned passengers from AI grouping
+      if (tripGrouping.unassignedPassengers && tripGrouping.unassignedPassengers.length > 0) {
+        console.log(`[AITripGenerator] Processing ${tripGrouping.unassignedPassengers.length} unassigned passengers`);
+        
+        const unassignedSubscriptionBookings: UnifiedBooking[] = [];
+        
+        for (const unassigned of tripGrouping.unassignedPassengers) {
+          const booking = unifiedBookings.find(b => b.id === unassigned.bookingId);
+          if (!booking) {
+            console.log(`[AITripGenerator] Could not find booking for unassigned passenger: ${unassigned.bookingId}`);
+            continue;
+          }
+          
+          if (booking.bookingType === 'subscription' && booking.subscriptionId) {
+            try {
+              await this.createServiceDayRecord(
+                booking.subscriptionId,
+                tripDate,
+                'trip_not_generated'
+              );
+              unassignedSubscriptionBookings.push(booking);
+              console.log(`[AITripGenerator] Created trip_not_generated record for unassigned subscription ${booking.subscriptionId}: ${unassigned.reason}`);
+            } catch (err) {
+              console.error(`[AITripGenerator] Failed to create service day record for unassigned subscription ${booking.subscriptionId}:`, err);
+            }
+          }
+        }
+        
+        // Notify all unassigned subscription holders
+        if (unassignedSubscriptionBookings.length > 0) {
+          // Group by route for notifications
+          const routeGroups = new Map<string, UnifiedBooking[]>();
+          for (const booking of unassignedSubscriptionBookings) {
+            const routeName = booking.route?.name || 'Unknown Route';
+            if (!routeGroups.has(routeName)) {
+              routeGroups.set(routeName, []);
+            }
+            routeGroups.get(routeName)!.push(booking);
+          }
+          
+          for (const [routeName, bookings] of routeGroups) {
+            await this.notifyMissedServiceSubscribers(bookings, tripDate, routeName);
+          }
+          
+          console.log(`[AITripGenerator] Notified ${unassignedSubscriptionBookings.length} unassigned subscribers`);
+        }
+      }
+
       const duration = Date.now() - startTime;
       console.log(`[AITripGenerator] Completed in ${duration}ms. Trips: ${tripsGenerated}, Low capacity: ${lowCapacityTrips}, Passengers: ${passengersAssigned}`);
 
