@@ -509,11 +509,30 @@ export const subscriptions = pgTable("subscriptions", {
   cancellationReason: text("cancellation_reason"),
   cancelledBy: varchar("cancelled_by"), // Admin user ID who cancelled (for admin cancellations)
   refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }), // Amount refunded upon cancellation
+  baseAmount: numeric("base_amount", { precision: 10, scale: 2 }), // Original price before any discount
+  netAmountPaid: numeric("net_amount_paid", { precision: 10, scale: 2 }), // What user actually paid after discounts
+  couponCode: text("coupon_code"), // Coupon code used (for audit trail)
+  billingCycleDays: integer("billing_cycle_days").default(30), // Number of days in billing cycle
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
   index("idx_subscription_user").on(table.userId, table.status),
   index("idx_subscription_dates").on(table.startDate, table.endDate, table.status),
+]);
+
+// Subscription Service Days Table - Daily service tracking for refunds
+export const subscriptionServiceDays = pgTable("subscription_service_days", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  subscriptionId: varchar("subscription_id").notNull().references(() => subscriptions.id),
+  serviceDate: timestamp("service_date").notNull(), // The date this service day is for
+  status: text("status").notNull().default("scheduled"), // 'scheduled', 'trip_generated', 'completed', 'trip_not_generated', 'refunded'
+  vehicleTripId: varchar("vehicle_trip_id").references(() => vehicleTrips.id), // Link to the trip if one was generated
+  refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }), // Amount refunded for this day
+  refundProcessedAt: timestamp("refund_processed_at"), // When refund was processed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_service_day_subscription").on(table.subscriptionId, table.serviceDate),
+  index("idx_service_day_status").on(table.status, table.serviceDate),
 ]);
 
 // Subscription Invoices Table - Monthly billing records
@@ -870,6 +889,12 @@ export const insertSubscriptionInvoiceSchema = createInsertSchema(subscriptionIn
   createdAt: true,
 });
 
+export const insertSubscriptionServiceDaySchema = createInsertSchema(subscriptionServiceDays).omit({
+  id: true,
+  refundProcessedAt: true,
+  createdAt: true,
+});
+
 export const insertVehicleTripSchema = createInsertSchema(vehicleTrips).omit({
   id: true,
   tripReferenceId: true,
@@ -982,6 +1007,8 @@ export type Subscription = typeof subscriptions.$inferSelect;
 export type InsertSubscription = z.infer<typeof insertSubscriptionSchema>;
 export type SubscriptionInvoice = typeof subscriptionInvoices.$inferSelect;
 export type InsertSubscriptionInvoice = z.infer<typeof insertSubscriptionInvoiceSchema>;
+export type SubscriptionServiceDay = typeof subscriptionServiceDays.$inferSelect;
+export type InsertSubscriptionServiceDay = z.infer<typeof insertSubscriptionServiceDaySchema>;
 export type VehicleTrip = typeof vehicleTrips.$inferSelect;
 export type InsertVehicleTrip = z.infer<typeof insertVehicleTripSchema>;
 export type UpdateVehicleTrip = z.infer<typeof updateVehicleTripSchema>;
