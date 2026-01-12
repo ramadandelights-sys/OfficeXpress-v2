@@ -539,6 +539,55 @@ export interface IStorage {
   // User ban/unban operations
   banUser(userId: string, adminId: string, reason: string): Promise<User>;
   unbanUser(userId: string): Promise<User>;
+  
+  // Refund processing operations
+  getRefundableTrips(): Promise<(TripBooking & { 
+    vehicleTrip: VehicleTrip,
+    subscription: Subscription,
+    route: CarpoolRoute 
+  })[]>;
+  bulkProcessRefunds(refunds: {
+    userId: string;
+    amount: number;
+    reason: string;
+    referenceId: string;
+    referenceType: 'trip_booking' | 'subscription' | 'blackout';
+    bookingId?: string;
+  }[]): Promise<{ transactions: WalletTransaction[]; errors: string[] }>;
+  getPendingRefunds(): Promise<{
+    tripRefunds: Array<{
+      bookingId: string;
+      userId: string;
+      userName: string;
+      tripDate: string;
+      route: string;
+      reason: string;
+      amount: number;
+    }>;
+    subscriptionRefunds: Array<{
+      subscriptionId: string;
+      userId: string;
+      userName: string;
+      route: string;
+      remainingDays: number;
+      amount: number;
+    }>;
+  }>;
+  getRefundHistory(filters?: {
+    userId?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+  }): Promise<(WalletTransaction & {
+    userName: string;
+    userPhone: string;
+  })[]>;
+  getRefundStats(): Promise<{
+    totalRefunded: number;
+    refundsByReason: Record<string, { count: number; amount: number }>;
+    monthlyTrends: Array<{ month: string; count: number; amount: number }>;
+  }>;
+  calculateProRatedRefund(subscription: Subscription): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -3651,7 +3700,7 @@ export class DatabaseStorage implements IStorage {
       };
     });
     
-    // Get cancelled subscriptions needing refunds
+    // Get cancelled subscriptions needing refunds (only online payments - cash payments go directly to driver)
     const cancelledSubs = await db
       .select({
         subscription: subscriptions,
@@ -3664,6 +3713,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(subscriptions.status, 'cancelled'),
+          eq(subscriptions.paymentMethod, 'online'),
           sql`${subscriptions.cancellationDate} IS NOT NULL`,
           sql`${subscriptions.endDate} > NOW()`
         )

@@ -89,7 +89,7 @@ class RefundProcessorService {
           if (trip) {
             await this.logRefundNotification(
               trip.userId,
-              transaction.amount,
+              Number(transaction.amount),
               transaction.description || "Refund processed",
               trip.id
             );
@@ -158,7 +158,7 @@ class RefundProcessorService {
         if (sub) {
           await this.logRefundNotification(
             sub.userId,
-            transaction.amount,
+            Number(transaction.amount),
             transaction.description || "Subscription refund processed",
             sub.subscriptionId
           );
@@ -212,7 +212,7 @@ class RefundProcessorService {
   ): Promise<void> {
     try {
       // Get user's current wallet balance
-      const [wallet] = await this.storage.getUserWallet(userId);
+      const wallet = await this.storage.getUserWallet(userId);
       const newBalance = wallet ? Number(wallet.balance) : 0;
       
       // Create notification record
@@ -222,10 +222,10 @@ class RefundProcessorService {
         title: 'Refund Processed',
         message: `Refund of ৳${amount.toFixed(2)} has been credited to your wallet. Reason: ${reason}. New balance: ৳${newBalance.toFixed(2)}`,
         metadata: {
-          amount,
+          amount: String(amount),
           reason,
           referenceId,
-          walletBalance: newBalance
+          walletBalance: String(newBalance)
         }
       });
       
