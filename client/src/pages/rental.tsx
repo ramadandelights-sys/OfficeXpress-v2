@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLocation } from "wouter";
-import { Car, Calendar, Clock, MapPin, Users, ArrowLeftRight, Info } from "lucide-react";
+import { Car, Calendar, Clock, MapPin, Users, ArrowLeftRight, Info, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, addDays, differenceInDays, isSameDay } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,73 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { HoneypotFields } from "@/components/HoneypotFields";
 import { RecaptchaField } from "@/components/RecaptchaField";
 import { useTranslation } from "react-i18next";
+
+import location1 from "@assets/maxresdefault_1768252215554.jpg";
+import location2 from "@assets/360_F_953680804_mFOKI3c69Vqg4Wdh5AUgYiQF5iy3ARbU_1768252215555.jpg";
+import location3 from "@assets/1707481002652_1768252215555.jpg";
+import location4 from "@assets/Picture12542150_1768252215555.jpg";
+import location5 from "@assets/Exploring-Coxs-Bazar-990x490_1768252215555.jpg";
+import location6 from "@assets/1720178954_7_1768252215556.jpg";
+
+const locations = [
+  { src: location1, title: "Scenic Routes" },
+  { src: location2, title: "Riverside Cities" },
+  { src: location3, title: "National Landmarks" },
+  { src: location4, title: "Urban Exploration" },
+  { src: location5, title: "Coastal Beauty" },
+  { src: location6, title: "Hill Tracts" },
+];
+
+function LocationSlideshow() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => {
+        let next;
+        do {
+          next = Math.floor(Math.random() * locations.length);
+        } while (next === prev);
+        return next;
+      });
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="relative w-full max-w-4xl mx-auto mb-12 overflow-hidden rounded-2xl shadow-xl aspect-[16/9]">
+      {locations.map((loc, index) => (
+        <div
+          key={index}
+          className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+            index === currentIndex ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <img
+            src={loc.src}
+            alt={loc.title}
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-4 backdrop-blur-sm">
+            <h3 className="text-white text-xl font-semibold text-center">{loc.title}</h3>
+          </div>
+        </div>
+      ))}
+      <button
+        onClick={() => setCurrentIndex((prev) => (prev - 1 + locations.length) % locations.length)}
+        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-sm transition-colors"
+      >
+        <ChevronLeft className="text-white w-6 h-6" />
+      </button>
+      <button
+        onClick={() => setCurrentIndex((prev) => (prev + 1) % locations.length)}
+        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-sm transition-colors"
+      >
+        <ChevronRight className="text-white w-6 h-6" />
+      </button>
+    </div>
+  );
+}
 
 // New rental booking schema matching the new requirements
 const newRentalBookingSchema = z.object({
@@ -504,6 +571,7 @@ export default function Rental() {
       {/* Booking Form Section */}
       <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
+          <LocationSlideshow />
           <div className="max-w-2xl mx-auto">
 
             {showThankYou && submittedData ? (
