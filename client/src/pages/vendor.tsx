@@ -104,7 +104,7 @@ export default function Vendor() {
   return (
     <div className="min-h-screen">
       {/* Header Section */}
-      <section className="py-16 bg-gradient-to-br from-brand-accent to-brand-highlight">
+      <section className="pt-16 pb-32 md:pb-48 lg:py-16 bg-gradient-to-br from-brand-accent to-brand-highlight">
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl lg:text-5xl font-bold text-primary-foreground mb-4">
@@ -118,9 +118,9 @@ export default function Vendor() {
       </section>
 
       {/* Registration Form */}
-      <section className="py-16 bg-muted">
+      <section className="pb-16 bg-muted lg:bg-muted lg:py-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto">
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto -mt-24 md:-mt-40 lg:mt-0">
             <div className="hidden lg:block space-y-8">
               <div className="relative overflow-hidden rounded-2xl shadow-xl aspect-video bg-brand-primary/10 flex items-center justify-center">
                 <Handshake className="w-32 h-32 text-brand-primary opacity-20" />

@@ -141,7 +141,7 @@ export default function Corporate() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header Section */}
-      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-12 md:py-16">
+      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent pt-12 pb-24 md:pt-16 md:pb-32 lg:py-16">
         <div className="container mx-auto px-4">
           <div className="text-center">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent leading-tight">
@@ -155,9 +155,9 @@ export default function Corporate() {
       </section>
 
       {/* Services Details & Form */}
-      <section className="py-8 md:py-12 bg-muted">
+      <section className="pb-8 md:pb-12 bg-muted lg:bg-muted lg:py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-4 lg:gap-8 lg:items-start">
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-4 lg:gap-8 lg:items-start -mt-16 md:-mt-24 lg:mt-0">
             {/* Mobile Carousel - visible only on mobile */}
             <div className="lg:hidden">
               <div className="overflow-hidden -mx-2" ref={emblaRef}>

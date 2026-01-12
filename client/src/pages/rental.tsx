@@ -536,7 +536,7 @@ export default function Rental() {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent py-20">
+      <section className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent pt-20 pb-32 md:pb-48 lg:py-20">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
             {t('rentalPage.heroTitle')}
@@ -548,9 +548,9 @@ export default function Rental() {
       </section>
 
       {/* Booking Form Section */}
-      <section className="py-16 bg-muted">
+      <section className="pb-16 bg-muted lg:bg-muted lg:py-16">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto">
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto -mt-24 md:-mt-40 lg:mt-0">
             <div className="w-full">
               <LocationSlideshow />
             </div>
