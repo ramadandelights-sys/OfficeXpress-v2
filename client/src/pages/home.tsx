@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { PortfolioClient, BlogPost } from "@shared/schema";
+import gulshanCircleImage from "@assets/gulshan-circle-2-azim-khan-ronnie_1768251395903.jpg";
 
 export default function Home() {
   const { t } = useTranslation();
@@ -58,9 +59,9 @@ export default function Home() {
             </div>
             <div className="lg:w-1/2">
               <img 
-                src="https://images.unsplash.com/photo-1449824913935-59a10b8d2000?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=800&h=600" 
-                alt="Professional transportation fleet" 
-                className="rounded-xl shadow-2xl w-full h-auto"
+                src={gulshanCircleImage} 
+                alt="Gulshan Circle 2 Dhaka" 
+                className="rounded-xl shadow-2xl w-full h-[500px] object-cover"
                 data-testid="hero-image"
               />
             </div>
