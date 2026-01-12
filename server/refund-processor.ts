@@ -110,7 +110,7 @@ class RefundProcessorService {
       totalAmount += blackoutRefunds.totalAmount;
       
       const duration = Date.now() - startTime;
-      log(`[RefundProcessor] Completed: ${processed} refunds processed, ${failed} failed, total amount: ₹${totalAmount.toFixed(2)} in ${duration}ms`);
+      log(`[RefundProcessor] Completed: ${processed} refunds processed, ${failed} failed, total amount: ৳${totalAmount.toFixed(2)} in ${duration}ms`);
       
       this.lastProcessedAt = new Date();
       
@@ -220,7 +220,7 @@ class RefundProcessorService {
         userId,
         type: 'refund',
         title: 'Refund Processed',
-        message: `Refund of ₹${amount.toFixed(2)} has been credited to your wallet. Reason: ${reason}. New balance: ₹${newBalance.toFixed(2)}`,
+        message: `Refund of ৳${amount.toFixed(2)} has been credited to your wallet. Reason: ${reason}. New balance: ৳${newBalance.toFixed(2)}`,
         metadata: {
           amount,
           reason,
@@ -229,7 +229,7 @@ class RefundProcessorService {
         }
       });
       
-      log(`[RefundProcessor] Notification logged for user ${userId}: ₹${amount.toFixed(2)} refunded`);
+      log(`[RefundProcessor] Notification logged for user ${userId}: ৳${amount.toFixed(2)} refunded`);
     } catch (error) {
       log(`[RefundProcessor] Failed to log notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
@@ -285,7 +285,7 @@ class RefundProcessorService {
       
       const totalRefunded = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
       
-      log(`[RefundProcessor] Trip ${tripId} cancelled: ${transactions.length} refunds processed, total: ₹${totalRefunded.toFixed(2)}`);
+      log(`[RefundProcessor] Trip ${tripId} cancelled: ${transactions.length} refunds processed, total: ৳${totalRefunded.toFixed(2)}`);
       
       return {
         affectedBookings: transactions.length,

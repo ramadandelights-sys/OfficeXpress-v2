@@ -134,7 +134,7 @@ export default function AdminRefundManagement() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/refunds"] });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/wallets"] });
-      alert(`Refunds processed successfully! ${data.processed} refunds completed, ${data.failed} failed. Total amount: ₹${data.totalAmount.toFixed(2)}`);
+      alert(`Refunds processed successfully! ${data.processed} refunds completed, ${data.failed} failed. Total amount: ৳${data.totalAmount.toFixed(2)}`);
       setConfirmProcessDialog(false);
     },
     onError: (error) => {
@@ -198,7 +198,7 @@ export default function AdminRefundManagement() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-2xl font-bold">₹{refundStats.totalRefunded.toFixed(2)}</p>
+              <p className="text-2xl font-bold">৳{refundStats.totalRefunded.toFixed(2)}</p>
             </CardContent>
           </Card>
           <Card>
@@ -210,7 +210,7 @@ export default function AdminRefundManagement() {
             </CardHeader>
             <CardContent>
               <p className="text-2xl font-bold">
-                ₹{refundStats.monthlyTrends.length > 0 ? 
+                ৳{refundStats.monthlyTrends.length > 0 ? 
                   refundStats.monthlyTrends[refundStats.monthlyTrends.length - 1].amount.toFixed(2) : 
                   "0.00"}
               </p>
@@ -267,15 +267,15 @@ export default function AdminRefundManagement() {
                     <div className="grid grid-cols-3 gap-4">
                       <div>
                         <p className="text-sm text-muted-foreground">Trip Refunds</p>
-                        <p className="text-lg font-semibold">{pendingRefunds.tripRefunds.length} (₹{pendingTripTotal.toFixed(2)})</p>
+                        <p className="text-lg font-semibold">{pendingRefunds.tripRefunds.length} (৳{pendingTripTotal.toFixed(2)})</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Subscription Refunds</p>
-                        <p className="text-lg font-semibold">{pendingRefunds.subscriptionRefunds.length} (₹{pendingSubscriptionTotal.toFixed(2)})</p>
+                        <p className="text-lg font-semibold">{pendingRefunds.subscriptionRefunds.length} (৳{pendingSubscriptionTotal.toFixed(2)})</p>
                       </div>
                       <div>
                         <p className="text-sm text-muted-foreground">Total Amount</p>
-                        <p className="text-lg font-semibold text-primary">₹{pendingTotal.toFixed(2)}</p>
+                        <p className="text-lg font-semibold text-primary">৳{pendingTotal.toFixed(2)}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -334,7 +334,7 @@ export default function AdminRefundManagement() {
                                 {refund.reason}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-right font-medium">₹{refund.amount.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium">৳{refund.amount.toFixed(2)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -365,7 +365,7 @@ export default function AdminRefundManagement() {
                             <TableCell>{refund.userName}</TableCell>
                             <TableCell>{refund.route}</TableCell>
                             <TableCell>{refund.remainingDays} days</TableCell>
-                            <TableCell className="text-right font-medium">₹{refund.amount.toFixed(2)}</TableCell>
+                            <TableCell className="text-right font-medium">৳{refund.amount.toFixed(2)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -477,7 +477,7 @@ export default function AdminRefundManagement() {
                         <TableCell>{refund.userPhone}</TableCell>
                         <TableCell>{refund.description}</TableCell>
                         <TableCell className="text-right font-medium text-green-600">
-                          +₹{refund.amount.toFixed(2)}
+                          +৳{refund.amount.toFixed(2)}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -579,7 +579,7 @@ export default function AdminRefundManagement() {
           <div className="space-y-2 py-4">
             <p className="text-sm">• Process {pendingRefunds?.tripRefunds.length || 0} trip refunds</p>
             <p className="text-sm">• Process {pendingRefunds?.subscriptionRefunds.length || 0} subscription refunds</p>
-            <p className="text-sm font-semibold">• Total amount: ₹{pendingTotal.toFixed(2)}</p>
+            <p className="text-sm font-semibold">• Total amount: ৳{pendingTotal.toFixed(2)}</p>
           </div>
           
           <Alert>
