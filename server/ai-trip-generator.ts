@@ -712,7 +712,102 @@ Respond with valid JSON in this exact format:
     const parsed = JSON.parse(content);
     const validated = AITripGroupingSchema.parse(parsed);
 
-    return validated;
+    const corrected = this.enforceSubscriberPriority(validated, bookings);
+    return corrected;
+  }
+
+  private enforceSubscriberPriority(grouping: AITripGrouping, bookings: UnifiedBooking[]): AITripGrouping {
+    const allSubscriptions = bookings.filter(b => b.bookingType === 'subscription');
+    const allIndividuals = bookings.filter(b => b.bookingType === 'individual');
+    
+    const assignedSubscriberIds = new Set<string>();
+    const assignedIndividualIds = new Set<string>();
+    
+    for (const trip of grouping.trips) {
+      trip.passengerIds.forEach(id => {
+        if (id.startsWith('sub_')) assignedSubscriberIds.add(id);
+        else if (id.startsWith('ind_')) assignedIndividualIds.add(id);
+      });
+    }
+    
+    const unassignedSubscribers = allSubscriptions.filter(s => !assignedSubscriberIds.has(s.id));
+    
+    const subscribersByRouteTime: Record<string, UnifiedBooking[]> = {};
+    unassignedSubscribers.forEach(s => {
+      const key = `${s.routeId}-${s.timeSlotId}`;
+      if (!subscribersByRouteTime[key]) subscribersByRouteTime[key] = [];
+      subscribersByRouteTime[key].push(s);
+    });
+
+    const correctedTrips: AITripGrouping['trips'] = [];
+    const unassignedPassengers: { bookingId: string; reason: string; }[] = [];
+
+    for (const trip of grouping.trips) {
+      const routeTimeKey = `${trip.routeId}-${trip.timeSlotId}`;
+      const missingSubscribers = subscribersByRouteTime[routeTimeKey] || [];
+      
+      const tripBookings = trip.passengerIds
+        .map(id => bookings.find(b => b.id === id))
+        .filter((b): b is UnifiedBooking => b !== undefined);
+
+      let subscriptionsInTrip = tripBookings.filter(b => b.bookingType === 'subscription');
+      let individualsInTrip = tripBookings.filter(b => b.bookingType === 'individual');
+      
+      subscriptionsInTrip = [...subscriptionsInTrip, ...missingSubscribers];
+      delete subscribersByRouteTime[routeTimeKey];
+      
+      const subscriberCount = subscriptionsInTrip.length;
+      let vehicleCapacity = VEHICLE_TYPES[trip.recommendedVehicleType as keyof typeof VEHICLE_TYPES]?.capacity || 4;
+      let vehicleType = trip.recommendedVehicleType;
+      
+      if (subscriberCount > vehicleCapacity) {
+        if (subscriberCount > 14) { vehicleType = '32_seater'; vehicleCapacity = 32; }
+        else if (subscriberCount > 10) { vehicleType = '14_seater'; vehicleCapacity = 14; }
+        else if (subscriberCount > 7) { vehicleType = '10_seater'; vehicleCapacity = 10; }
+        else if (subscriberCount > 4) { vehicleType = '7_seater'; vehicleCapacity = 7; }
+      }
+
+      const sortedSubscriptions = subscriptionsInTrip.sort((a, b) => 
+        (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0)
+      );
+      const sortedIndividuals = individualsInTrip.sort((a, b) => 
+        (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0)
+      );
+
+      const finalPassengers: UnifiedBooking[] = [...sortedSubscriptions];
+      const remainingSlots = vehicleCapacity - subscriberCount;
+      
+      const acceptedIndividuals = sortedIndividuals.slice(0, Math.max(0, remainingSlots));
+      const rejectedIndividuals = sortedIndividuals.slice(Math.max(0, remainingSlots));
+      
+      finalPassengers.push(...acceptedIndividuals);
+      rejectedIndividuals.forEach(i => unassignedPassengers.push({
+        bookingId: i.id,
+        reason: 'Capacity full after prioritizing monthly subscribers'
+      }));
+
+      const sortedFinal = finalPassengers.sort((a, b) => 
+        (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0)
+      );
+
+      correctedTrips.push({
+        routeId: trip.routeId,
+        timeSlotId: trip.timeSlotId,
+        passengerIds: sortedFinal.map(b => b.id),
+        recommendedVehicleType: vehicleType as any,
+        pickupSequence: sortedFinal.map(b => b.id),
+        rationale: `[Priority enforced: ${sortedSubscriptions.length} subscribers guaranteed, ${acceptedIndividuals.length} individuals added]`,
+        confidenceScore: trip.confidenceScore,
+        isLowCapacity: trip.isLowCapacity,
+      });
+    }
+
+    Object.values(subscribersByRouteTime).flat().forEach(s => {
+      console.error(`[AITripGenerator] CRITICAL: Subscriber ${s.id} has no matching trip - this should not happen`);
+      unassignedPassengers.push({ bookingId: s.id, reason: 'No trip found for route/time' });
+    });
+
+    return { trips: correctedTrips, unassignedPassengers };
   }
 
   private generateFallbackTripGroupingUnified(bookings: UnifiedBooking[]): AITripGrouping {
@@ -726,47 +821,75 @@ Respond with valid JSON in this exact format:
     }
 
     const trips: AITripGrouping['trips'] = [];
+    const unassignedPassengers: { bookingId: string; reason: string; }[] = [];
 
     for (const key of Object.keys(routeGroups)) {
       const groupBookings = routeGroups[key];
       
-      const sorted = groupBookings.sort((a: UnifiedBooking, b: UnifiedBooking) => {
-        if (a.priority !== b.priority) {
-          return a.priority - b.priority;
-        }
-        return (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0);
-      });
-
-      const passengerCount = sorted.length;
+      const subscriptions = groupBookings
+        .filter(b => b.bookingType === 'subscription')
+        .sort((a, b) => (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0));
       
-      if (passengerCount < MIN_PASSENGERS_FOR_TRIP) {
-        console.log(`[AITripGenerator] Skipping route ${sorted[0].routeId} - only ${passengerCount} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+      const individuals = groupBookings
+        .filter(b => b.bookingType === 'individual')
+        .sort((a, b) => (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0));
+
+      const subscriberCount = subscriptions.length;
+      
+      if (subscriberCount < MIN_PASSENGERS_FOR_TRIP && (subscriberCount + individuals.length) < MIN_PASSENGERS_FOR_TRIP) {
+        console.log(`[AITripGenerator] Skipping route ${groupBookings[0].routeId} - only ${subscriberCount + individuals.length} total passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
+        subscriptions.forEach(s => unassignedPassengers.push({ bookingId: s.id, reason: 'Insufficient passengers for trip' }));
+        individuals.forEach(i => unassignedPassengers.push({ bookingId: i.id, reason: 'Insufficient passengers for trip' }));
         continue;
       }
       
       let vehicleType: 'sedan' | '7_seater' | '10_seater' | '14_seater' | '32_seater' = 'sedan';
+      let vehicleCapacity = 4;
       
-      if (passengerCount > 14) vehicleType = '32_seater';
-      else if (passengerCount > 10) vehicleType = '14_seater';
-      else if (passengerCount > 7) vehicleType = '10_seater';
-      else if (passengerCount > 4) vehicleType = '7_seater';
+      if (subscriberCount > 14) { vehicleType = '32_seater'; vehicleCapacity = 32; }
+      else if (subscriberCount > 10) { vehicleType = '14_seater'; vehicleCapacity = 14; }
+      else if (subscriberCount > 7) { vehicleType = '10_seater'; vehicleCapacity = 10; }
+      else if (subscriberCount > 4) { vehicleType = '7_seater'; vehicleCapacity = 7; }
 
-      const subscriberCount = sorted.filter(b => b.bookingType === 'subscription').length;
-      const individualCount = sorted.filter(b => b.bookingType === 'individual').length;
+      const assignedPassengers: UnifiedBooking[] = [...subscriptions];
+      
+      const remainingCapacity = vehicleCapacity - subscriberCount;
+      const individualSlotsAvailable = Math.max(0, remainingCapacity);
+      const assignedIndividuals = individuals.slice(0, individualSlotsAvailable);
+      const unassignedIndividuals = individuals.slice(individualSlotsAvailable);
+      
+      assignedPassengers.push(...assignedIndividuals);
+      unassignedIndividuals.forEach(i => unassignedPassengers.push({ 
+        bookingId: i.id, 
+        reason: 'No remaining capacity after prioritizing subscribers' 
+      }));
+
+      if (assignedPassengers.length < MIN_PASSENGERS_FOR_TRIP) {
+        console.log(`[AITripGenerator] Skipping route ${groupBookings[0].routeId} - only ${assignedPassengers.length} assignable passengers`);
+        assignedPassengers.forEach(p => unassignedPassengers.push({ bookingId: p.id, reason: 'Trip below minimum passenger threshold' }));
+        continue;
+      }
+
+      const sortedAssigned = assignedPassengers.sort((a, b) => 
+        (a.boardingPoint?.sequenceOrder || 0) - (b.boardingPoint?.sequenceOrder || 0)
+      );
+
+      const finalSubscriberCount = sortedAssigned.filter(b => b.bookingType === 'subscription').length;
+      const finalIndividualCount = sortedAssigned.filter(b => b.bookingType === 'individual').length;
 
       trips.push({
-        routeId: sorted[0].routeId,
-        timeSlotId: sorted[0].timeSlotId,
-        passengerIds: sorted.map(b => b.id),
+        routeId: groupBookings[0].routeId,
+        timeSlotId: groupBookings[0].timeSlotId,
+        passengerIds: sortedAssigned.map(b => b.id),
         recommendedVehicleType: vehicleType,
-        pickupSequence: sorted.map(b => b.id),
-        rationale: `Grouped ${passengerCount} passengers (${subscriberCount} subscribers, ${individualCount} individual) by route and time. Subscribers prioritized first.`,
-        confidenceScore: 0.8,
+        pickupSequence: sortedAssigned.map(b => b.id),
+        rationale: `Grouped ${sortedAssigned.length} passengers (${finalSubscriberCount} subscribers GUARANTEED, ${finalIndividualCount} individual). Vehicle sized for subscribers first.`,
+        confidenceScore: 0.9,
         isLowCapacity: false,
       });
     }
 
-    return { trips, unassignedPassengers: [] };
+    return { trips, unassignedPassengers };
   }
 
   private async generateAITripGrouping(subscriptions: EnrichedSubscription[], tripDate: string): Promise<AITripGrouping> {

@@ -490,6 +490,15 @@ export interface IStorage {
     dropOffPointId: string;
     pickupSequence: number;
   }): Promise<TripBooking>;
+  getIndividualBookingsForDate(tripDate: string): Promise<CarpoolBooking[]>;
+  createTripBookingFromIndividual(booking: {
+    vehicleTripId: string;
+    carpoolBookingId: string;
+    userId: string | null;
+    boardingPointId: string;
+    dropOffPointId: string;
+    pickupSequence: number;
+  }): Promise<TripBooking>;
   getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined>;
   getVehicleTripsWithDetails(tripDate: string): Promise<(VehicleTrip & {
     routeName: string;
@@ -3707,6 +3716,63 @@ export class DatabaseStorage implements IStorage {
         updatedAt: new Date() 
       })
       .where(eq(vehicleTrips.id, booking.vehicleTripId));
+    
+    return newBooking;
+  }
+
+  async getIndividualBookingsForDate(tripDate: string): Promise<CarpoolBooking[]> {
+    const bookings = await db
+      .select()
+      .from(carpoolBookings)
+      .where(
+        and(
+          eq(carpoolBookings.tripDate, tripDate),
+          eq(carpoolBookings.status, 'confirmed'),
+          isNull(carpoolBookings.vehicleTripId)
+        )
+      );
+    return bookings;
+  }
+
+  async createTripBookingFromIndividual(booking: {
+    vehicleTripId: string;
+    carpoolBookingId: string;
+    userId: string | null;
+    boardingPointId: string;
+    dropOffPointId: string;
+    pickupSequence: number;
+  }): Promise<TripBooking> {
+    const [newBooking] = await db
+      .insert(tripBookings)
+      .values({
+        vehicleTripId: booking.vehicleTripId,
+        carpoolBookingId: booking.carpoolBookingId,
+        userId: booking.userId || undefined,
+        boardingPointId: booking.boardingPointId,
+        dropOffPointId: booking.dropOffPointId,
+        pickupSequence: booking.pickupSequence,
+        status: 'expected',
+      })
+      .returning();
+    
+    if (!newBooking) throw new Error('Failed to create trip booking from individual');
+    
+    await db
+      .update(vehicleTrips)
+      .set({ 
+        bookedSeats: sql`${vehicleTrips.bookedSeats} + 1`,
+        updatedAt: new Date() 
+      })
+      .where(eq(vehicleTrips.id, booking.vehicleTripId));
+
+    await db
+      .update(carpoolBookings)
+      .set({ 
+        vehicleTripId: booking.vehicleTripId,
+        status: 'in_trip',
+        updatedAt: new Date() 
+      })
+      .where(eq(carpoolBookings.id, booking.carpoolBookingId));
     
     return newBooking;
   }
