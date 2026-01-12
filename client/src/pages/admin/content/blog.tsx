@@ -108,15 +108,49 @@ export default function AdminBlogPage() {
             <div className="space-y-4">
               {blogPosts.map((post) => (
                 <div key={post.id} className="border rounded-lg p-4 bg-white dark:bg-gray-800">
-                  <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate" data-testid={`text-blog-title-${post.id}`}>
-                        {post.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
-                        {post.excerpt}
-                      </p>
-                      <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="flex flex-col sm:flex-row gap-6">
+                    {post.featuredImage && (
+                      <div className="w-full sm:w-48 h-32 flex-shrink-0">
+                        <img 
+                          src={post.featuredImage} 
+                          alt={post.title} 
+                          className="w-full h-full object-cover rounded-md border"
+                        />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start gap-4">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white line-clamp-2" data-testid={`text-blog-title-${post.id}`}>
+                            {post.title}
+                          </h3>
+                          {hasPermission('blogPosts', 'edit') && (
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setEditingBlogPost(post)}
+                                data-testid={`button-edit-blog-${post.id}`}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => deleteBlogPostMutation.mutate(post.id)}
+                                className="text-red-600 hover:text-red-700"
+                                data-testid={`button-delete-blog-${post.id}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
+                          {post.excerpt}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2 mt-4">
                         <span className={`text-xs px-2 py-1 rounded-full ${post.published ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300'}`}>
                           Status: {post.published ? 'Published' : 'Draft'}
                         </span>
@@ -125,28 +159,6 @@ export default function AdminBlogPage() {
                         </span>
                       </div>
                     </div>
-                    {hasPermission('blogPosts', 'edit') && (
-                      <div className="flex gap-2 w-full sm:w-auto">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setEditingBlogPost(post)}
-                          className="flex-1 sm:flex-initial"
-                          data-testid={`button-edit-blog-${post.id}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteBlogPostMutation.mutate(post.id)}
-                          className="text-red-600 hover:text-red-700 flex-1 sm:flex-initial"
-                          data-testid={`button-delete-blog-${post.id}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 </div>
               ))}
