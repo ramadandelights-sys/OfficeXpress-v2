@@ -44,14 +44,8 @@ function LocationSlideshow() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => {
-        let next;
-        do {
-          next = Math.floor(Math.random() * locations.length);
-        } while (next === prev);
-        return next;
-      });
-    }, 5000);
+      setCurrentIndex((prev) => (prev + 1) % locations.length);
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -69,23 +63,8 @@ function LocationSlideshow() {
             alt={loc.title}
             className="w-full h-full object-cover"
           />
-          <div className="absolute bottom-0 left-0 right-0 bg-black/40 p-4 backdrop-blur-sm">
-            <h3 className="text-white text-xl font-semibold text-center">{loc.title}</h3>
-          </div>
         </div>
       ))}
-      <button
-        onClick={() => setCurrentIndex((prev) => (prev - 1 + locations.length) % locations.length)}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-sm transition-colors"
-      >
-        <ChevronLeft className="text-white w-6 h-6" />
-      </button>
-      <button
-        onClick={() => setCurrentIndex((prev) => (prev + 1) % locations.length)}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/40 p-2 rounded-full backdrop-blur-sm transition-colors"
-      >
-        <ChevronRight className="text-white w-6 h-6" />
-      </button>
     </div>
   );
 }
