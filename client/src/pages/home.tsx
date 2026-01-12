@@ -115,7 +115,7 @@ export default function Home() {
             {/* Airport Services */}
             <div className="service-card bg-white rounded-xl p-8 shadow-md border border-border">
               <div className="w-16 h-16 bg-brand-accent/20 rounded-lg flex items-center justify-center mb-6">
-                <Plane className="text-accent-foreground w-8 h-8" />
+                <Plane className="text-brand-primary w-8 h-8" />
               </div>
               <h3 className="text-xl font-semibold text-card-foreground mb-4">{t('home.airportTitle')}</h3>
               <p className="text-muted-foreground mb-6">{t('home.airportDescription')}</p>
