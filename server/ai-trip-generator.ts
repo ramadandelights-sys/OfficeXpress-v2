@@ -3,8 +3,8 @@ import * as cron from 'node-cron';
 import { storage } from './storage';
 import type { IStorage } from './storage';
 import { z } from 'zod';
-import type { Subscription, CarpoolRoute, CarpoolTimeSlot, CarpoolPickupPoint, User, CarpoolBooking } from '@shared/schema';
-import { sendAITripPlannerReportEmail, sendDriverAssignmentNeededEmail } from './lib/resend';
+import type { Subscription, CarpoolRoute, CarpoolTimeSlot, CarpoolPickupPoint, User, CarpoolBooking, InsertSubscriptionServiceDay } from '@shared/schema';
+import { sendAITripPlannerReportEmail, sendDriverAssignmentNeededEmail, sendMissedServiceNotificationEmail } from './lib/resend';
 
 const ADMIN_EMAIL = 'hesham@officexpress.org';
 
@@ -248,6 +248,31 @@ export class AITripGeneratorService {
         if (tripData.passengerIds.length < MIN_PASSENGERS_FOR_TRIP) {
           console.log(`[AITripGenerator] Skipping trip - only ${tripData.passengerIds.length} passengers (minimum ${MIN_PASSENGERS_FOR_TRIP} required)`);
           lowCapacityTrips++;
+          
+          const affectedSubscriptionBookings = tripData.passengerIds
+            .map(id => unifiedBookings.find(b => b.id === id))
+            .filter((b): b is UnifiedBooking => b !== undefined && b.bookingType === 'subscription');
+          
+          if (affectedSubscriptionBookings.length > 0) {
+            const routeName = affectedSubscriptionBookings[0]?.route?.name || 'Unknown Route';
+            
+            for (const booking of affectedSubscriptionBookings) {
+              if (booking.subscriptionId) {
+                try {
+                  await this.createServiceDayRecord(
+                    booking.subscriptionId,
+                    tripDate,
+                    'trip_not_generated'
+                  );
+                } catch (err) {
+                  console.error(`[AITripGenerator] Failed to create service day record for subscription ${booking.subscriptionId}:`, err);
+                }
+              }
+            }
+            
+            await this.notifyMissedServiceSubscribers(affectedSubscriptionBookings, tripDate, routeName);
+          }
+          
           continue;
         }
         
@@ -284,6 +309,17 @@ export class AITripGeneratorService {
                   dropOffPointId: booking.dropOffPointId,
                   pickupSequence: tripData.pickupSequence.indexOf(bookingId) + 1,
                 });
+                
+                try {
+                  await this.createServiceDayRecord(
+                    booking.subscriptionId,
+                    tripDate,
+                    'trip_generated',
+                    vehicleTrip.id
+                  );
+                } catch (err) {
+                  console.error(`[AITripGenerator] Failed to create service day record for subscription ${booking.subscriptionId}:`, err);
+                }
               } else if (booking.bookingType === 'individual' && booking.carpoolBookingId) {
                 await this.storage.createTripBookingFromIndividual({
                   vehicleTripId: vehicleTrip.id,
@@ -608,6 +644,61 @@ export class AITripGeneratorService {
       console.log(`[AITripGenerator] Sent driver assignment notifications to ${usersWithPermission.length} users for ${trips.length} trips`);
     } catch (notifyError) {
       console.error('[AITripGenerator] Failed to send driver assignment notifications:', notifyError);
+    }
+  }
+
+  private async createServiceDayRecord(
+    subscriptionId: string,
+    serviceDate: string,
+    status: 'scheduled' | 'trip_generated' | 'trip_not_generated',
+    vehicleTripId?: string
+  ): Promise<void> {
+    await this.storage.createSubscriptionServiceDay({
+      subscriptionId,
+      serviceDate: new Date(serviceDate),
+      status,
+      vehicleTripId: vehicleTripId || null,
+    });
+    console.log(`[AITripGenerator] Created service day record: subscription=${subscriptionId}, date=${serviceDate}, status=${status}`);
+  }
+
+  private async notifyMissedServiceSubscribers(
+    affectedBookings: UnifiedBooking[],
+    tripDate: string,
+    routeName: string
+  ): Promise<void> {
+    try {
+      for (const booking of affectedBookings) {
+        if (!booking.userId) continue;
+        
+        const user = await this.storage.getUserById(booking.userId);
+        if (!user) continue;
+        
+        await this.storage.createNotification({
+          userId: booking.userId,
+          type: 'trip_not_generated',
+          title: 'Trip Could Not Be Arranged',
+          message: `Your trip on ${tripDate} for the ${routeName} route couldn't be arranged due to insufficient bookings. A refund will be credited to your wallet.`,
+          metadata: {
+            tripDate,
+            routeName,
+            subscriptionId: booking.subscriptionId,
+          } as Record<string, any>,
+        });
+        
+        if (user.email) {
+          await sendMissedServiceNotificationEmail({
+            email: user.email,
+            customerName: user.name,
+            tripDate,
+            routeName,
+          });
+        }
+      }
+      
+      console.log(`[AITripGenerator] Sent missed service notifications to ${affectedBookings.length} subscribers`);
+    } catch (notifyError) {
+      console.error('[AITripGenerator] Failed to send missed service notifications:', notifyError);
     }
   }
 

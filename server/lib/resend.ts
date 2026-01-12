@@ -1406,3 +1406,84 @@ export async function sendCarpoolTripDriverAssignedEmail(data: {
     console.error('[Email] Error sending carpool trip driver assigned notification:', error);
   }
 }
+
+export async function sendMissedServiceNotificationEmail(data: {
+  email: string;
+  customerName: string;
+  tripDate: string;
+  routeName: string;
+}) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    
+    const formattedDate = new Date(data.tripDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const content = `
+      <div style="text-align: center; margin-bottom: 30px;">
+        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 30px; border-radius: 8px;">
+          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">
+            Trip Update
+          </h1>
+        </div>
+      </div>
+
+      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Dear <strong>${data.customerName}</strong>,
+      </p>
+
+      <p style="margin: 0 0 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        We wanted to let you know that your scheduled trip on <strong>${formattedDate}</strong> for the <strong>${data.routeName}</strong> route couldn't be arranged due to insufficient bookings for that day.
+      </p>
+
+      <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin: 0 0 10px 0; color: #065f46; font-size: 16px;">💰 Automatic Refund</h3>
+        <p style="margin: 0; color: #047857; font-size: 14px; line-height: 1.6;">
+          A refund for this day's service will be automatically credited to your wallet. You don't need to take any action - we'll handle everything for you.
+        </p>
+      </div>
+
+      <p style="margin: 20px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+        Your subscription remains active for all other scheduled days. We apologize for any inconvenience and appreciate your understanding.
+      </p>
+
+      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <h3 style="margin: 0 0 15px 0; color: #374151; font-size: 16px;">📋 Trip Details</h3>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Date:</td>
+            <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 600; text-align: right;">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Route:</td>
+            <td style="padding: 8px 0; color: #374151; font-size: 14px; font-weight: 600; text-align: right;">${data.routeName}</td>
+          </tr>
+        </table>
+      </div>
+
+      <p style="margin: 20px 0 0 0; color: #6b7280; font-size: 14px; line-height: 1.6;">
+        If you have any questions, please don't hesitate to contact our support team.
+      </p>
+
+      <p style="margin: 20px 0 0 0; color: #374151; font-size: 15px; line-height: 1.6;">
+        Best regards,<br>
+        <strong>OfficeXpress Team</strong>
+      </p>
+    `;
+
+    await client.emails.send({
+      from: `OfficeXpress <${fromEmail}>`,
+      to: data.email,
+      subject: `Trip Update - ${data.routeName} on ${formattedDate}`,
+      html: emailWrapper(content, false)
+    });
+    
+    console.log(`[Email] Missed service notification sent to ${data.email} for ${data.tripDate}`);
+  } catch (error) {
+    console.error('[Email] Error sending missed service notification:', error);
+  }
+}

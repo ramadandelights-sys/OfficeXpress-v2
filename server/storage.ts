@@ -24,6 +24,7 @@ import {
   userWallets,
   walletTransactions,
   subscriptions,
+  subscriptionServiceDays,
   subscriptionInvoices,
   vehicleTrips,
   tripBookings,
@@ -86,6 +87,8 @@ import {
   type InsertWalletTransaction,
   type Subscription,
   type InsertSubscription,
+  type SubscriptionServiceDay,
+  type InsertSubscriptionServiceDay,
   type SubscriptionInvoice,
   type InsertSubscriptionInvoice,
   type VehicleTrip,
@@ -509,6 +512,7 @@ export interface IStorage {
     dropOffPointId: string;
     pickupSequence: number;
   }): Promise<TripBooking>;
+  createSubscriptionServiceDay(data: InsertSubscriptionServiceDay): Promise<SubscriptionServiceDay>;
   getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined>;
   getVehicleTripsWithDetails(tripDate: string): Promise<(VehicleTrip & {
     routeName: string;
@@ -3996,6 +4000,21 @@ export class DatabaseStorage implements IStorage {
       .where(eq(carpoolBookings.id, booking.carpoolBookingId));
     
     return newBooking;
+  }
+
+  async createSubscriptionServiceDay(data: InsertSubscriptionServiceDay): Promise<SubscriptionServiceDay> {
+    const [serviceDay] = await db
+      .insert(subscriptionServiceDays)
+      .values({
+        subscriptionId: data.subscriptionId,
+        serviceDate: data.serviceDate,
+        status: data.status,
+        vehicleTripId: data.vehicleTripId,
+      })
+      .returning();
+    
+    if (!serviceDay) throw new Error('Failed to create subscription service day');
+    return serviceDay;
   }
   
   async getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined> {
