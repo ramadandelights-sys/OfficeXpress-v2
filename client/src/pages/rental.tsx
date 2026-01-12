@@ -550,9 +550,12 @@ export default function Rental() {
       {/* Booking Form Section */}
       <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
-          <LocationSlideshow />
-          <div className="max-w-2xl mx-auto">
-
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto">
+            <div className="w-full">
+              <LocationSlideshow />
+            </div>
+            
+            <div className="w-full">
             {showThankYou && submittedData ? (
               <Card>
                 <CardContent className="py-12">
@@ -1100,6 +1103,7 @@ export default function Rental() {
                 </CardContent>
               </Card>
             )}
+            </div>
           </div>
         </div>
       </section>

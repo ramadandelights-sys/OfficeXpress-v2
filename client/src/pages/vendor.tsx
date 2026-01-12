@@ -120,8 +120,32 @@ export default function Vendor() {
       {/* Registration Form */}
       <section className="py-16 bg-muted">
         <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <Card>
+          <div className="flex flex-col lg:grid lg:grid-cols-[1fr_450px] gap-8 lg:items-start max-w-7xl mx-auto">
+            <div className="hidden lg:block space-y-8">
+              <div className="relative overflow-hidden rounded-2xl shadow-xl aspect-video bg-brand-primary/10 flex items-center justify-center">
+                <Handshake className="w-32 h-32 text-brand-primary opacity-20" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8 text-white">
+                  <h3 className="text-2xl font-bold mb-2">Join Our Network</h3>
+                  <p className="text-white/80">Become a certified OfficeXpress vendor and grow your business with us.</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-background p-4 rounded-xl border border-border shadow-sm">
+                  <div className="text-2xl mb-2">💼</div>
+                  <h4 className="font-semibold mb-1">Steady Income</h4>
+                  <p className="text-xs text-muted-foreground">Regular bookings from corporate clients.</p>
+                </div>
+                <div className="bg-background p-4 rounded-xl border border-border shadow-sm">
+                  <div className="text-2xl mb-2">🤝</div>
+                  <h4 className="font-semibold mb-1">Support</h4>
+                  <p className="text-xs text-muted-foreground">Professional training and 24/7 support.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full">
+            <Card className="shadow-lg border-primary/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Handshake className="w-6 h-6" />
@@ -358,6 +382,7 @@ export default function Vendor() {
                 </Form>
               </CardContent>
             </Card>
+            </div>
           </div>
         </div>
       </section>
