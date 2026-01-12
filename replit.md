@@ -77,6 +77,13 @@ Preferred communication style: Simple, everyday language.
 - **Payment Linkage Backfill**: Admin endpoint to retroactively link historical wallet transactions to their subscriptions. Run in dry-run mode first (`POST /api/admin/payment-linkage-backfill` with `{dryRun: true}`), review the results, then execute with `{dryRun: false}`.
 - **User Ban Management**: Admin can ban/unban customers and employees with reason and timestamp tracking.
 - **Driver Assignment Workflow**: Dedicated Driver Assignment page (/admin/operations/driver-assignment) consolidates pending assignments from Rental and Carpool systems. PII protection enforced at API level - customer names and phones are masked unless the user has `driverAssignmentViewPII` permission. Toggle switch allows authorized users to reveal customer details when needed. This separation ensures supply operations team can assign drivers without accessing customer PII unless explicitly granted.
+- **Automated Missed Service Refunds**: When trips are not generated due to insufficient bookings (minimum 3 passengers required):
+  - **Service Day Tracking**: Each subscription has daily service records (subscription_service_days table) tracking status: 'scheduled', 'trip_generated', 'trip_not_generated', 'cash_no_payment_needed'
+  - **Online Subscribers**: Automatically receive wallet refunds calculated at daily rate (netAmountPaid / billingCycleDays) and email notifications about the missed service
+  - **Cash Subscribers**: Flagged as 'cash_no_payment_needed' for admin review (no wallet refund needed since they pay per trip)
+  - **Cash Settlements Page**: Admin Finance section includes a Cash Settlements page (/admin/finance/cash-settlements) to track and acknowledge days where cash subscribers had no trip
+- **Enhanced Subscription Pricing Fields**: Subscriptions now store baseAmount, discountAmount, netAmountPaid, couponCode, and billingCycleDays for accurate pro-rated refund calculations
+- **Improved Refund UI**: Admin refund management shows refund types (Trip Cancellation, Subscription Cancellation, Missed Service, Manual), automatic vs manual badges, and expandable subscription details showing base/net amounts and daily rate calculations
 
 ## External Dependencies
 
