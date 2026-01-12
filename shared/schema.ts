@@ -525,10 +525,12 @@ export const subscriptionServiceDays = pgTable("subscription_service_days", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   subscriptionId: varchar("subscription_id").notNull().references(() => subscriptions.id),
   serviceDate: timestamp("service_date").notNull(), // The date this service day is for
-  status: text("status").notNull().default("scheduled"), // 'scheduled', 'trip_generated', 'completed', 'trip_not_generated', 'refunded'
+  status: text("status").notNull().default("scheduled"), // 'scheduled', 'trip_generated', 'completed', 'trip_not_generated', 'cash_no_payment_needed', 'refunded'
   vehicleTripId: varchar("vehicle_trip_id").references(() => vehicleTrips.id), // Link to the trip if one was generated
   refundAmount: numeric("refund_amount", { precision: 10, scale: 2 }), // Amount refunded for this day
   refundProcessedAt: timestamp("refund_processed_at"), // When refund was processed
+  acknowledgedAt: timestamp("acknowledged_at"), // When cash settlement was acknowledged by admin
+  acknowledgedBy: varchar("acknowledged_by"), // Admin user ID who acknowledged the cash settlement
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("idx_service_day_subscription_unique").on(table.subscriptionId, table.serviceDate),
@@ -892,6 +894,8 @@ export const insertSubscriptionInvoiceSchema = createInsertSchema(subscriptionIn
 export const insertSubscriptionServiceDaySchema = createInsertSchema(subscriptionServiceDays).omit({
   id: true,
   refundProcessedAt: true,
+  acknowledgedAt: true,
+  acknowledgedBy: true,
   createdAt: true,
 });
 

@@ -18,6 +18,7 @@ import AdminAITripsPage from "./operations/ai-trips";
 import AdminDriverAssignmentPage from "./operations/driver-assignment";
 import AdminWalletsPage from "./finance/wallets";
 import AdminRefundsPage from "./finance/refunds";
+import AdminCashSettlementsPage from "./finance/cash-settlements";
 import AdminSubscriptionsPage from "./finance/subscriptions";
 import AdminWebsitePage from "./settings/website";
 import AdminMarketingPage from "./settings/marketing";
@@ -72,6 +73,7 @@ export default function AdminRouter() {
       <Route path="/admin/operations/ai-trips" component={() => <AdminLayout title="AI Trip Planner"><AdminAITripsPage /></AdminLayout>} />
       <Route path="/admin/finance/wallets" component={() => <AdminLayout title="Wallet Management"><AdminWalletsPage /></AdminLayout>} />
       <Route path="/admin/finance/refunds" component={() => <AdminLayout title="Refund Management"><AdminRefundsPage /></AdminLayout>} />
+      <Route path="/admin/finance/cash-settlements" component={() => <AdminLayout title="Cash Settlements"><AdminCashSettlementsPage /></AdminLayout>} />
       <Route path="/admin/finance/subscriptions" component={() => <AdminLayout title="Subscription Management"><AdminSubscriptionsPage /></AdminLayout>} />
       <Route path="/admin/settings/website" component={() => <AdminLayout title="Website Settings"><AdminWebsitePage /></AdminLayout>} />
       <Route path="/admin/settings/marketing" component={() => <AdminLayout title="Marketing Settings"><AdminMarketingPage /></AdminLayout>} />

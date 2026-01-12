@@ -43,6 +43,7 @@ interface UnifiedBooking {
   dropOffPoint: CarpoolPickupPoint | undefined;
   subscriptionId?: string;
   carpoolBookingId?: string;
+  paymentMethod?: 'online' | 'cash';
 }
 
 const VEHICLE_TYPES = {
@@ -259,10 +260,11 @@ export class AITripGeneratorService {
             for (const booking of affectedSubscriptionBookings) {
               if (booking.subscriptionId) {
                 try {
+                  const serviceDayStatus = this.getServiceDayStatusForMissedTrip(booking.paymentMethod);
                   await this.createServiceDayRecord(
                     booking.subscriptionId,
                     tripDate,
-                    'trip_not_generated'
+                    serviceDayStatus
                   );
                 } catch (err) {
                   console.error(`[AITripGenerator] Failed to create service day record for subscription ${booking.subscriptionId}:`, err);
@@ -356,13 +358,14 @@ export class AITripGeneratorService {
           
           if (booking.bookingType === 'subscription' && booking.subscriptionId) {
             try {
+              const serviceDayStatus = this.getServiceDayStatusForMissedTrip(booking.paymentMethod);
               await this.createServiceDayRecord(
                 booking.subscriptionId,
                 tripDate,
-                'trip_not_generated'
+                serviceDayStatus
               );
               unassignedSubscriptionBookings.push(booking);
-              console.log(`[AITripGenerator] Created trip_not_generated record for unassigned subscription ${booking.subscriptionId}: ${unassigned.reason}`);
+              console.log(`[AITripGenerator] Created ${serviceDayStatus} record for unassigned subscription ${booking.subscriptionId}: ${unassigned.reason}`);
             } catch (err) {
               console.error(`[AITripGenerator] Failed to create service day record for unassigned subscription ${booking.subscriptionId}:`, err);
             }
@@ -618,6 +621,7 @@ export class AITripGeneratorService {
         boardingPoint: sub.boardingPoint,
         dropOffPoint: sub.dropOffPoint,
         subscriptionId: sub.id,
+        paymentMethod: sub.paymentMethod as 'online' | 'cash',
       });
     }
 
@@ -698,7 +702,7 @@ export class AITripGeneratorService {
   private async createServiceDayRecord(
     subscriptionId: string,
     serviceDate: string,
-    status: 'scheduled' | 'trip_generated' | 'trip_not_generated',
+    status: 'scheduled' | 'trip_generated' | 'trip_not_generated' | 'cash_no_payment_needed',
     vehicleTripId?: string
   ): Promise<void> {
     await this.storage.createSubscriptionServiceDay({
@@ -710,14 +714,26 @@ export class AITripGeneratorService {
     console.log(`[AITripGenerator] Created service day record: subscription=${subscriptionId}, date=${serviceDate}, status=${status}`);
   }
 
+  private getServiceDayStatusForMissedTrip(paymentMethod?: 'online' | 'cash'): 'trip_not_generated' | 'cash_no_payment_needed' {
+    return paymentMethod === 'cash' ? 'cash_no_payment_needed' : 'trip_not_generated';
+  }
+
   private async notifyMissedServiceSubscribers(
     affectedBookings: UnifiedBooking[],
     tripDate: string,
     routeName: string
   ): Promise<void> {
     try {
+      let notificationsSent = 0;
+      
       for (const booking of affectedBookings) {
         if (!booking.userId) continue;
+        
+        // Skip notifications for cash subscribers - they don't need refund notifications
+        if (booking.paymentMethod === 'cash') {
+          console.log(`[AITripGenerator] Skipping notification for cash subscriber ${booking.subscriptionId}`);
+          continue;
+        }
         
         const user = await this.storage.getUserById(booking.userId);
         if (!user) continue;
@@ -742,9 +758,10 @@ export class AITripGeneratorService {
             routeName,
           });
         }
+        notificationsSent++;
       }
       
-      console.log(`[AITripGenerator] Sent missed service notifications to ${affectedBookings.length} subscribers`);
+      console.log(`[AITripGenerator] Sent missed service notifications to ${notificationsSent} online subscribers (skipped ${affectedBookings.length - notificationsSent} cash subscribers)`);
     } catch (notifyError) {
       console.error('[AITripGenerator] Failed to send missed service notifications:', notifyError);
     }

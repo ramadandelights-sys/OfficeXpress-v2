@@ -513,6 +513,19 @@ export interface IStorage {
     pickupSequence: number;
   }): Promise<TripBooking>;
   createSubscriptionServiceDay(data: InsertSubscriptionServiceDay): Promise<SubscriptionServiceDay>;
+  
+  // Cash settlement operations
+  getPendingCashSettlements(): Promise<(SubscriptionServiceDay & {
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    subscriptionPaymentMethod: string | null;
+  })[]>;
+  acknowledgeCashSettlement(id: string, adminId: string): Promise<SubscriptionServiceDay>;
+  
   getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined>;
   getVehicleTripsWithDetails(tripDate: string): Promise<(VehicleTrip & {
     routeName: string;
@@ -4158,6 +4171,62 @@ export class DatabaseStorage implements IStorage {
     
     if (!serviceDay) throw new Error('Failed to create subscription service day');
     return serviceDay;
+  }
+  
+  async getPendingCashSettlements(): Promise<(SubscriptionServiceDay & {
+    userName: string | null;
+    userPhone: string | null;
+    routeName: string | null;
+    fromLocation: string | null;
+    toLocation: string | null;
+    timeSlot: string | null;
+    subscriptionPaymentMethod: string | null;
+  })[]> {
+    const results = await db
+      .select({
+        serviceDay: subscriptionServiceDays,
+        subscription: subscriptions,
+        user: users,
+        route: carpoolRoutes,
+        timeSlot: carpoolTimeSlots,
+      })
+      .from(subscriptionServiceDays)
+      .leftJoin(subscriptions, eq(subscriptionServiceDays.subscriptionId, subscriptions.id))
+      .leftJoin(users, eq(subscriptions.userId, users.id))
+      .leftJoin(carpoolRoutes, eq(subscriptions.routeId, carpoolRoutes.id))
+      .leftJoin(carpoolTimeSlots, eq(subscriptions.timeSlotId, carpoolTimeSlots.id))
+      .where(
+        and(
+          eq(subscriptionServiceDays.status, 'cash_no_payment_needed'),
+          sql`${subscriptionServiceDays.acknowledgedAt} IS NULL`
+        )
+      )
+      .orderBy(desc(subscriptionServiceDays.serviceDate));
+    
+    return results.map(row => ({
+      ...row.serviceDay,
+      userName: row.user?.name || null,
+      userPhone: row.user?.phone || null,
+      routeName: row.route?.name || null,
+      fromLocation: row.route?.fromLocation || null,
+      toLocation: row.route?.toLocation || null,
+      timeSlot: row.timeSlot?.departureTime || null,
+      subscriptionPaymentMethod: row.subscription?.paymentMethod || null,
+    }));
+  }
+  
+  async acknowledgeCashSettlement(id: string, adminId: string): Promise<SubscriptionServiceDay> {
+    const [updated] = await db
+      .update(subscriptionServiceDays)
+      .set({
+        acknowledgedAt: new Date(),
+        acknowledgedBy: adminId,
+      })
+      .where(eq(subscriptionServiceDays.id, id))
+      .returning();
+    
+    if (!updated) throw new Error('Cash settlement not found');
+    return updated;
   }
   
   async getVehicleTripByReferenceId(tripReferenceId: string): Promise<VehicleTrip | undefined> {

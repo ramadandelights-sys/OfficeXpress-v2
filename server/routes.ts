@@ -5253,6 +5253,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
+  // Get pending cash settlements (service days where cash subscribers didn't have trips generated)
+  app.get("/api/admin/cash-settlements/pending",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'view'),
+    async (req: any, res: any) => {
+      try {
+        const settlements = await storage.getPendingCashSettlements();
+        res.json(settlements);
+      } catch (error) {
+        console.error("Error fetching pending cash settlements:", error);
+        res.status(500).json({ message: "Failed to fetch pending cash settlements" });
+      }
+    }
+  );
+
+  // Acknowledge a cash settlement (mark as reviewed by admin)
+  app.post("/api/admin/cash-settlements/:id/acknowledge",
+    isEmployeeOrAdmin,
+    hasPermission('walletManagement', 'edit'),
+    async (req: any, res: any) => {
+      try {
+        const { id } = req.params;
+        const adminId = req.session.userId;
+        
+        if (!id) {
+          return res.status(400).json({ message: "Service day ID is required" });
+        }
+        
+        const updatedRecord = await storage.acknowledgeCashSettlement(id, adminId);
+        
+        res.json({
+          success: true,
+          record: updatedRecord
+        });
+      } catch (error: any) {
+        console.error("Error acknowledging cash settlement:", error);
+        res.status(500).json({ message: error.message || "Failed to acknowledge cash settlement" });
+      }
+    }
+  );
+
   app.post("/api/admin/users/:id/ban",
     isEmployeeOrAdmin,
     hasPermission('userBanManagement'),

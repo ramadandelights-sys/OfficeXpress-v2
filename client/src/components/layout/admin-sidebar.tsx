@@ -88,6 +88,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: "Wallets", href: "/admin/finance/wallets", icon: <CreditCard className="h-4 w-4" />, permission: "walletManagement" },
       { title: "Refunds", href: "/admin/finance/refunds", icon: <RefreshCw className="h-4 w-4" />, permission: "walletManagement" },
+      { title: "Cash Settlements", href: "/admin/finance/cash-settlements", icon: <CreditCard className="h-4 w-4" />, permission: "walletManagement" },
       { title: "Subscriptions", href: "/admin/finance/subscriptions", icon: <Calendar className="h-4 w-4" />, permission: "subscriptionManagement" },
     ],
   },
