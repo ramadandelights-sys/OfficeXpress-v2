@@ -582,9 +582,21 @@ export interface IStorage {
     startDate?: Date;
     endDate?: Date;
     limit?: number;
+    refundType?: 'all' | 'trip_cancellation' | 'subscription_cancellation' | 'missed_service' | 'manual';
   }): Promise<(WalletTransaction & {
     userName: string;
     userPhone: string;
+    refundType: string;
+    isAutomatic: boolean;
+    subscriptionDetails?: {
+      baseAmount: number;
+      discountAmount: number;
+      netAmountPaid: number;
+      billingCycleDays: number;
+      dailyRate: number;
+      remainingDays: number;
+    };
+    serviceDate?: string;
   })[]>;
   getRefundStats(): Promise<{
     totalRefunded: number;
@@ -3765,29 +3777,34 @@ export class DatabaseStorage implements IStorage {
     return { tripRefunds, subscriptionRefunds };
   }
   
-  // Get refund history
+  // Get refund history with enhanced details
   async getRefundHistory(filters?: {
     userId?: string;
     startDate?: Date;
     endDate?: Date;
     limit?: number;
+    refundType?: 'all' | 'trip_cancellation' | 'subscription_cancellation' | 'missed_service' | 'manual';
   }): Promise<(WalletTransaction & {
     userName: string;
     userPhone: string;
+    refundType: string;
+    isAutomatic: boolean;
+    subscriptionDetails?: {
+      baseAmount: number;
+      discountAmount: number;
+      netAmountPaid: number;
+      billingCycleDays: number;
+      dailyRate: number;
+      remainingDays: number;
+    };
+    serviceDate?: string;
   })[]> {
-    let query = db
-      .select({
-        transaction: walletTransactions,
-        wallet: userWallets,
-        user: users
-      })
-      .from(walletTransactions)
-      .innerJoin(userWallets, eq(walletTransactions.walletId, userWallets.id))
-      .innerJoin(users, eq(userWallets.userId, users.id))
-      .where(eq(walletTransactions.reason, 'refund'))
-      .$dynamic();
-    
     const conditions = [];
+    
+    // Include both 'refund', 'missed_service_refund', and 'admin_manual_refund' reasons
+    conditions.push(
+      sql`${walletTransactions.reason} IN ('refund', 'missed_service_refund', 'admin_manual_refund')`
+    );
     
     if (filters?.userId) {
       conditions.push(eq(userWallets.userId, filters.userId));
@@ -3801,19 +3818,120 @@ export class DatabaseStorage implements IStorage {
       conditions.push(sql`${walletTransactions.createdAt} <= ${filters.endDate}`);
     }
     
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    const results = await query
+    const results = await db
+      .select({
+        transaction: walletTransactions,
+        wallet: userWallets,
+        user: users
+      })
+      .from(walletTransactions)
+      .innerJoin(userWallets, eq(walletTransactions.walletId, userWallets.id))
+      .innerJoin(users, eq(userWallets.userId, users.id))
+      .where(and(...conditions))
       .orderBy(desc(walletTransactions.createdAt))
       .limit(filters?.limit || 100);
     
-    return results.map(row => ({
-      ...row.transaction,
-      userName: row.user.name,
-      userPhone: row.user.phone
-    }));
+    // Collect subscription IDs for fetching details
+    const subscriptionIds = new Set<string>();
+    results.forEach(row => {
+      const metadata = row.transaction.metadata as Record<string, any> || {};
+      if (metadata.subscriptionId) {
+        subscriptionIds.add(metadata.subscriptionId);
+      }
+      if (metadata.referenceType === 'subscription' && metadata.referenceId) {
+        subscriptionIds.add(metadata.referenceId);
+      }
+    });
+    
+    // Fetch subscription details
+    let subscriptionMap = new Map<string, typeof subscriptions.$inferSelect>();
+    if (subscriptionIds.size > 0) {
+      const subs = await db
+        .select()
+        .from(subscriptions)
+        .where(inArray(subscriptions.id, [...subscriptionIds]));
+      subscriptionMap = new Map(subs.map(s => [s.id, s]));
+    }
+    
+    // Map results with enhanced details
+    const mappedResults = results.map(row => {
+      const metadata = row.transaction.metadata as Record<string, any> || {};
+      const reason = row.transaction.reason;
+      const description = row.transaction.description || '';
+      
+      // Determine refund type
+      let refundType = 'other';
+      let isAutomatic = true;
+      
+      if (reason === 'missed_service_refund') {
+        refundType = 'missed_service';
+      } else if (reason === 'admin_manual_refund') {
+        refundType = 'manual';
+        isAutomatic = false;
+      } else if (metadata.referenceType === 'subscription' || description.toLowerCase().includes('subscription')) {
+        refundType = 'subscription_cancellation';
+      } else if (metadata.referenceType === 'trip_booking' || description.toLowerCase().includes('trip')) {
+        refundType = 'trip_cancellation';
+      } else if (metadata.referenceType === 'blackout') {
+        refundType = 'blackout';
+      }
+      
+      // Get subscription details if available
+      let subscriptionDetails: {
+        baseAmount: number;
+        discountAmount: number;
+        netAmountPaid: number;
+        billingCycleDays: number;
+        dailyRate: number;
+        remainingDays: number;
+      } | undefined;
+      
+      const subId = metadata.subscriptionId || (metadata.referenceType === 'subscription' ? metadata.referenceId : null);
+      if (subId && subscriptionMap.has(subId)) {
+        const sub = subscriptionMap.get(subId)!;
+        const baseAmount = Number(sub.baseAmount || sub.totalMonthlyPrice || 0);
+        const discountAmount = Number(sub.discountAmount || 0);
+        const netAmountPaid = Number(sub.netAmountPaid || sub.totalMonthlyPrice || 0);
+        const billingCycleDays = sub.billingCycleDays || 30;
+        const dailyRate = netAmountPaid / billingCycleDays;
+        const remainingDays = metadata.remainingDays || 0;
+        
+        subscriptionDetails = {
+          baseAmount,
+          discountAmount,
+          netAmountPaid,
+          billingCycleDays,
+          dailyRate,
+          remainingDays
+        };
+      }
+      
+      // Extract service date for missed service refunds
+      let serviceDate: string | undefined;
+      if (refundType === 'missed_service' && metadata.serviceDay) {
+        const serviceDayMatch = description.match(/(\d{4}-\d{2}-\d{2}|\d{2}\/\d{2}\/\d{4})/);
+        if (serviceDayMatch) {
+          serviceDate = serviceDayMatch[1];
+        }
+      }
+      
+      return {
+        ...row.transaction,
+        userName: row.user.name,
+        userPhone: row.user.phone,
+        refundType,
+        isAutomatic,
+        subscriptionDetails,
+        serviceDate
+      };
+    });
+    
+    // Apply refund type filter if specified
+    if (filters?.refundType && filters.refundType !== 'all') {
+      return mappedResults.filter(r => r.refundType === filters.refundType);
+    }
+    
+    return mappedResults;
   }
   
   // Get refund statistics

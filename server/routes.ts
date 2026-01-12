@@ -5122,19 +5122,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
   
-  // Get refund history
+  // Get refund history with type filtering and subscription details
   app.get("/api/admin/refunds/history",
     isEmployeeOrAdmin,
     hasPermission('walletManagement', 'view'),
     async (req: any, res: any) => {
       try {
-        const { userId, startDate, endDate, limit } = req.query;
+        const { userId, startDate, endDate, limit, refundType } = req.query;
         
         const filters: any = {};
         if (userId) filters.userId = userId as string;
         if (startDate) filters.startDate = new Date(startDate as string);
         if (endDate) filters.endDate = new Date(endDate as string);
         if (limit) filters.limit = parseInt(limit as string);
+        if (refundType && ['all', 'trip_cancellation', 'subscription_cancellation', 'missed_service', 'manual'].includes(refundType)) {
+          filters.refundType = refundType as string;
+        }
         
         const history = await storage.getRefundHistory(filters);
         res.json(history);

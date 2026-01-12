@@ -32,18 +32,26 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   RefreshCw, 
-  CheckCircle, 
-  XCircle, 
   TrendingUp, 
   AlertCircle,
   Download,
-  Calendar,
   DollarSign,
   CreditCard,
   ChevronRight,
-  ChevronDown
+  ChevronDown,
+  Clock,
+  CalendarX,
+  XCircle,
+  User,
+  Zap,
+  Hand
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -87,6 +95,17 @@ interface RefundHistory {
   createdAt: string;
   userName: string;
   userPhone: string;
+  refundType: string;
+  isAutomatic: boolean;
+  subscriptionDetails?: {
+    baseAmount: number;
+    discountAmount: number;
+    netAmountPaid: number;
+    billingCycleDays: number;
+    dailyRate: number;
+    remainingDays: number;
+  };
+  serviceDate?: string;
 }
 
 interface RefundStats {
@@ -95,15 +114,38 @@ interface RefundStats {
   monthlyTrends: Array<{ month: string; count: number; amount: number }>;
 }
 
+type RefundTypeFilter = 'all' | 'trip_cancellation' | 'subscription_cancellation' | 'missed_service' | 'manual';
+
+const refundTypeLabels: Record<string, string> = {
+  all: 'All Refunds',
+  trip_cancellation: 'Trip Cancellation',
+  subscription_cancellation: 'Subscription Cancellation',
+  missed_service: 'Missed Service',
+  manual: 'Manual Refund',
+  other: 'Other',
+  blackout: 'Blackout Date'
+};
+
+const refundTypeBadgeVariants: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
+  trip_cancellation: { variant: "destructive" },
+  subscription_cancellation: { variant: "secondary", className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-100" },
+  missed_service: { variant: "outline", className: "border-orange-500 text-orange-600 dark:border-orange-400 dark:text-orange-400" },
+  manual: { variant: "default", className: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-100" },
+  blackout: { variant: "outline", className: "border-blue-500 text-blue-600 dark:border-blue-400 dark:text-blue-400" },
+  other: { variant: "secondary" }
+};
+
 export default function AdminRefundManagement() {
   const [selectedTab, setSelectedTab] = useState("pending");
   const [confirmProcessDialog, setConfirmProcessDialog] = useState(false);
   const [selectedRefundType, setSelectedRefundType] = useState<"all" | "trips" | "subscriptions">("all");
   const [expandedTrips, setExpandedTrips] = useState<Set<string>>(new Set());
+  const [expandedRefunds, setExpandedRefunds] = useState<Set<string>>(new Set());
   const [historyFilters, setHistoryFilters] = useState({
     startDate: "",
     endDate: "",
-    userId: ""
+    userId: "",
+    refundType: "all" as RefundTypeFilter
   });
 
   const toggleTrip = (tripId: string) => {
@@ -116,13 +158,21 @@ export default function AdminRefundManagement() {
     setExpandedTrips(newExpanded);
   };
 
-  // Fetch pending refunds
+  const toggleRefundDetails = (refundId: string) => {
+    const newExpanded = new Set(expandedRefunds);
+    if (newExpanded.has(refundId)) {
+      newExpanded.delete(refundId);
+    } else {
+      newExpanded.add(refundId);
+    }
+    setExpandedRefunds(newExpanded);
+  };
+
   const { data: pendingRefunds, isLoading: loadingPending } = useQuery<PendingRefunds>({
     queryKey: ["/api/admin/refunds/pending"],
     enabled: selectedTab === "pending"
   });
 
-  // Group trip refunds by tripId
   const groupedTripRefunds = pendingRefunds?.tripRefunds.reduce((acc, refund) => {
     if (!acc[refund.tripId]) {
       acc[refund.tripId] = {
@@ -141,7 +191,6 @@ export default function AdminRefundManagement() {
 
   const groupedTripsArray = Object.values(groupedTripRefunds);
 
-  // Fetch refund history
   const { data: refundHistory, isLoading: loadingHistory } = useQuery<RefundHistory[]>({
     queryKey: ["/api/admin/refunds/history", historyFilters],
     queryFn: async () => {
@@ -149,6 +198,9 @@ export default function AdminRefundManagement() {
       if (historyFilters.startDate) params.append("startDate", historyFilters.startDate);
       if (historyFilters.endDate) params.append("endDate", historyFilters.endDate);
       if (historyFilters.userId) params.append("userId", historyFilters.userId);
+      if (historyFilters.refundType && historyFilters.refundType !== "all") {
+        params.append("refundType", historyFilters.refundType);
+      }
       
       const response = await fetch(`/api/admin/refunds/history?${params}`);
       if (!response.ok) throw new Error("Failed to fetch refund history");
@@ -157,13 +209,11 @@ export default function AdminRefundManagement() {
     enabled: selectedTab === "history"
   });
 
-  // Fetch refund statistics
   const { data: refundStats, isLoading: loadingStats } = useQuery<RefundStats>({
     queryKey: ["/api/admin/refunds/stats"],
     enabled: selectedTab === "statistics"
   });
 
-  // Process refunds mutation
   const processRefundsMutation = useMutation({
     mutationFn: async () => {
       const response = await fetch("/api/admin/refunds/process", {
@@ -184,7 +234,6 @@ export default function AdminRefundManagement() {
     }
   });
 
-  // Export to CSV
   const exportToCSV = (data: any[], filename: string) => {
     const csvContent = convertToCSV(data);
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -201,18 +250,42 @@ export default function AdminRefundManagement() {
   const convertToCSV = (data: any[]) => {
     if (data.length === 0) return "";
     const headers = Object.keys(data[0]).join(",");
-    const rows = data.map(item => Object.values(item).join(","));
+    const rows = data.map(item => Object.values(item).map(v => 
+      typeof v === 'object' ? JSON.stringify(v) : v
+    ).join(","));
     return [headers, ...rows].join("\n");
   };
 
-  // Calculate totals for pending refunds
   const pendingTripTotal = pendingRefunds?.tripRefunds.reduce((sum, r) => sum + r.amount, 0) || 0;
   const pendingSubscriptionTotal = pendingRefunds?.subscriptionRefunds.reduce((sum, r) => sum + r.amount, 0) || 0;
   const pendingTotal = pendingTripTotal + pendingSubscriptionTotal;
 
+  const getRefundTypeBadge = (refundType: string) => {
+    const config = refundTypeBadgeVariants[refundType] || refundTypeBadgeVariants.other;
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {refundTypeLabels[refundType] || refundType}
+      </Badge>
+    );
+  };
+
+  const getRefundTypeIcon = (refundType: string) => {
+    switch (refundType) {
+      case 'trip_cancellation':
+        return <XCircle className="h-4 w-4 text-red-500" />;
+      case 'subscription_cancellation':
+        return <CreditCard className="h-4 w-4 text-amber-500" />;
+      case 'missed_service':
+        return <CalendarX className="h-4 w-4 text-orange-500" />;
+      case 'manual':
+        return <Hand className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Clock className="h-4 w-4 text-gray-500" />;
+    }
+  };
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Refund Management</h2>
         <div className="flex gap-2">
@@ -229,7 +302,6 @@ export default function AdminRefundManagement() {
         </div>
       </div>
 
-      {/* Statistics Summary */}
       {selectedTab === "statistics" && refundStats && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
@@ -274,7 +346,6 @@ export default function AdminRefundManagement() {
         </div>
       )}
 
-      {/* Tabs */}
       <Tabs value={selectedTab} onValueChange={setSelectedTab}>
         <TabsList className="grid grid-cols-3 w-full max-w-md">
           <TabsTrigger value="pending">
@@ -289,7 +360,6 @@ export default function AdminRefundManagement() {
           <TabsTrigger value="statistics">Statistics</TabsTrigger>
         </TabsList>
 
-        {/* Pending Refunds */}
         <TabsContent value="pending" className="space-y-4">
           {loadingPending ? (
             <div className="space-y-2">
@@ -299,7 +369,6 @@ export default function AdminRefundManagement() {
             </div>
           ) : pendingRefunds ? (
             <>
-              {/* Summary Card */}
               {(pendingRefunds.tripRefunds.length > 0 || pendingRefunds.subscriptionRefunds.length > 0) && (
                 <Card>
                   <CardHeader>
@@ -324,7 +393,6 @@ export default function AdminRefundManagement() {
                 </Card>
               )}
 
-              {/* Filter */}
               <div className="flex gap-2">
                 <Select value={selectedRefundType} onValueChange={(value: any) => setSelectedRefundType(value)}>
                   <SelectTrigger className="w-48">
@@ -348,7 +416,6 @@ export default function AdminRefundManagement() {
                 )}
               </div>
 
-              {/* Trip Refunds Table */}
               {(selectedRefundType === "all" || selectedRefundType === "trips") && groupedTripsArray.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -412,7 +479,6 @@ export default function AdminRefundManagement() {
                 </Card>
               )}
 
-              {/* Subscription Refunds Table */}
               {(selectedRefundType === "all" || selectedRefundType === "subscriptions") && pendingRefunds.subscriptionRefunds.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -460,15 +526,13 @@ export default function AdminRefundManagement() {
           )}
         </TabsContent>
 
-        {/* History */}
         <TabsContent value="history" className="space-y-4">
-          {/* Filters */}
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">Filter History</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <div>
                   <Label htmlFor="startDate">Start Date</Label>
                   <Input
@@ -496,10 +560,28 @@ export default function AdminRefundManagement() {
                     onChange={(e) => setHistoryFilters(prev => ({ ...prev, userId: e.target.value }))}
                   />
                 </div>
+                <div>
+                  <Label htmlFor="refundType">Refund Type</Label>
+                  <Select 
+                    value={historyFilters.refundType} 
+                    onValueChange={(value: RefundTypeFilter) => setHistoryFilters(prev => ({ ...prev, refundType: value }))}
+                  >
+                    <SelectTrigger id="refundType">
+                      <SelectValue placeholder="All Types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Types</SelectItem>
+                      <SelectItem value="trip_cancellation">Trip Cancellation</SelectItem>
+                      <SelectItem value="subscription_cancellation">Subscription Cancellation</SelectItem>
+                      <SelectItem value="missed_service">Missed Service</SelectItem>
+                      <SelectItem value="manual">Manual Refund</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div className="flex items-end">
                   <Button
                     variant="outline"
-                    onClick={() => setHistoryFilters({ startDate: "", endDate: "", userId: "" })}
+                    onClick={() => setHistoryFilters({ startDate: "", endDate: "", userId: "", refundType: "all" })}
                   >
                     Clear Filters
                   </Button>
@@ -508,7 +590,6 @@ export default function AdminRefundManagement() {
             </CardContent>
           </Card>
 
-          {/* History Table */}
           {loadingHistory ? (
             <div className="space-y-2">
               {[...Array(10)].map((_, i) => (
@@ -531,24 +612,134 @@ export default function AdminRefundManagement() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[40px]"></TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>User</TableHead>
-                      <TableHead>Phone</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Processing</TableHead>
                       <TableHead>Description</TableHead>
                       <TableHead className="text-right">Amount</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {refundHistory.map((refund) => (
-                      <TableRow key={refund.id}>
-                        <TableCell>{format(new Date(refund.createdAt), "dd/MM/yyyy HH:mm")}</TableCell>
-                        <TableCell>{refund.userName}</TableCell>
-                        <TableCell>{refund.userPhone}</TableCell>
-                        <TableCell>{refund.description}</TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
-                          +৳{refund.amount.toFixed(2)}
-                        </TableCell>
-                      </TableRow>
+                      <React.Fragment key={refund.id}>
+                        <TableRow 
+                          className={refund.subscriptionDetails ? "cursor-pointer hover:bg-muted/50" : ""}
+                          onClick={() => refund.subscriptionDetails && toggleRefundDetails(refund.id)}
+                        >
+                          <TableCell>
+                            {refund.subscriptionDetails && (
+                              expandedRefunds.has(refund.id) ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span>{format(new Date(refund.createdAt), "dd/MM/yyyy")}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(refund.createdAt), "HH:mm")}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <div>
+                                <div className="font-medium">{refund.userName}</div>
+                                <div className="text-xs text-muted-foreground">{refund.userPhone}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getRefundTypeIcon(refund.refundType)}
+                              {getRefundTypeBadge(refund.refundType)}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {refund.isAutomatic ? (
+                              <Badge variant="outline" className="border-green-500 text-green-600">
+                                <Zap className="h-3 w-3 mr-1" />
+                                Automatic
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-purple-500 text-purple-600">
+                                <Hand className="h-3 w-3 mr-1" />
+                                Manual
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs truncate">
+                              {refund.description}
+                              {refund.refundType === 'missed_service' && refund.serviceDate && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                                  <CalendarX className="h-3 w-3" />
+                                  Service Date: {refund.serviceDate}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-green-600">
+                            +৳{Number(refund.amount).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                        
+                        {refund.subscriptionDetails && expandedRefunds.has(refund.id) && (
+                          <TableRow className="bg-muted/30">
+                            <TableCell></TableCell>
+                            <TableCell colSpan={6}>
+                              <div className="py-3">
+                                <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                                  <CreditCard className="h-4 w-4" />
+                                  Subscription Refund Details
+                                </h4>
+                                <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Base Amount</p>
+                                    <p className="font-semibold">৳{refund.subscriptionDetails.baseAmount.toFixed(2)}</p>
+                                  </div>
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Discount</p>
+                                    <p className="font-semibold text-amber-600">
+                                      -৳{refund.subscriptionDetails.discountAmount.toFixed(2)}
+                                    </p>
+                                  </div>
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Net Amount Paid</p>
+                                    <p className="font-semibold text-blue-600">৳{refund.subscriptionDetails.netAmountPaid.toFixed(2)}</p>
+                                  </div>
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Billing Cycle</p>
+                                    <p className="font-semibold">{refund.subscriptionDetails.billingCycleDays} days</p>
+                                  </div>
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Daily Rate</p>
+                                    <p className="font-semibold">৳{refund.subscriptionDetails.dailyRate.toFixed(2)}/day</p>
+                                  </div>
+                                  <div className="bg-background p-3 rounded-lg">
+                                    <p className="text-muted-foreground text-xs mb-1">Remaining Days</p>
+                                    <p className="font-semibold">{refund.subscriptionDetails.remainingDays} days</p>
+                                  </div>
+                                </div>
+                                <div className="mt-3 pt-3 border-t">
+                                  <p className="text-sm">
+                                    <span className="text-muted-foreground">Calculation: </span>
+                                    <span className="font-medium">
+                                      ৳{refund.subscriptionDetails.dailyRate.toFixed(2)} × {refund.subscriptionDetails.remainingDays} days = 
+                                      <span className="text-green-600 ml-1">৳{Number(refund.amount).toFixed(2)}</span>
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </React.Fragment>
                     ))}
                   </TableBody>
                 </Table>
@@ -562,7 +753,6 @@ export default function AdminRefundManagement() {
           )}
         </TabsContent>
 
-        {/* Statistics */}
         <TabsContent value="statistics" className="space-y-4">
           {loadingStats ? (
             <div className="space-y-2">
@@ -572,7 +762,6 @@ export default function AdminRefundManagement() {
             </div>
           ) : refundStats ? (
             <>
-              {/* Refunds by Reason */}
               <Card>
                 <CardHeader>
                   <CardTitle>Refunds by Reason</CardTitle>
@@ -591,7 +780,7 @@ export default function AdminRefundManagement() {
                         <TableRow key={reason}>
                           <TableCell>{reason}</TableCell>
                           <TableCell className="text-right">{data.count}</TableCell>
-                          <TableCell className="text-right font-medium">₹{data.amount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-medium">৳{data.amount.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -599,7 +788,6 @@ export default function AdminRefundManagement() {
                 </CardContent>
               </Card>
 
-              {/* Monthly Trends */}
               <Card>
                 <CardHeader>
                   <CardTitle>Monthly Trends</CardTitle>
@@ -618,7 +806,7 @@ export default function AdminRefundManagement() {
                         <TableRow key={trend.month}>
                           <TableCell>{format(new Date(trend.month + "-01"), "MMMM yyyy")}</TableCell>
                           <TableCell className="text-right">{trend.count}</TableCell>
-                          <TableCell className="text-right font-medium">₹{trend.amount.toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-medium">৳{trend.amount.toFixed(2)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -635,7 +823,6 @@ export default function AdminRefundManagement() {
         </TabsContent>
       </Tabs>
 
-      {/* Process Confirmation Dialog */}
       <Dialog open={confirmProcessDialog} onOpenChange={setConfirmProcessDialog}>
         <DialogContent>
           <DialogHeader>
