@@ -46,3 +46,6 @@ integrations = ["javascript_database:1.0.0", "javascript_log_in_with_replit:1.0.
 [userenv.development]
 TEST_ADMIN_PHONE = "01700TEST02"
 TEST_ADMIN_PASSWORD = "Employee@2024"
+
+[userenv.shared]
+CRON_SECRET = "wjYN6KOC0cn5nki4wDIqEdC34t4FMeOl"

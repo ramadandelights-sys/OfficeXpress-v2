@@ -198,6 +198,11 @@ function csrfProtection(req: any, res: any, next: any) {
     return next();
   }
   
+  // Skip CSRF check for cron endpoints (protected by secret token instead)
+  if (req.path.startsWith('/api/cron/')) {
+    return next();
+  }
+  
   const origin = req.get('origin') || req.get('referer');
   const host = req.get('host');
   
