@@ -114,3 +114,12 @@ Preferred communication style: Simple, everyday language.
 - **Facebook Pixel**: For conversion tracking and analytics (client-side and Conversions API).
 - **Google Analytics 4 (GA4)**: For website analytics and event tracking.
 - **Google reCAPTCHA**: Optional spam protection for forms.
+
+### External Cron Job Trigger
+To solve production issues with server sleeping and missing scheduled tasks, a secure external cron trigger endpoint is available:
+- **Endpoint**: `POST /api/cron/generate-trips`
+- **Health Check**: `GET /api/cron/health`
+- **Authentication**: Requires `CRON_SECRET` token via query param (`?token=...`), header (`x-cron-secret`), or `Authorization: Bearer <token>`
+- **Rate Limiting**: Max 2 requests per hour
+- **Usage**: Configure an external cron service (cron-job.org, EasyCron, Pipedream, etc.) to call the endpoint daily at 8 PM Bangladesh time (2 PM UTC)
+- **Example curl**: `curl -X POST "https://yourapp.replit.app/api/cron/generate-trips?token=YOUR_CRON_SECRET"`
