@@ -5473,6 +5473,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
 
 
+  // ===========================================
+  // EXTERNAL CRON ENDPOINTS (Protected by secret token)
+  // ===========================================
+  
+  // Rate limiter for cron endpoints - max 2 per hour
+  const cronRateLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 2,
+    message: { message: "Cron endpoint rate limit exceeded. Max 2 requests per hour." },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  // Middleware to validate cron secret token
+  const validateCronSecret = (req: any, res: any, next: any) => {
+    const cronSecret = process.env.CRON_SECRET;
+    
+    if (!cronSecret) {
+      console.error('[Cron] CRON_SECRET not configured');
+      return res.status(500).json({ message: "Cron secret not configured on server" });
+    }
+    
+    // Accept token from query param or Authorization header
+    const providedToken = req.query.token || req.headers['x-cron-secret'] || req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!providedToken || providedToken !== cronSecret) {
+      console.warn('[Cron] Invalid or missing cron secret token');
+      return res.status(401).json({ message: "Invalid cron secret" });
+    }
+    
+    next();
+  };
+
+  // External cron trigger for AI trip generation
+  app.post("/api/cron/generate-trips",
+    cronRateLimiter,
+    validateCronSecret,
+    async (req: any, res: any) => {
+      try {
+        console.log('[Cron] External trigger received for AI trip generation');
+        
+        // Import the service getter
+        const { getAITripGeneratorService } = await import('./ai-trip-generator');
+        const aiService = getAITripGeneratorService();
+        
+        if (!aiService) {
+          return res.status(503).json({ 
+            message: "AI Trip Generator service not initialized. Check if OPENAI_API_KEY is configured." 
+          });
+        }
+        
+        // Generate trips for next day
+        const result = await aiService.generateTripsForNextDay();
+        
+        console.log('[Cron] AI trip generation completed:', result);
+        
+        res.json({
+          success: true,
+          message: "AI trip generation completed successfully",
+          result
+        });
+      } catch (error: any) {
+        console.error('[Cron] Error in AI trip generation:', error);
+        res.status(500).json({ 
+          success: false,
+          message: "Failed to generate trips",
+          error: error.message 
+        });
+      }
+    }
+  );
+
+  // Health check for cron service
+  app.get("/api/cron/health",
+    validateCronSecret,
+    async (req: any, res: any) => {
+      const { getAITripGeneratorService } = await import('./ai-trip-generator');
+      const aiService = getAITripGeneratorService();
+      
+      res.json({
+        status: "ok",
+        aiTripGenerator: aiService ? "running" : "not_initialized",
+        openaiConfigured: !!process.env.OPENAI_API_KEY,
+        timestamp: new Date().toISOString()
+      });
+    }
+  );
+
   const httpServer = createServer(app);
   return httpServer;
 }

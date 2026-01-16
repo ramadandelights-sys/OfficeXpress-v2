@@ -82,10 +82,17 @@ function generateTripReferenceId(): string {
   return `${prefix}${timestamp}${random}`;
 }
 
-export function startAITripGeneratorService(storage: IStorage) {
+let aiTripGeneratorInstance: AITripGeneratorService | null = null;
+
+export function startAITripGeneratorService(storage: IStorage, cronSchedule?: string) {
   const service = new AITripGeneratorService(storage);
-  service.start();
+  service.start(cronSchedule);
+  aiTripGeneratorInstance = service;
   return service;
+}
+
+export function getAITripGeneratorService(): AITripGeneratorService | null {
+  return aiTripGeneratorInstance;
 }
 
 export class AITripGeneratorService {
